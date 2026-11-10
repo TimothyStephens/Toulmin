@@ -1571,7 +1571,7 @@ Each phase ends when its checkpoint command passes on CI. No phase starts before
 
 ### Verification Plan
 
-**Build.** `cargo build --release --target x86_64-unknown-linux-musl -p tm-cli`; the glibc 2.17 fallback build in a CentOS 7 container (a CI job, not only release); `scripts/ci/symbol-versions.sh` reports no glibc symbol version above 2.17 in the fallback binary and no dynamic dependency in the musl binary.
+**Build.** `cargo build --release --target x86_64-unknown-linux-musl -p tm-cli`; the glibc 2.17 fallback with `cargo zigbuild --target x86_64-unknown-linux-gnu.2.17` and `-g0` (a CI job, not only release); `scripts/ci/symbol-versions.sh` reports no glibc symbol version above 2.17 in the fallback binary and no dynamic dependency in the musl binary.
 
 **Static analysis.** `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings` at pedantic level with `unwrap_used` denied in library crates; `cargo deny check`; `cargo audit`; `scripts/ci/check-owner-cap.sh`.
 
