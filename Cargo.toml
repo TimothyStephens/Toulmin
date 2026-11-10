@@ -5,14 +5,13 @@
 # Versions are the ones current on crates.io on 2026-11-10 (P0).
 #
 # Members: the gate A crates under `crates/` are added by their phases
-# (P1 onwards). During P0 the only member is the throwaway musl spike; it
-# exists so that the exact `duckdb` and `mimalloc` pins below are built and
-# locked before any real crate uses them, and it is deleted when
-# `docs/decisions/musl-spike.md` lands (item 9).
+# (P1 onwards). P0's musl spike was the only member until
+# `docs/decisions/musl-spike.md` landed (item 9); the build path it chose is
+# recorded there.
 
 [workspace]
 resolver = "3"
-members = ["spike/musl-duckdb"]
+members = []
 
 [workspace.package]
 edition = "2024"
@@ -47,8 +46,8 @@ ammonia = "=4.2.4"
 askama = "=0.16.1"
 clap = { version = "=4.6.7", features = ["derive"] }
 
-# Allocator. P0's spike decides whether the binaries use it; see
-# docs/decisions/musl-spike.md once it exists.
+# Allocator for the musl binaries, confirmed by P0's spike
+# (docs/decisions/musl-spike.md).
 mimalloc = { version = "=0.1.52", default-features = false }
 
 # Test and fuzz.

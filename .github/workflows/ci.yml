@@ -29,8 +29,7 @@ env:
   MUSL_CROSS_SHA256: faeaf3c7c377cb4351490988d9a1c8fed7d403a5b8066e5103af5d4dd96450fe
   ZIGLANG_VERSION: 0.17.1
   CARGO_ZIGBUILD_VERSION: 0.24.1
-  # Until P8 the release-shaped jobs build and run the P0 spike.
-  SPIKE_PKG: musl-duckdb
+  # The release-shaped jobs (musl, glibc 2.17, smoke) are no-ops until P8.
   CLI_PKG: tm-cli
 
 jobs:
@@ -41,8 +40,12 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      # cargo refuses a workspace with no members, which is the state between
+      # the spike's deletion (P0) and the first crate (P1).
+      - run: |
+          if [ ! -d crates ]; then echo "::notice::no-op until P1: crates/ does not exist"; exit 0; fi
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
 
   test:
     name: cargo test --workspace
@@ -117,13 +120,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: crates present
+        id: ws
+        run: |
+          if [ -d crates ]; then echo "ready=yes" >> "$GITHUB_OUTPUT"
+          else echo "::notice::no-op until P1: crates/ does not exist (cargo deny needs a workspace member)"; fi
       - run: rustup toolchain install && rustup show
+        if: steps.ws.outputs.ready == 'yes'
       - uses: EmbarkStudios/cargo-deny-action@v2
+        if: steps.ws.outputs.ready == 'yes'
         with:
           command: check
           arguments: --locked
       - run: cargo install cargo-audit --locked
+        if: steps.ws.outputs.ready == 'yes'
       - run: cargo audit
+        if: steps.ws.outputs.ready == 'yes'
 
   owner-cap:
     name: OwnerCap stays in tm-cli
@@ -139,9 +151,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: package to build
+        id: pkg
+        run: |
+          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
+          else echo "::notice::no-op until P8: crates/tm-cli absent"; fi
       - run: rustup toolchain install && rustup show
+        if: steps.pkg.outputs.name != ''
       - uses: Swatinem/rust-cache@v2
+        if: steps.pkg.outputs.name != ''
       - name: musl cross toolchain
+        if: steps.pkg.outputs.name != ''
         run: |
           curl -sSfL -o musl.tar.xz "$MUSL_CROSS_URL"
           echo "$MUSL_CROSS_SHA256  musl.tar.xz" | sha256sum -c -
@@ -154,25 +174,15 @@ jobs:
             echo "AR_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-ar"
             echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-unknown-linux-musl-gcc"
           } >> "$GITHUB_ENV"
-      - name: package to build
-        id: pkg
-        run: |
-          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
-          elif [ -d spike/musl-duckdb ]; then echo "name=$SPIKE_PKG" >> "$GITHUB_OUTPUT"; echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"
-          else echo "::error::neither crates/tm-cli nor spike/musl-duckdb exists"; exit 1; fi
       - run: cargo build --release --locked --target x86_64-unknown-linux-musl -p ${{ steps.pkg.outputs.name }}
+        if: steps.pkg.outputs.name != ''
       - run: scripts/ci/symbol-versions.sh --static target/x86_64-unknown-linux-musl/release/${{ steps.pkg.outputs.bin }}
-      - name: run the spike (P0 checkpoint)
-        if: steps.pkg.outputs.name == 'musl-duckdb'
-        run: |
-          mkdir -p out
-          target/x86_64-unknown-linux-musl/release/musl-duckdb | tee out/spike-musl-runner.txt
+        if: steps.pkg.outputs.name != ''
       - uses: actions/upload-artifact@v4
+        if: steps.pkg.outputs.name != ''
         with:
           name: musl
-          path: |
-            target/x86_64-unknown-linux-musl/release/${{ steps.pkg.outputs.bin }}
-            out/
+          path: target/x86_64-unknown-linux-musl/release/${{ steps.pkg.outputs.bin }}
           if-no-files-found: error
 
   glibc-fallback:
@@ -180,68 +190,41 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: rustup toolchain install && rustup show
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install "ziglang==$ZIGLANG_VERSION" "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION"
       - name: package to build
         id: pkg
         run: |
           if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
-          elif [ -d spike/musl-duckdb ]; then echo "name=$SPIKE_PKG" >> "$GITHUB_OUTPUT"; echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"
-          else echo "::error::neither crates/tm-cli nor spike/musl-duckdb exists"; exit 1; fi
+          else echo "::notice::no-op until P8: crates/tm-cli absent"; fi
+      - run: rustup toolchain install && rustup show
+        if: steps.pkg.outputs.name != ''
+      - uses: Swatinem/rust-cache@v2
+        if: steps.pkg.outputs.name != ''
+      - uses: actions/setup-python@v5
+        if: steps.pkg.outputs.name != ''
+        with:
+          python-version: "3.12"
+      - run: pip install "ziglang==$ZIGLANG_VERSION" "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION"
+        if: steps.pkg.outputs.name != ''
       # cargo-zigbuild's C/C++ wrapper adds -g; DuckDB's unity files at -O3 -g
       # need several GiB per compile. The release binary carries no debug info
       # anyway, so turn it off (-g0 comes after the wrapper's -g and wins).
       - run: cargo zigbuild --release --locked --target x86_64-unknown-linux-gnu.2.17 -p ${{ steps.pkg.outputs.name }}
+        if: steps.pkg.outputs.name != ''
         env:
           CFLAGS_x86_64_unknown_linux_gnu: -g0
           CXXFLAGS_x86_64_unknown_linux_gnu: -g0
       - run: scripts/ci/symbol-versions.sh --max-glibc 2.17 target/x86_64-unknown-linux-gnu/release/${{ steps.pkg.outputs.bin }}
-      - name: run the spike (P0 checkpoint)
-        if: steps.pkg.outputs.name == 'musl-duckdb'
-        run: |
-          mkdir -p out
-          target/x86_64-unknown-linux-gnu/release/musl-duckdb | tee out/spike-glibc217-runner.txt
+        if: steps.pkg.outputs.name != ''
       - uses: actions/upload-artifact@v4
+        if: steps.pkg.outputs.name != ''
         with:
           name: glibc217
-          path: |
-            target/x86_64-unknown-linux-gnu/release/${{ steps.pkg.outputs.bin }}
-            out/
+          path: target/x86_64-unknown-linux-gnu/release/${{ steps.pkg.outputs.bin }}
           if-no-files-found: error
-
-  glibc-dev:
-    name: glibc dynamic build on the runner
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - run: rustup toolchain install && rustup show
-      - uses: Swatinem/rust-cache@v2
-      - name: package to build
-        id: pkg
-        run: |
-          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
-          elif [ -d spike/musl-duckdb ]; then echo "name=$SPIKE_PKG" >> "$GITHUB_OUTPUT"; echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"
-          else echo "::error::neither crates/tm-cli nor spike/musl-duckdb exists"; exit 1; fi
-      - run: cargo build --release --locked -p ${{ steps.pkg.outputs.name }}
-      - run: scripts/ci/symbol-versions.sh --max-glibc 99.99 target/release/${{ steps.pkg.outputs.bin }} || true
-      - name: run the spike (P0 checkpoint)
-        if: steps.pkg.outputs.name == 'musl-duckdb'
-        run: |
-          mkdir -p out
-          target/release/musl-duckdb | tee out/spike-glibcdev-runner.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: glibcdev
-          path: out/
-          if-no-files-found: ignore
 
   smoke:
     name: smoke on ${{ matrix.image }}
-    needs: [musl-build, glibc-fallback, glibc-dev]
+    needs: [musl-build, glibc-fallback]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -249,54 +232,43 @@ jobs:
         image: ["centos:7", "rockylinux:8", "rockylinux:9"]
     steps:
       - uses: actions/checkout@v4
+      - name: package to build
+        id: pkg
+        run: |
+          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
+          else echo "::notice::no-op until P8: crates/tm-cli absent"; fi
       - uses: actions/download-artifact@v4
+        if: steps.pkg.outputs.name != ''
         with:
           path: artifacts
       - name: layout
         id: lay
-        # upload-artifact keeps paths relative to their common ancestor, so
-        # the binary sits at artifacts/<flavour>/target/<triple>/release/<bin>
-        # and the runner output at artifacts/<flavour>/out/. The executable
-        # bit is not preserved across upload/download.
+        if: steps.pkg.outputs.name != ''
+        # upload-artifact strips the common path prefix and does not keep
+        # the executable bit.
         run: |
           ls -lR artifacts
-          if [ -d crates/tm-cli ]; then bin=tm; else bin=musl-duckdb; fi
-          echo "bin=$bin" >> "$GITHUB_OUTPUT"
+          bin=${{ steps.pkg.outputs.bin }}
           for flavour in musl glibc217; do
             path=$(find "artifacts/$flavour" -type f -name "$bin" | head -n 1)
             [ -n "$path" ] || { echo "::error::no $bin in artifacts/$flavour"; exit 1; }
             chmod +x "$path"
             echo "$flavour=$path" >> "$GITHUB_OUTPUT"
           done
-      - name: run both binaries in the container
+      - name: run the smoke list with both binaries in the container
+        if: steps.pkg.outputs.name != ''
         run: |
           set -o pipefail
-          bin=${{ steps.lay.outputs.bin }}
           tag=$(echo "${{ matrix.image }}" | tr ':/' '--')
           mkdir -p out
           for flavour in musl glibc217; do
             if [ "$flavour" = musl ]; then path='${{ steps.lay.outputs.musl }}'; else path='${{ steps.lay.outputs.glibc217 }}'; fi
             docker run --rm -v "$PWD:/w:ro" -w /w "${{ matrix.image }}" bash -ec "
               cat /etc/redhat-release >&2
-              if [ -d fixtures ] && [ \"$bin\" = tm ]; then
-                scripts/ci/smoke.sh $path fixtures
-              else
-                $path
-              fi" | tee "out/$flavour-$tag.txt"
-            echo "$flavour on ${{ matrix.image }}: exit 0, $(grep -c '^row:' "out/$flavour-$tag.txt") row lines"
+              scripts/ci/smoke.sh $path fixtures" | tee "out/$flavour-$tag.txt"
           done
-      - name: spike numbers identical (P0 checkpoint)
-        if: steps.lay.outputs.bin == 'musl-duckdb'
-        run: |
-          tag=$(echo "${{ matrix.image }}" | tr ':/' '--')
-          strip() { grep -v '^time:' "$1" | grep -v '^build:' | grep -v '^worker_stack_mib:'; }
-          ref=artifacts/musl/out/spike-musl-runner.txt
-          status=0
-          for f in artifacts/glibc217/out/spike-glibc217-runner.txt artifacts/glibcdev/spike-glibcdev-runner.txt out/musl-$tag.txt out/glibc217-$tag.txt; do
-            if diff <(strip "$ref") <(strip "$f"); then echo "identical: $f"; else echo "::error::DIFFERS: $f"; status=1; fi
-          done
-          exit $status
       - uses: actions/upload-artifact@v4
+        if: steps.pkg.outputs.name != ''
         with:
           name: smoke-${{ strategy.job-index }}
           path: out/

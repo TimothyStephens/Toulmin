@@ -4,24 +4,24 @@ Deviations from `docs/design/toulmin_v1_design.md`, one entry each: date,
 what was done differently, why. Design-level decisions with their own record
 live under `docs/decisions/`.
 
-## 2026-11-10 P0: spike builds and smoke runs made without containers
+## 2026-11-10 P0: glibc 2.17 fallback built with zig, not in a CentOS 7 container
 
-**What.** The P0 spike's "runs on CentOS 7, Rocky 8, Rocky 9" check was done by
-running each binary through those distributions' own dynamic loader and
-libraries (root filesystems from the CentOS and Rocky image repositories on
-GitHub), not inside containers. The "glibc inside a CentOS 7 container with
-static libstdc++" build was not made; a glibc 2.17 build cross-compiled with
-zig's glibc headers and a statically linked libc++ stands in for it, and that
-is also the fallback build ci.yml and release.yml produce.
+**What.** ci.yml and release.yml build the glibc 2.17 fallback with
+`cargo zigbuild --target x86_64-unknown-linux-gnu.2.17` (glibc 2.17 headers,
+zig's statically linked C++ runtime), not "inside a CentOS 7 container with
+static libstdc++" as the design's Portability section words it. The CentOS 7
+container build was made once, on the owner's host with podman, and its
+results are in `docs/decisions/musl-spike.md`; the smoke runs on CentOS 7,
+Rocky 8 and Rocky 9 were made in real containers on the host and, in the
+agentbox session (no container runtime), through those distributions'
+loaders and root filesystems.
 
-**Why.** The agentbox session that did P0 has no container runtime (no podman
-socket, chroot refused, no container registry reachable through the proxy).
-The loader-based run exercises the same old glibc and libstdc++ a container
-would, so it answers the fallback question; it does not exercise an old
-kernel, which neither would. The zig path was the only glibc 2.17 build that
-could be verified end to end from this environment, and it needs no CentOS 7
-image or devtoolset repository, both of which are end-of-life. Details and
-numbers: `docs/decisions/musl-spike.md`.
+**Why.** The CentOS 7 build needs an end-of-life base image and an opt-out
+(`DUCKDB_CUSTOM_PLATFORM`) for an ABI DuckDB upstream refuses, and it still
+links `libstdc++.so.6` dynamically at the gcc 4.8 level. The zig path needs
+neither and is checked by the same symbol ceilings and the same smoke
+containers. The CentOS 7 recipe is kept as the known-good alternative if the
+zig job fails on CI.
 
 ## 2026-11-10 P0: local musl std built from rust-src
 
@@ -58,3 +58,18 @@ GLIBCXX and CXXABI, the levels CentOS 7's libstdc++ 4.8.5 exports (3.4.19 and
 matters is that the binary loads on CentOS 7. A fully static C++ runtime
 references no GLIBCXX version and passes; a devtoolset-style hybrid link
 would reference 3.4.19 and below and also runs there.
+
+## 2026-11-10 P0: Cargo.lock is empty between the spike's deletion and P1
+
+**What.** Item 2 commits `Cargo.lock`, and item 1's exact pins were locked
+by building the spike. Deleting the spike (item 9) leaves a workspace with
+no members, so the committed lock holds no packages until P1 adds the first
+crate. The lint and deny-audit CI jobs, which cargo cannot run on a
+memberless workspace, are no-ops until `crates/` exists.
+
+**Why.** Item 9 requires the spike to be deleted in the change that lands
+the decision record, and cargo cannot lock dependencies no member uses. The
+pins themselves stay exact in `Cargo.toml`, so P1's first `cargo build`
+locks the same versions the spike built against; `deny.toml`'s allowed-crate
+list is kept as reviewed for P0 and re-checked when P1 regenerates the lock.
+
