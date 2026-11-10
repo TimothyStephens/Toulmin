@@ -1,0 +1,7 @@
+# Item 3. One pinned stable toolchain for every build; the fuzz job installs
+# nightly explicitly and does not use this file.
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-unknown-linux-musl"]

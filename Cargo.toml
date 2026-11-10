@@ -1,0 +1,75 @@
+# Toulmin workspace manifest (design item 1).
+#
+# Every dependency the gate A crates may use is pinned here, exactly, and
+# nowhere else (D24). Crates take them with `name.workspace = true`.
+# Versions are the ones current on crates.io on 2026-11-10 (P0).
+#
+# Members: the gate A crates under `crates/` are added by their phases
+# (P1 onwards). During P0 the only member is the throwaway musl spike; it
+# exists so that the exact `duckdb` and `mimalloc` pins below are built and
+# locked before any real crate uses them, and it is deleted when
+# `docs/decisions/musl-spike.md` lands (item 9).
+
+[workspace]
+resolver = "3"
+members = ["spike/musl-duckdb"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[workspace.dependencies]
+# Engine. `default-features = false` keeps the crate's `download-lib`
+# default off: DuckDB is compiled from the bundled sources, never fetched at
+# build time. `parquet` is compiled in (NFR Determinism); `vtab-arrow` is the
+# Arrow registration path item 26a uses. The crate version encodes the DuckDB
+# version: 1.20000.1 is DuckDB 2.0.0, crate patch 1.
+duckdb = { version = "=1.20000.1", default-features = false, features = ["bundled", "parquet", "vtab-arrow"] }
+# duckdb 1.20000.x re-exports arrow 60.
+arrow = { version = "=60.1.0", default-features = false }
+parquet = { version = "=60.1.0", default-features = false, features = ["arrow", "zstd"] }
+
+# Formats and record.
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.154", features = ["preserve_order"] }
+sha2 = "=0.11.1"
+rusqlite = { version = "=0.41.1", features = ["bundled"] }
+zstd = "=0.13.4"
+bigdecimal = "=0.4.11"
+unicode-normalization = "=0.1.26"
+rustix = { version = "=1.1.6", features = ["fs"] }
+
+# Files, claims, static view, CLI.
+lopdf = { version = "=0.47.0", default-features = false }
+pulldown-cmark = { version = "=0.13.6", default-features = false }
+ammonia = "=4.2.4"
+askama = "=0.16.1"
+clap = { version = "=4.6.7", features = ["derive"] }
+
+# Allocator. P0's spike decides whether the binaries use it; see
+# docs/decisions/musl-spike.md once it exists.
+mimalloc = { version = "=0.1.52", default-features = false }
+
+# Test and fuzz.
+proptest = "=1.12.0"
+insta = { version = "=1.49.0", features = ["json"] }
+assert_cmd = "=2.2.2"
+tempfile = "=3.27.0"
+libfuzzer-sys = "=0.4.13"
+
+# Pedantic Clippy for every crate that opts in with `[lints] workspace = true`
+# (item 5). `unwrap_used` is denied here; a binary crate that needs to relax
+# it does so in its own `[lints]` table.
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"

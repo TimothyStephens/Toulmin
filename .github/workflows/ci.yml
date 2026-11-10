@@ -1,0 +1,379 @@
+# Item 6. Every gate A exit criterion a machine can check.
+#
+# Jobs whose inputs do not exist yet print a no-op notice and pass; each
+# guard names the phase that brings the input. The scripts under scripts/ci/
+# carry their own guards so the owner can run them by hand.
+#
+# Toolchains: rust-toolchain.toml pins the Rust version and the musl target.
+# The musl C and C++ side is the pinned cross-tools/musl-cross release below
+# (gcc 16.2, musl), verified by sha256. The glibc 2.17 fallback is built with
+# zig's cross glibc (see docs/decisions/musl-spike.md).
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * *" # nightly: fuzz
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  MUSL_CROSS_URL: https://github.com/cross-tools/musl-cross/releases/download/20261001/x86_64-unknown-linux-musl.tar.xz
+  MUSL_CROSS_SHA256: faeaf3c7c377cb4351490988d9a1c8fed7d403a5b8066e5103af5d4dd96450fe
+  ZIGLANG_VERSION: 0.17.1
+  CARGO_ZIGBUILD_VERSION: 0.24.1
+  # Until P8 the release-shaped jobs build and run the P0 spike.
+  SPIKE_PKG: musl-duckdb
+  CLI_PKG: tm-cli
+
+jobs:
+  lint:
+    name: format and clippy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: cargo test --workspace
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          if [ ! -d crates ]; then echo "::notice::no-op until P1: crates/ does not exist"; exit 0; fi
+          cargo test --workspace --locked
+
+  conformance:
+    name: conformance suites
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: formats
+        run: |
+          if [ ! -d crates/tm-formats ]; then echo "::notice::no-op until P1: crates/tm-formats absent"; exit 0; fi
+          cargo test -p tm-formats --test conformance --locked
+      - name: record
+        run: |
+          if [ ! -d crates/tm-record ]; then echo "::notice::no-op until P2: crates/tm-record absent"; exit 0; fi
+          cargo test -p tm-record --test record_conformance --locked
+      - name: checker
+        run: |
+          if [ ! -d crates/tm-checker ]; then echo "::notice::no-op until P4: crates/tm-checker absent"; exit 0; fi
+          cargo test -p tm-checker --test conformance --locked
+          cargo test -p tm-checker --test property --locked
+
+  python-crosscheck:
+    name: Python formats and checker cross-checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: formats
+        run: |
+          if [ ! -f reference/formats/test_formats.py ]; then echo "::notice::no-op until P1: reference/formats absent"; exit 0; fi
+          python3 -I reference/formats/test_formats.py
+      - name: checker
+        run: |
+          if [ ! -f reference/checker/refcheck.py ]; then echo "::notice::no-op until P5: reference/checker absent"; exit 0; fi
+          python3 -I reference/checker/refcheck.py conformance/checker
+          python3 -I reference/checker/validate.py conformance/formats/steps/invalid conformance/formats/assertions
+
+  differential:
+    name: differential (${{ matrix.runner }})
+    # Two runner classes of different CPU generations (item 89).
+    strategy:
+      matrix:
+        runner: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          if [ ! -x scripts/differential.sh ]; then echo "::notice::no-op until P5: scripts/differential.sh absent"; exit 0; fi
+          scripts/differential.sh 10000
+
+  deny-audit:
+    name: cargo deny and cargo audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+          arguments: --locked
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
+
+  owner-cap:
+    name: OwnerCap stays in tm-cli
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: scripts/ci/check-owner-cap.sh
+
+  musl-build:
+    name: musl static build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: musl cross toolchain
+        run: |
+          curl -sSfL -o musl.tar.xz "$MUSL_CROSS_URL"
+          echo "$MUSL_CROSS_SHA256  musl.tar.xz" | sha256sum -c -
+          mkdir -p "$HOME/musl-cross"
+          tar -xJf musl.tar.xz -C "$HOME/musl-cross" --strip-components=1
+          echo "$HOME/musl-cross/bin" >> "$GITHUB_PATH"
+          {
+            echo "CC_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-gcc"
+            echo "CXX_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-g++"
+            echo "AR_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-ar"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-unknown-linux-musl-gcc"
+          } >> "$GITHUB_ENV"
+      - name: package to build
+        id: pkg
+        run: |
+          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
+          elif [ -d spike/musl-duckdb ]; then echo "name=$SPIKE_PKG" >> "$GITHUB_OUTPUT"; echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"
+          else echo "::error::neither crates/tm-cli nor spike/musl-duckdb exists"; exit 1; fi
+      - run: cargo build --release --locked --target x86_64-unknown-linux-musl -p ${{ steps.pkg.outputs.name }}
+      - run: scripts/ci/symbol-versions.sh --static target/x86_64-unknown-linux-musl/release/${{ steps.pkg.outputs.bin }}
+      - name: run the spike (P0 checkpoint)
+        if: steps.pkg.outputs.name == 'musl-duckdb'
+        run: |
+          mkdir -p out
+          target/x86_64-unknown-linux-musl/release/musl-duckdb | tee out/spike-musl-runner.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: musl
+          path: |
+            target/x86_64-unknown-linux-musl/release/${{ steps.pkg.outputs.bin }}
+            out/
+          if-no-files-found: error
+
+  glibc-fallback:
+    name: glibc 2.17 fallback build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ziglang==$ZIGLANG_VERSION" "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION"
+      - name: package to build
+        id: pkg
+        run: |
+          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
+          elif [ -d spike/musl-duckdb ]; then echo "name=$SPIKE_PKG" >> "$GITHUB_OUTPUT"; echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"
+          else echo "::error::neither crates/tm-cli nor spike/musl-duckdb exists"; exit 1; fi
+      # cargo-zigbuild's C/C++ wrapper adds -g; DuckDB's unity files at -O3 -g
+      # need several GiB per compile. The release binary carries no debug info
+      # anyway, so turn it off (-g0 comes after the wrapper's -g and wins).
+      - run: cargo zigbuild --release --locked --target x86_64-unknown-linux-gnu.2.17 -p ${{ steps.pkg.outputs.name }}
+        env:
+          CFLAGS_x86_64_unknown_linux_gnu: -g0
+          CXXFLAGS_x86_64_unknown_linux_gnu: -g0
+      - run: scripts/ci/symbol-versions.sh --max-glibc 2.17 target/x86_64-unknown-linux-gnu/release/${{ steps.pkg.outputs.bin }}
+      - name: run the spike (P0 checkpoint)
+        if: steps.pkg.outputs.name == 'musl-duckdb'
+        run: |
+          mkdir -p out
+          target/x86_64-unknown-linux-gnu/release/musl-duckdb | tee out/spike-glibc217-runner.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glibc217
+          path: |
+            target/x86_64-unknown-linux-gnu/release/${{ steps.pkg.outputs.bin }}
+            out/
+          if-no-files-found: error
+
+  glibc-dev:
+    name: glibc dynamic build on the runner
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: package to build
+        id: pkg
+        run: |
+          if [ -d crates/tm-cli ]; then echo "name=$CLI_PKG" >> "$GITHUB_OUTPUT"; echo "bin=tm" >> "$GITHUB_OUTPUT"
+          elif [ -d spike/musl-duckdb ]; then echo "name=$SPIKE_PKG" >> "$GITHUB_OUTPUT"; echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"
+          else echo "::error::neither crates/tm-cli nor spike/musl-duckdb exists"; exit 1; fi
+      - run: cargo build --release --locked -p ${{ steps.pkg.outputs.name }}
+      - run: scripts/ci/symbol-versions.sh --max-glibc 99.99 target/release/${{ steps.pkg.outputs.bin }} || true
+      - name: run the spike (P0 checkpoint)
+        if: steps.pkg.outputs.name == 'musl-duckdb'
+        run: |
+          mkdir -p out
+          target/release/musl-duckdb | tee out/spike-glibcdev-runner.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glibcdev
+          path: out/
+          if-no-files-found: ignore
+
+  smoke:
+    name: smoke on ${{ matrix.image }}
+    needs: [musl-build, glibc-fallback, glibc-dev]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["centos:7", "rockylinux:8", "rockylinux:9"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: layout
+        id: lay
+        run: |
+          chmod +x artifacts/musl/* artifacts/glibc217/* 2>/dev/null || true
+          ls -lR artifacts
+          if [ -d crates/tm-cli ]; then echo "bin=tm" >> "$GITHUB_OUTPUT"; else echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"; fi
+      - name: run both binaries in the container
+        run: |
+          bin=${{ steps.lay.outputs.bin }}
+          tag=$(echo "${{ matrix.image }}" | tr ':/' '--')
+          mkdir -p out
+          for flavour in musl glibc217; do
+            docker run --rm -v "$PWD:/w:ro" -w /w "${{ matrix.image }}" bash -ec "
+              cat /etc/redhat-release
+              if [ -d fixtures ] && [ \"$bin\" = tm ]; then
+                scripts/ci/smoke.sh artifacts/$flavour/$bin fixtures
+              else
+                artifacts/$flavour/$bin
+              fi" | tee "out/$flavour-$tag.txt"
+          done
+      - name: spike numbers identical (P0 checkpoint)
+        if: steps.lay.outputs.bin == 'musl-duckdb'
+        run: |
+          tag=$(echo "${{ matrix.image }}" | tr ':/' '--')
+          strip() { grep -v '^time:' "$1" | grep -v '^build:' | grep -v '^worker_stack_mib:'; }
+          ref=artifacts/musl/out/spike-musl-runner.txt
+          status=0
+          for f in artifacts/glibc217/out/spike-glibc217-runner.txt artifacts/glibcdev/spike-glibcdev-runner.txt out/musl-$tag.txt out/glibc217-$tag.txt; do
+            if diff <(strip "$ref") <(strip "$f"); then echo "identical: $f"; else echo "::error::DIFFERS: $f"; status=1; fi
+          done
+          exit $status
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ strategy.job-index }}
+          path: out/
+
+  bench-index:
+    name: index rebuild budget
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: scripts/ci/bench-index.sh
+
+  coverage:
+    name: line coverage (85 percent)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          if [ ! -d crates/tm-formats ]; then echo "::notice::no-op until P1: no library crate yet"; exit 0; fi
+          rustup component add llvm-tools
+          cargo install cargo-llvm-cov --locked
+          pkgs=""
+          for c in tm-formats tm-record tm-checker tm-claims; do [ -d "crates/$c" ] && pkgs="$pkgs -p $c"; done
+          # shellcheck disable=SC2086
+          cargo llvm-cov $pkgs --locked --fail-under-lines 85
+
+  insta:
+    name: snapshots
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          if [ ! -d crates/tm-checker ]; then echo "::notice::no-op until P4: crates/tm-checker absent"; exit 0; fi
+          cargo install cargo-insta --locked
+          cargo insta test -p tm-checker --check --locked
+
+  fuzz:
+    name: fuzz (nightly toolchain, 600 s per target)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          if [ ! -d crates/tm-checker/fuzz ]; then echo "::notice::no-op until P4: crates/tm-checker/fuzz absent"; exit 0; fi
+          rustup toolchain install nightly --profile minimal
+          cargo +nightly install cargo-fuzz --locked
+          cd crates/tm-checker
+          for target in steps_json derive_expr csv_parse; do
+            cargo +nightly fuzz run "$target" -- -max_total_time=600
+          done
+
+  nfs-lock:
+    name: lock on an NFS loopback export (privileged)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          if [ ! -f crates/tm-record/tests/lock.rs ]; then echo "::notice::no-op until P2: crates/tm-record/tests/lock.rs absent"; exit 0; fi
+          sudo apt-get update && sudo apt-get install -y nfs-kernel-server
+          sudo mkdir -p /srv/tm-export /mnt/tm-nfs
+          sudo chown "$USER" /srv/tm-export
+          echo "/srv/tm-export 127.0.0.1(rw,sync,no_subtree_check,no_root_squash)" | sudo tee /etc/exports
+          sudo exportfs -ra && sudo systemctl restart nfs-kernel-server
+          sudo mount -t nfs -o vers=4 127.0.0.1:/srv/tm-export /mnt/tm-nfs
+          TM_NFS_DIR=/mnt/tm-nfs cargo test -p tm-record --test lock --locked -- --ignored nfs
+
+  spec-drift:
+    name: spec files match the design
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/ci/spec-drift.sh
+
+  error-codes:
+    name: every gate A error code is produced
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          if [ ! -f crates/tm-cli/tests/error_codes.rs ]; then echo "::notice::no-op until P8: crates/tm-cli/tests/error_codes.rs absent"; exit 0; fi
+          export TM_ERROR_LOG="$RUNNER_TEMP/tm-error-log"
+          : > "$TM_ERROR_LOG"
+          cargo test --workspace --locked
+          cargo test -p tm-cli --test error_codes --locked

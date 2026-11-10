@@ -1,0 +1,13 @@
+# Item 5 and D24.
+#
+# Every build: warnings are errors. (Dependencies from the registry are
+# unaffected; cargo caps their lints.)
+[target.'cfg(all())']
+rustflags = ["-D", "warnings"]
+
+# The release target: one static musl binary. The C and C++ side (bundled
+# DuckDB) needs a musl-targeting g++; CI points the `cc` crate at it through
+# CC_x86_64_unknown_linux_musl, CXX_x86_64_unknown_linux_musl and
+# CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER, so nothing here assumes a path.
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-D", "warnings", "-C", "target-feature=+crt-static"]

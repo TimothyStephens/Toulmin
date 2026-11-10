@@ -1,0 +1,7 @@
+# Item 5. Lint levels live in Cargo.toml's [workspace.lints]; this file holds
+# the lint configuration.
+msrv = "1.99"
+avoid-breaking-exported-api = false
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-print-in-tests = true

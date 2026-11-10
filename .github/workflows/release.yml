@@ -1,0 +1,106 @@
+# Item 7 (G12). On a version tag: the static musl `tm` binary and the glibc
+# 2.17 fallback, each with a sha256 checksum, attached to a GitHub release.
+# `tm-agent` and `tm-bridge` are added by gate B.
+# Until crates/tm-cli exists (P8) the workflow stops with a notice.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  MUSL_CROSS_URL: https://github.com/cross-tools/musl-cross/releases/download/20261001/x86_64-unknown-linux-musl.tar.xz
+  MUSL_CROSS_SHA256: faeaf3c7c377cb4351490988d9a1c8fed7d403a5b8066e5103af5d4dd96450fe
+  ZIGLANG_VERSION: 0.17.1
+  CARGO_ZIGBUILD_VERSION: 0.24.1
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [ -d crates/tm-cli ]; then echo "ready=yes" >> "$GITHUB_OUTPUT"
+          else echo "::notice::no release before P8: crates/tm-cli does not exist"; echo "ready=no" >> "$GITHUB_OUTPUT"; fi
+
+  musl:
+    needs: gate
+    if: needs.gate.outputs.ready == 'yes'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - name: musl cross toolchain
+        run: |
+          curl -sSfL -o musl.tar.xz "$MUSL_CROSS_URL"
+          echo "$MUSL_CROSS_SHA256  musl.tar.xz" | sha256sum -c -
+          mkdir -p "$HOME/musl-cross"
+          tar -xJf musl.tar.xz -C "$HOME/musl-cross" --strip-components=1
+          echo "$HOME/musl-cross/bin" >> "$GITHUB_PATH"
+          {
+            echo "CC_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-gcc"
+            echo "CXX_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-g++"
+            echo "AR_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-ar"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-unknown-linux-musl-gcc"
+          } >> "$GITHUB_ENV"
+      - run: cargo build --release --locked --target x86_64-unknown-linux-musl -p tm-cli
+      - run: scripts/ci/symbol-versions.sh --static target/x86_64-unknown-linux-musl/release/tm
+      - run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-musl/release/tm dist/tm-x86_64-linux-musl
+          (cd dist && sha256sum tm-x86_64-linux-musl > tm-x86_64-linux-musl.sha256)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-musl
+          path: dist/
+
+  glibc217:
+    needs: gate
+    if: needs.gate.outputs.ready == 'yes'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install && rustup show
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ziglang==$ZIGLANG_VERSION" "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION"
+      # cargo-zigbuild's C/C++ wrapper adds -g; DuckDB's unity files at -O3 -g
+      # need several GiB per compile. The release binary carries no debug info
+      # anyway, so turn it off (-g0 comes after the wrapper's -g and wins).
+      - run: cargo zigbuild --release --locked --target x86_64-unknown-linux-gnu.2.17 -p tm-cli
+        env:
+          CFLAGS_x86_64_unknown_linux_gnu: -g0
+          CXXFLAGS_x86_64_unknown_linux_gnu: -g0
+      - run: scripts/ci/symbol-versions.sh --max-glibc 2.17 target/x86_64-unknown-linux-gnu/release/tm
+      - run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/tm dist/tm-x86_64-linux-gnu2.17
+          (cd dist && sha256sum tm-x86_64-linux-gnu2.17 > tm-x86_64-linux-gnu2.17.sha256)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-glibc217
+          path: dist/
+
+  publish:
+    needs: [musl, glibc217]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -l dist && cat dist/*.sha256
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

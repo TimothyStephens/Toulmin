@@ -1,0 +1,25 @@
+# Item 9: throwaway. Deleted in the change that lands
+# docs/decisions/musl-spike.md.
+[package]
+name = "musl-duckdb"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "P0 spike: static musl build of duckdb-rs (bundled) with mimalloc"
+
+[[bin]]
+name = "musl-duckdb"
+path = "src/main.rs"
+
+[features]
+default = ["mimalloc"]
+# Step 4 of the spike turns this off with --no-default-features.
+mimalloc = ["dep:mimalloc"]
+
+[dependencies]
+duckdb.workspace = true
+mimalloc = { workspace = true, optional = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,208 @@
+# Item 4 (D14): cargo-deny policy. Checked by `cargo deny check` in CI.
+#
+# The [bans] allow list is every crate in Cargo.lock, by name, workspace
+# members included. A new
+# dependency (direct or transitive) fails the check until it is added here,
+# which is the point: every crate is chosen deliberately. Regenerate after a
+# lock change with
+#   grep '^name = ' Cargo.lock | sort -u | sed 's/name = \(.*\)/    \1,/'
+# and review the diff.
+
+[graph]
+targets = [
+    { triple = "x86_64-unknown-linux-musl" },
+    { triple = "x86_64-unknown-linux-gnu" },
+]
+all-features = false
+no-default-features = false
+
+[output]
+feature-depth = 1
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Workspace crates are unpublished (publish = false) and carry no license
+# field; cargo-deny skips them.
+private = { ignore = true }
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "BSL-1.0",
+    "CC0-1.0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.8
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+# Crates that must never enter the graph.
+deny = [
+    { crate = "ureq", reason = "duckdb's download-lib feature fetches a prebuilt engine at build time; DuckDB is compiled from the bundled sources (D24)" },
+    { crate = "reqwest", reason = "no Toulmin process makes network requests except the loopback viewer (NFR Security)" },
+    { crate = "openssl-sys", reason = "no OpenSSL: static musl build, no TLS needed" },
+    { crate = "openssl", reason = "no OpenSSL: static musl build, no TLS needed" },
+    { crate = "native-tls", reason = "no TLS needed" },
+    { crate = "curl-sys", reason = "no network, no C curl" },
+    { crate = "git2", reason = "git is shelled out to, never linked (NFR Portability: no runtime dependency beyond git on the path)" },
+    { crate = "rust_decimal", reason = "capped at 28 digits; bigdecimal does the 34-digit arithmetic (item 1)" },
+    { crate = "polars", reason = "not used; duckdb's optional polars integration stays off" },
+]
+# Every crate allowed in the graph (see the header).
+allow = [
+    "adler2",
+    "ahash",
+    "aho-corasick",
+    "android_system_properties",
+    "arrow",
+    "arrow-arith",
+    "arrow-array",
+    "arrow-buffer",
+    "arrow-cast",
+    "arrow-cmp",
+    "arrow-data",
+    "arrow-ord",
+    "arrow-row",
+    "arrow-schema",
+    "arrow-select",
+    "arrow-string",
+    "atoi",
+    "autocfg",
+    "base64",
+    "bitflags",
+    "block-buffer",
+    "bumpalo",
+    "bytes",
+    "cast",
+    "cc",
+    "cfg-if",
+    "chrono",
+    "comfy-table",
+    "const-oid",
+    "const-random",
+    "const-random-macro",
+    "core-foundation-sys",
+    "cpufeatures",
+    "crc32fast",
+    "crunchy",
+    "crypto-common",
+    "digest",
+    "duckdb",
+    "errno",
+    "fallible-iterator",
+    "fallible-streaming-iterator",
+    "filetime",
+    "find-msvc-tools",
+    "flate2",
+    "foldhash",
+    "futures-core",
+    "futures-task",
+    "futures-util",
+    "getrandom",
+    "half",
+    "hashbrown",
+    "hashlink",
+    "heck",
+    "hybrid-array",
+    "iana-time-zone",
+    "iana-time-zone-haiku",
+    "itoa",
+    "jobserver",
+    "js-sys",
+    "lexical-core",
+    "lexical-parse-float",
+    "lexical-parse-integer",
+    "lexical-util",
+    "lexical-write-float",
+    "lexical-write-integer",
+    "libc",
+    "libduckdb-sys",
+    "libm",
+    "libmimalloc-sys",
+    "linux-raw-sys",
+    "log",
+    "memchr",
+    "mimalloc",
+    "miniz_oxide",
+    "musl-duckdb",
+    "num",
+    "num-bigint",
+    "num-complex",
+    "num-integer",
+    "num-iter",
+    "num-rational",
+    "num-traits",
+    "once_cell",
+    "pin-project-lite",
+    "proc-macro2",
+    "quote",
+    "r-efi",
+    "regex",
+    "regex-automata",
+    "regex-syntax",
+    "rustix",
+    "rustversion",
+    "ryu",
+    "serde",
+    "serde_core",
+    "serde_derive",
+    "serde_json",
+    "sha2",
+    "shlex",
+    "simd-adler32",
+    "slab",
+    "strum",
+    "strum_macros",
+    "syn",
+    "tar",
+    "tiny-keccak",
+    "typenum",
+    "unicode-ident",
+    "unicode-segmentation",
+    "unicode-width",
+    "version_check",
+    "wasi",
+    "wasip2",
+    "wasm-bindgen",
+    "wasm-bindgen-macro",
+    "wasm-bindgen-macro-support",
+    "wasm-bindgen-shared",
+    "windows-core",
+    "windows-implement",
+    "windows-interface",
+    "windows-link",
+    "windows-result",
+    "windows-strings",
+    "windows-sys",
+    "wit-bindgen",
+    "xattr",
+    "zerocopy",
+    "zerocopy-derive",
+    "zlib-rs",
+    "zmij",
+]
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
