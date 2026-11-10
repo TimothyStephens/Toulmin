@@ -254,23 +254,36 @@ jobs:
           path: artifacts
       - name: layout
         id: lay
+        # upload-artifact keeps paths relative to their common ancestor, so
+        # the binary sits at artifacts/<flavour>/target/<triple>/release/<bin>
+        # and the runner output at artifacts/<flavour>/out/. The executable
+        # bit is not preserved across upload/download.
         run: |
-          chmod +x artifacts/musl/* artifacts/glibc217/* 2>/dev/null || true
           ls -lR artifacts
-          if [ -d crates/tm-cli ]; then echo "bin=tm" >> "$GITHUB_OUTPUT"; else echo "bin=musl-duckdb" >> "$GITHUB_OUTPUT"; fi
+          if [ -d crates/tm-cli ]; then bin=tm; else bin=musl-duckdb; fi
+          echo "bin=$bin" >> "$GITHUB_OUTPUT"
+          for flavour in musl glibc217; do
+            path=$(find "artifacts/$flavour" -type f -name "$bin" | head -n 1)
+            [ -n "$path" ] || { echo "::error::no $bin in artifacts/$flavour"; exit 1; }
+            chmod +x "$path"
+            echo "$flavour=$path" >> "$GITHUB_OUTPUT"
+          done
       - name: run both binaries in the container
         run: |
+          set -o pipefail
           bin=${{ steps.lay.outputs.bin }}
           tag=$(echo "${{ matrix.image }}" | tr ':/' '--')
           mkdir -p out
           for flavour in musl glibc217; do
+            if [ "$flavour" = musl ]; then path='${{ steps.lay.outputs.musl }}'; else path='${{ steps.lay.outputs.glibc217 }}'; fi
             docker run --rm -v "$PWD:/w:ro" -w /w "${{ matrix.image }}" bash -ec "
-              cat /etc/redhat-release
+              cat /etc/redhat-release >&2
               if [ -d fixtures ] && [ \"$bin\" = tm ]; then
-                scripts/ci/smoke.sh artifacts/$flavour/$bin fixtures
+                scripts/ci/smoke.sh $path fixtures
               else
-                artifacts/$flavour/$bin
+                $path
               fi" | tee "out/$flavour-$tag.txt"
+            echo "$flavour on ${{ matrix.image }}: exit 0, $(grep -c '^row:' "out/$flavour-$tag.txt") row lines"
           done
       - name: spike numbers identical (P0 checkpoint)
         if: steps.lay.outputs.bin == 'musl-duckdb'
