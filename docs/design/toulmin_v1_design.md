@@ -64,7 +64,7 @@ Each goal carries one testable success measure. The gate exit criteria under Fut
 | G11 | **Report text and claims stay in sync.** A claim whose sentence in the report differs from its recorded sentence is flagged. | A scenario test edits one span's text in the report; `tm status` flags exactly that claim with `text drifted`, and `tm claim update-text` clears it. |
 | G12 | **Works without special privileges** on a workstation or a shared cluster, including runs inside batch jobs. | The release binary runs with no installation step beyond copying it, on CentOS 7, Rocky 8, and Rocky 9 in CI, and a `tm run` inside an `sbatch` script on a compute node that can see the record directory produces a complete two-phase receipt (checked on the owner's cluster and recorded as a manual gate C check, since CI has no scheduler). |
 | G13 | **Validation on request.** `tm audit` re-hashes everything, checks every chain, re-runs every claim check, and reports what changed and why. | On the reference project, `tm audit` run twice with no changes in between reports zero differences; after each listed tampering case (a byte changed in a kept file, a line removed from a segment, a journal truncated, a verdict's data changed), it reports that case by name. |
-| G14 | **Modular and replaceable,** with conformance tests for the shared formats, the Record library, and the Checker, and a Python reference checker for differential testing. | The conformance suites run against the Rust implementation and the Python cross-check with identical results; differential testing over at least 10,000 generated cases shows no difference beyond the allowed last-digit tolerance for `log`, `exp`, `mean`, and `median`. |
+| G14 | **Modular and replaceable,** with conformance tests for the shared formats, the Record library, and the Checker, and a Python reference checker for differential testing. | The conformance suites run against the Rust implementation and the Python cross-check with identical results; differential testing over at least 10,000 generated cases shows no difference in any field, the result hashes included. |
 | G15 | **Imperfect setups still count,** labeled as such. | An unisolated session, a run with an undeclared input, and a claim on unapproved code each complete and each carry the matching label in the static view. |
 
 ## Non-Goals
@@ -317,6 +317,7 @@ A stat cache is a node-local file beside the index holding, per tracked path, th
 | Shared formats | Shared code, pure | `tm-formats` | Event envelope, IDs, canonical JSON, typed values, citations, query step operations, assertion schema, receipts, declarations, handshake messages, and error codes |
 | Filesystem facts | Shared code, pure, no state | `tm-fsfacts` | Stat snapshots, hashing, directory manifests, exclusions, and the racy rule |
 | DuckDB engine | Shared code, no state | `tm-duckdb` | One function that opens an in-memory DuckDB with the 11.6 settings, registers Arrow tables, applies the per-call time limit, and reports the runtime version and loaded extensions; the only crate with `unsafe` (the binding) |
+| Index transaction | Shared code, no state | `tm-index` | The `IndexTx` type over one `rusqlite::Transaction`, the `Row` and parameter types the folds use, and the `rusqlite` dependency; every library's fold and the Core write through it |
 | Record library | Library | `tm-record` | Main-chain segments, journals, inbox, lock and epochs, kept-files folder, event scans, and integrity checks |
 | Files | Library | `tm-files` | File identity, versions, attributes, parse specs and keys, and the parse cache |
 | Runs | Library | `tm-runs` | Declarations, receipts, run checks, lineage per version, approval scope, and attribution matching |
@@ -355,7 +356,7 @@ The five libraries, both shared crates, and the Core are synchronous. Async code
 #### 4.2 Rules between parts
 
 1. **Libraries never call each other.** The Core passes data between them: a parsed Arrow table from Files into the Checker, Checker results into Claims, file version handles from Files into Runs.
-2. **Shared formats, filesystem facts, and the DuckDB engine crate** can be used by any part. They hold no state and never touch the record.
+2. **Shared formats, filesystem facts, the DuckDB engine crate, and the index-transaction crate** can be used by any part. They hold no state and never touch the record.
 3. **Front ends only call the Core.**
 4. **Permissions are checked only in the Core.** Libraries receive plain, already-authorized decisions. Owner operations take an `OwnerCap` argument, and so does the Record's main-chain append, so `read_in` and system re-checks pass through the same gate (the CLI holds the capability for the whole command). Every crate may name the type; only `tm-cli` may construct it. `tm-agent` and `tm-bridge` are separate binaries that do not depend on `tm-cli`, so no process other than `tm` ever holds an `OwnerCap`. CI builds `tm-agent` and `tm-bridge` standalone with the `construct` feature off and fails if any crate other than `tm-cli` names `OwnerCap::new_for_cli`. This is defence in depth: the primary controls are that `tm-agent` exposes no owner tool and that the record directory is not mounted in the sandbox.
 5. **Who writes what.** Only the CLI writes the main chain, under the lock. Tool servers and viewer launches append only to their own journals. The run wrapper writes only receipts.
@@ -384,6 +385,7 @@ Computed, not stored: staleness, cited and uncited counts, agent attribution, "o
 | Shared formats | Nothing stateful | Types and pure functions: canonical JSON, ID derivation, schema validation, error codes |
 | Filesystem facts | Paths, exclude lists, settings, previous stat values | Snapshots, hashes, manifests, "needs re-hash" results |
 | DuckDB engine | Settings and Arrow tables | An open connection with the settings applied; version and extension facts |
+| Index transaction | SQL and parameters from a fold | Rows, and the recorded chain head |
 | Record library | From the Core only: a framed batch for the main chain; kept-file paths with expected hashes (the Record library streams, compresses, and checks them). Journals appended by their own writers through the journal API | Event scans (all, by type, after a position), journal reads, inbox listings, kept bytes, integrity results (torn tail, fork, corruption) |
 | Files | Filesystem facts, declarations' expanded paths from the Core, receipts' output facts, owner decisions passed by the Core | Identities, versions, attributes; Arrow tables from the parse cache; page counts (PDF) and registered panel labels; content-equivalence results (same bytes, same table by key, same decompressed content) |
 | Runs | Declarations, receipts, git facts (commit, script diff, commit list with patch IDs), session reports, file version handles from Files | Run records and run-check results; lineage edges between versions; code-version identities for approval; matched agent commits |
@@ -795,9 +797,10 @@ One encoding everywhere (events, steps, assertions, Arrow conversion):
 | Type | Encoding | Notes |
 | --- | --- | --- |
 | `int` | `{"t":"int","v":"42"}` | Decimal string; arbitrary size |
-| `dec` | `{"t":"dec","v":"0.00310"}` | Decimal string as written; trailing zeros kept |
+| `dec` | `{"t":"dec","v":"0.00310"}` | Decimal string, always positional notation, never an exponent. Parsed values keep the scale as written, trailing zeros included. Computed values follow the General Decimal Arithmetic specification (IEEE 754-2008 decimal) at 34 significant digits, rounding half-even, so multiplication's scale is the sum of the operands' scales (`1.10 * 2` is `2.20`), addition and subtraction take the larger scale, and division is exact when it terminates within 34 digits and otherwise rounds (`10 / 4` is `2.5`). Negative zero is written `0`. A value that reaches this encoding from an IEEE double (`log`, `exp`, `mean`, `median`) is first rounded to 15 significant digits, then written with the shortest digits that round-trip at that precision, in positional notation |
 | `str` | `{"t":"str","v":"..."}` | NFC-normalized |
 | `bool` | `{"t":"bool","v":true}` | |
+| `list` | `{"t":"list","v":[typed values]}` | Settings only in gate A; never a column value |
 | `date`, `datetime` | `{"t":"date","v":"2026-11-09"}` | RFC 3339 |
 | `missing` | `{"t":"missing"}` | Null, NA tokens, and anything the parse spec maps to missing |
 | `nan`, `+inf`, `-inf` | `{"t":"nan"}`, `{"t":"inf","s":"+"}` | Only when the parse spec maps them to a value instead of missing; treated as missing by filters and placed by the sort's missing rule |
@@ -810,7 +813,7 @@ Floats from a table are parsed as decimals from their text; a parse spec may dec
 
 #### 11.8 Query steps
 
-`{"steps":1,"tables":{"de":"F7@v2"},"ops":[...]}`. Operations and their versions:
+`{"steps":1,"tables":{"de":"F7@v2"},"from":"de","ops":[...]}`. `from` names the table the pipeline starts from and is required even when `tables` holds one entry; a `from` that names no entry in `tables` is `E6002`. Operations and their versions:
 
 | Op (version) | Required fields |
 | --- | --- |
@@ -821,7 +824,7 @@ Floats from a table are parsed as decimals from their text; a parse spec may dec
 | `rank` (1) | `by`, `dir`, `ties`: `min`, `max`, `dense`, or `ordinal` (ordinal uses the key as tie-breaker), `missing`: `first`, `last`, or `exclude`, `scope`: `all` or `group`, `group_by`: column list, required when `scope` is `group` |
 | `derive` (1) | `as`, `expr` from a closed grammar: arithmetic, comparison, `abs`, `log`, `log2`, `log10`, `exp`, `coalesce`, string equality; no `random()`, `now()`, or user functions |
 | `group` (1) | `by`, `aggregates`: list of `{as, fn in count,sum,mean,min,max,median, column}`; output ordered by group keys; each row carries member count and member-key fingerprint |
-| `join` (1) | `right`: table name, `on`: key pairs, `kind`: `inner` or `left`; both sides must be keyed |
+| `join` (1) | `right`: table name, `on`: `[{"left":"col","right":"col"}, ...]`, `kind`: `inner` or `left`; both sides must be keyed and the pairs must cover the right key |
 
 Each op's semantics are frozen at its version; a change is a new version number, and the old one stays runnable.
 
@@ -849,7 +852,7 @@ Every format carries its own version number: record header, envelope, each event
 
 #### 11.12 Error catalog
 
-Stable codes `E<library><nnn>`: 1 formats, 2 record, 3 files, 4 runs, 5 checker, 6 claims, 7 core and permissions, 8 front ends. Each error is `{"code","message","rule","field","owner_command","subject"}`; `rule` and `owner_command` are filled for agent refusals. Messages may change; codes never do.
+Stable codes `E<library><nnn>`: 1 formats, 2 record, 3 files, 4 runs, 5 checker, 6 claims, 7 core and permissions, 8 front ends. Each error is `{"code","message","rule","field","owner_command","subject"}`; `rule` and `owner_command` are filled for agent refusals. `field` is a JSON Pointer (RFC 6901) into the document the error is about, for example `/ops/1/ties`, and is the same string in both the Rust and the reference implementation. Messages may change; codes never do.
 
 #### 11.13 Reserved fields
 
@@ -900,7 +903,7 @@ Every body is an object whose values use the 11.6 typed-value encoding for table
 | Type (`tv`) | Body keys | Notes |
 | --- | --- | --- |
 | `project.created` (1) | `{"project_id","owner_id","record_format","repo_root_hash"}` | `repo_root_hash` is the SHA-256 of the repository root path string, so a moved checkout is visible |
-| `settings.changed` (1) | `{"key","value","previous"}` | `value` and `previous` are typed values or `null` (unset) |
+| `settings.changed` (1) | `{"key","value","previous"}` | `value` and `previous` are typed values or `null` (unset); a list-valued setting uses the `list` typed value of 11.6, and a `set` replaces the whole list |
 | `file.registered` (1) | `{"file","kind","path","title","description","source"}` | `kind` is `input` in gate A |
 | `file.version_added` (1) | `{"file","version","fingerprint","origin","size","snapshot","content_label","manifest"}` | `origin` is `{"kind":"registered"\|"run"\|"changed_outside_run","run":handle or null}`; `content_label` is one of 6.2's three values or `null` for a first version; `manifest` is the directory manifest object or `null` |
 | `file.checksum_checked` (1) | `{"file","version","algorithm","matched","mismatches"}` | `mismatches` is a list of relative paths |
@@ -913,13 +916,20 @@ Every body is an object whose values use the 11.6 typed-value encoding for table
 | `report.registered` (1) | `{"report","path","spans"}` | `spans` is a list of `{"ref","sentence","line","inline_code","section_kind"}` |
 | `claim.added` (1) | `{"ref","kind","sentence","report","cited","citations","steps","assertion","qualifiers","supersedes"}` | `cited` is a list of version handles; `citations` a list of 11.23 citation objects; `steps` and `assertion` the 11.8 and 11.9 objects or `null`; `supersedes` a ref or `null` |
 | `claim.checked` (1) | `{"ref","revision","against","evidence","assertion","steps","final_rows_hash","key_map_hash","sql","versions","error"}` | `revision` is the event ID of the revision checked; `against` the version handles; `evidence` is `{"outcome","detail"}`; `assertion` is `{"outcome","observed","expected"}` or `null`; `steps` a list of `{"op","rows_out","description"}`; `versions` is `{"parse_specs":{handle:fingerprint},"translator","duckdb","extensions","rules","build"}`, where `build` is `musl` or `glibc`; `error` is `{"code","message"}` or `null`; outcomes are `holds`, `fails`, `not_checkable`, `error` |
-| `claim.revised` (1) | `{"ref","sentence","steps","assertion","qualifiers","reason"}` | `reason` is `update_text` in gate A |
+| `claim.revised` (1) | `{"ref","sentence","cited","citations","steps","assertion","qualifiers","reason"}` | Every revision restates the claim in full, so `cited` and `citations` are present even when unchanged and the fold never reads an earlier revision; `reason` is `update_text` in gate A |
 | `claim.reviewed` (1) | `{"ref","revision","outcome","note","report_fingerprint"}` | `outcome` is `confirmed`, `disputed`, or `question` |
 | `claim.retracted` (1) | `{"ref","reason"}` | |
 | `claim.superseded` (1) | `{"ref","replacement"}` | written in the same batch as the replacement's `claim.added` |
 | `audit.completed` (1) | `{"report_hash","since","counts"}` | `counts` is `{"files_rehashed","mismatches","verdicts_rerun","verdicts_changed","open_flags"}` |
 | `chain.torn_tail_truncated` (1) | `{"segment","offset","bytes"}` | |
 | `lock.taken_over` (1) | `{"previous","epoch"}` | `previous` is `{"host","pid","epoch","heartbeat"}` |
+
+Two objects appear inside several bodies:
+
+| Object | Keys | Notes |
+| --- | --- | --- |
+| `snapshot` | `{"size","mtime","mtime_ns","ctime","ctime_ns","ino"}` | `size`, `mtime_ns`, `ctime_ns`, and `ino` are integers; `mtime` and `ctime` are RFC 3339 UTC strings with their sub-second part in the `_ns` field (11.1). No device number (item 26) |
+| `manifest` | `{"fingerprint","ignore","entries"}` | `entries` is a list of `{"path","snapshot","fingerprint"}` sorted by `path` in 11.10 order; `ignore` is the exclude list actually applied; `fingerprint` is `sha256:` of the canonical JSON of `entries` |
 
 Declared but reserved (not writable in gate A): the `run.`, `session.`, `viewer.`, `journal.`, `draft.`, `receipt.`, `engine.` namespaces and `file.tracked`, `file.retired`, `file.hashing_finished`.
 
@@ -965,7 +975,7 @@ CREATE TABLE flags (subject_kind TEXT NOT NULL, subject TEXT NOT NULL, name TEXT
   since_event TEXT NOT NULL, PRIMARY KEY (subject_kind, subject, name));
 ```
 
-JSON-valued columns (`spec`, `cited`, `citations`, `steps`, `assertion`, `body`, `counts`, `key_tuple`) hold canonical JSON text; `verdicts.body` is the whole `claim.checked` body, so `claims.show` reads SQL, steps, hashes, versions, and error from it. `IndexTx` is a wrapper over one `rusqlite::Transaction` exposing `execute(sql, params)`, `query_rows(sql, params) -> Vec<Row>`, and `head(chain) -> Head`. The Core writes `head`, `events`, `opaque_events`, `settings`, `audits`, and `claim_events`; each library's fold writes its own tables. **Fold contract:** one transaction per main-chain batch; a fold first looks the event ID up in `events` and returns if present, which is the idempotence check, and may otherwise insert or update rows in its tables; a fold never reads the record directory or the working tree; a full rebuild drops every table except `stat_cache` and replays from the first segment. `stat_cache(path TEXT PRIMARY KEY, snapshot TEXT, fingerprint TEXT, confirmed_at TEXT)` lives in the same database but is not rebuildable and is never dropped. `claims.evidence` recomputes per-step rows by re-running the Checker on the parse cache for the pinned versions; `claims.history` reads `claim_events`; `claims.citing_rows` reads `claim_keys`; `audit.last` reads `audits`. `files.list` text search is `LIKE` over `title`, `description`, and `path`; the cited count is `SELECT COUNT(*) FROM claim_cites JOIN file_versions USING (version) WHERE file = ?`.
+JSON-valued columns (`spec`, `cited`, `citations`, `steps`, `assertion`, `body`, `counts`, `key_tuple`) hold canonical JSON text; `verdicts.body` is the whole `claim.checked` body, so `claims.show` reads SQL, steps, hashes, versions, and error from it. `IndexTx` lives in `tm-index` (4.1) and wraps one `rusqlite::Transaction`, exposing `execute(sql, params)`, `query_rows(sql, params) -> Vec<Row>`, and `head(chain) -> Head`; every library's fold and the Core depend on that crate, and no library depends on the Core. The Core writes `head`, `events`, `opaque_events`, `settings`, `audits`, and `claim_events`; each library's fold writes its own tables. **Fold contract:** one transaction per main-chain batch; a fold first looks the event ID up in `events` and returns if present, which is the idempotence check, and may otherwise insert or update rows in its tables; a fold never reads the record directory, the working tree, or an earlier revision of the event's subject; a full rebuild drops every table except `stat_cache` and replays from the first segment. `stat_cache(path TEXT PRIMARY KEY, snapshot TEXT, fingerprint TEXT, confirmed_at TEXT)` lives in the same database but is not rebuildable and is never dropped. `claims.evidence` recomputes per-step rows by re-running the Checker on the parse cache for the pinned versions; `claims.history` reads `claim_events`; `claims.citing_rows` reads `claim_keys`; `audit.last` reads `audits`. `files.list` text search is `LIKE` over `title`, `description`, and `path`; the cited count is `SELECT COUNT(*) FROM claim_cites JOIN file_versions USING (version) WHERE file = ?`.
 
 #### 11.18 Checker semantics
 
@@ -984,13 +994,13 @@ primary  := literal | column | call | "(" expr ")"
 call     := ( "abs" | "log" | "log2" | "log10" | "exp" | "coalesce" ) "(" expr ( "," expr )* ")"
 literal  := INT | DEC | STRING | "true" | "false" | "missing"
 column   := IDENT | "`" any-but-backtick+ "`"
-INT      := "-"? DIGIT+                       (typed value int)
-DEC      := "-"? DIGIT+ "." DIGIT+            (typed value dec; no exponent form)
+INT      := DIGIT+                            (typed value int; unsigned)
+DEC      := DIGIT+ "." DIGIT+                 (typed value dec; unsigned, no exponent form)
 STRING   := '"' ( any-but-quote-or-backslash | "\\" '"' | "\\" "\\" )* '"'
 IDENT    := [A-Za-z_][A-Za-z0-9_]*
 ```
 
-Whitespace between tokens is ignored. `coalesce` takes two or more arguments; every other call takes one.
+Whitespace between tokens is ignored. Literals carry no sign: `-` is always an operator, unary or binary, so `a -5` is `a - 5` and a negative constant is unary minus applied to an unsigned literal. `coalesce` takes two or more arguments; every other call takes one.
 
 ##### 11.18.2 Evaluation rules
 
@@ -998,16 +1008,16 @@ Whitespace between tokens is ignored. `coalesce` takes two or more arguments; ev
 | --- | --- |
 | Where | `filter.where` and `derive.expr` are evaluated in Rust over the Arrow batch with `bigdecimal` (the reference checker uses Python `decimal` with the same context); the relational operations (`sort`, `take`, `rank`, `group`, `join`, `select`) run in DuckDB over the result. The stored SQL covers the relational part and names the derived columns as inputs. |
 | Types | Operands are typed values (11.6). `int` combined with `dec` gives `dec`. `+`, `-`, and `*` on two `int` give `int`; `/` always gives `dec`. Comparisons give `bool`. |
-| Precision | Every `dec` result is rounded to 34 significant digits, half-even, after each operation. |
-| Missing | Any arithmetic or comparison with a `missing` operand is `missing`. `nan` is `missing` for every operator. A `filter` keeps a row only when `where` is `true`; `missing` and `false` drop it. |
+| Precision | Decimal arithmetic follows the General Decimal Arithmetic specification (IEEE 754-2008 decimal) with a context of 34 significant digits and half-even rounding: `bigdecimal` on the Rust side, Python's `decimal` on the reference side, both named in 11.6. Results of `log`, `log2`, `log10`, `exp`, `mean`, and `median` are rounded to 15 significant digits before they become `dec` values (see the `log` family row). |
+| Missing | Any arithmetic or comparison with a `missing` operand is `missing`, and `nan` is `missing` for every operator. `and`, `or`, and `not` are SQL three-valued: `true or missing` is `true`, `false and missing` is `false`, `false or missing` and `true and missing` are `missing`, and `not missing` is `missing`. A `filter` keeps a row only when `where` is `true`; `missing` and `false` drop it. A `where` that evaluates to anything but a boolean or `missing` is `E6004`. |
 | Domain | Division by zero, `log` of a value at or below zero, and `exp` overflow give `missing`, not an error. Decimal overflow beyond 34 digits gives verdict `error` with `E5002`. |
 | Strings | `=` and `!=` compare NFC-normalized bytes. `<`, `<=`, `>`, `>=` on strings use 11.10 binary order. Comparing a string with a number, bool, or date is a validation error `E6004` type mismatch, raised before DuckDB runs. |
 | Dates | `date` and `datetime` compare chronologically; arithmetic on them is `E6004`. |
-| `log` family | `log` is the natural logarithm. `log`, `log2`, `log10`, and `exp` take and return `dec` through IEEE double; these, with `mean` and `median`, are the tolerated last-digit sites (11.6). The tolerance is structural, not a convenience: the Rust side takes them from the `libm` it is linked against (musl's in the static build, the host's in the glibc fallback) and the reference checker takes them from CPython's, so the two can differ in the last bit on the same machine. |
+| `log` family | `log` is the natural logarithm, translated to DuckDB `ln` where DuckDB sees it. `log`, `log2`, `log10`, and `exp` take and return `dec` through IEEE double, as do `mean` and `median`. These six are the only places two conforming implementations may differ, because the Rust side takes them from the `libm` it is linked against (musl's in the static build, the host's in the glibc fallback) and the reference checker takes them from CPython's, which can differ in the last bit on one machine. The difference is absorbed rather than tolerated: every result of these six is rounded to 15 significant digits before it becomes a `dec`, which is below the 16 to 17 digits at which a one-unit-in-the-last-place difference appears, so `final_rows_hash` is comparable for every pipeline and there is one comparison rule. A claim therefore cannot assert the 16th significant digit of a logarithm or a mean. |
 | `sort` | `by` entries apply in order; `missing` rows go first or last per `missing`; the table key is appended ascending as the final tie-breaker. |
 | `take` | Keeps the first `n` rows of the current total order; requires a preceding `sort` or `rank`. |
 | `rank` | `scope: all` ranks the whole table; `scope: group` requires `group_by` (a non-empty column list) and ranks within each group. `missing: first` or `last` assigns ranks as if sorted that way; `missing: exclude` drops rows whose `by` value is missing. `ties: min`, `max`, and `dense` follow SQL `RANK`, inverse `RANK`, and `DENSE_RANK`; `ordinal` is `ROW_NUMBER` ordered by `by` then the key. The rank column is named `rank` and the table order becomes rank ascending then key. |
-| `group` | Output rows are one per distinct `by` tuple, ordered by the tuple in sort order. Output columns: the `by` columns, each aggregate under its `as`, `member_count` (int), and `member_keys_hash` (`sha256:` of the canonical JSON list of the members' key tuples sorted in 11.10 order). `count` counts every member, missing included; `sum`, `min`, and `max` ignore missing and give `missing` when every member is missing; `mean` and `median` are DuckDB `DOUBLE` converted to `dec` by the shortest round-trip string. The output key is the `by` tuple. |
+| `group` | Output rows are one per distinct `by` tuple, ordered by the tuple in sort order. Output columns: the `by` columns, each aggregate under its `as`, `member_count` (int), and `member_keys_hash` (`sha256:` of the canonical JSON list of the members' key tuples sorted in 11.10 order). `count` counts every member, missing included; `sum`, `min`, and `max` ignore missing and give `missing` when every member is missing; `mean` and `median` are DuckDB `DOUBLE` rounded to 15 significant digits and converted to `dec` per 11.6. The output key is the `by` tuple. |
 | `join` | `on` pairs left columns with right columns; both sides must be keyed and the pairs must cover the right key. Right columns are added with the prefix `<right>.`. `inner` drops unmatched left rows; `left` keeps them with `missing`. The output key is the left key. |
 | `select` | Keeps the listed columns and the key columns. |
 | Key mapping | Each final row carries the input key tuple(s) it derives from: the left key for joins, the `by` tuple for groups, the row key otherwise. `key_map_hash` is `sha256:` of the canonical JSON list of those tuples in final-row order. |
@@ -1030,7 +1040,7 @@ Whitespace between tokens is ignored. `coalesce` takes two or more arguments; ev
 
 ##### 11.18.4 Description templates
 
-One sentence per step, produced by the Checker and reproduced byte for byte by the reference checker. Placeholder renderings: `{n}`, `{m}`, and `{k}` are integers with `,` as the thousands separator; `{expr}` is the parsed expression re-serialized with one space around every binary operator, no space inside calls or parentheses, column names as written (backticks kept only where required), and literals as written; `{cols}` and every other list is comma-separated with `, and ` before the last item when there are three or more and ` and ` for two; `{dir}` is `ascending` or `descending`; `{missing}` is `placed first`, `placed last`, or `excluded`; `{ties}` is the `ties` value as written (`min`, `max`, `dense`, `ordinal`); `{scope}` is `all rows` or `each {group_by}`; `{key}` is the table key column list; `{fn}` is the aggregate name as written; `{right}` is the right table's name as registered.
+One sentence per step, produced by the Checker and reproduced byte for byte by the reference checker. Placeholder renderings: `{n}`, `{m}`, and `{k}` are integers with `,` as the thousands separator; `{expr}` is the parsed expression re-serialized from the parse tree, never echoed from the author's text: one space around every binary operator and around `and` and `or`, one space after `not`, no space after unary `-`, no space inside parentheses, one space after each comma in a call, column names as written with backticks kept only where the grammar requires them, literals as written, and parentheses emitted only where precedence requires them; `{cols}` and every other list is comma-separated with `, and ` before the last item when there are three or more and ` and ` for two; `{dir}` is `ascending` or `descending`; `{missing}` is `placed first`, `placed last`, or `excluded`; `{ties}` is the `ties` value as written (`min`, `max`, `dense`, `ordinal`); `{scope}` is `all rows` or `each {group_by}`; `{key}` is the table key column list; `{fn}` is the aggregate name as written; `{right}` is the right table's name as registered.
 
 | Op | Template |
 | --- | --- |
@@ -1221,7 +1231,7 @@ Each alternative lists what it would have given (for), what it costs (against), 
 | Tables cited by cells have a unique single or composite key | The parse spec is refused and the table is citable only as a whole file |
 | The record directory is on a filesystem compute nodes can see | Receipts go to the project inbox and are read in later |
 | The owner fetches agent session branches from the reported clone path, merges them with git, and removes the clone | Report text from agents stays on the session branch; claims can still be promoted |
-| DuckDB builds and runs under musl | Confirmed in the P0 spike (DuckDB 2.0.0, bundled, under musl with mimalloc and an 8 MiB stack; `ln`, `exp`, and `avg` bit-identical to the glibc builds). Fallback is the `cargo-zigbuild` glibc 2.17 target; cross-machine maths differences are possible there because `log` and `exp` come from the host's `libm`, and `tm audit` on each machine reports any verdict that differs from the stored one |
+| DuckDB builds and runs under musl | Confirmed in the P0 spike (DuckDB 2.0.0, bundled, under musl with mimalloc and an 8 MiB stack; `ln`, `exp`, and `avg` bit-identical to a dynamically linked glibc 2.17 build run on CentOS 7, and identical between hosts for the static build). Fallback is the `cargo-zigbuild` glibc 2.17 target; cross-machine maths differences are possible there because `log` and `exp` come from the host's `libm`, and `tm audit` on each machine reports any verdict that differs from the stored one |
 
 ### Risks
 
@@ -1273,7 +1283,7 @@ Shorthand used in the Reason and Replaces columns: B1 to B6 are the blockers and
 | D18 | Static view early and permanent; live viewer last | Settled | Evidence must be readable before the viewer exists; unreliable networks | Live viewer only |
 | D19 | Hashing tiers: stat-only routine checks with a small-file threshold; `tm run` hashes only new or changed entries; `tm audit` hashes everything; one thread in batch jobs; bandwidth cap | Settled | A one-file rerun must not re-hash a 500 GB folder | Full hash on every run output; I/O priority |
 | D20 | Build gates A (record, checker, claims, static view, audit), B (agents), C (runs and staleness), D (live viewer) | Settled | Agents are tested before cluster machinery; each gate is usable alone | Summary's six-stage order |
-| D21 | Python reference checker kept, built at gate A by a separate agent session from the spec alone; last-digit tolerance for `log`, `exp`, `mean`, and `median` | Settled | Only independent check on the Checker's meaning | Deferring it |
+| D21 | Python reference checker kept, built at gate A by a separate agent session from the spec alone; the six IEEE-double functions are reconciled by 11.6's 15-significant-digit rounding rather than by a comparison tolerance, so the differential suite expects exact equality | Settled | Only independent check on the Checker's meaning | Deferring it |
 | D22 | Staleness belongs to an analysis with plain reasons; identical content (bytes, keyed table, decompressed content) stops the spread; command templates; hand edits are new versions automatically; failed runs do not make outputs current; lineage per version | Settled | Staleness noise from compressed outputs and run-specific command values | Staleness per run; separate file accept |
 | D23 | Agents outside agentbox get `tm session start --unisolated --harness NAME`; owner actions record terminal interactivity; a known harness variable triggers confirmation and a label | Settled | Unisolated is the likely cluster default; visibility, not prevention | Undetected unisolated agents |
 | D24 | DuckDB pinned exactly with a lock file; extensions locked; static musl build with a faster allocator; glibc 2.17 fallback; smoke tests on CentOS 7, Rocky 8 and 9; musl spike first. Outcome recorded in `docs/decisions/musl-spike.md` (2026-11-10): musl confirmed, fallback built with `cargo-zigbuild`, no `libstdc++` | Settled | Cross-machine verdicts must match | Tilde pin, glibc build |
@@ -1370,7 +1380,7 @@ One static musl binary per architecture (x86_64 first), with mimalloc as the glo
 
 ### Determinism
 
-DuckDB pinned to an exact version with a committed lock file; extension auto-install and auto-load off; Parquet compiled in; one DuckDB thread per check; stable sort with the key as the last tie-breaker; explicit null placement and binary collation in every generated SQL; decimal arithmetic in `derive` except `log` and `exp`. The static musl binary carries its own `libm`, so `log` and `exp` are reproducible across machines for that build; the glibc fallback takes them from the host's `libm`, and glibc before 2.28 uses a different implementation, so last-bit differences are possible there (none appeared for the P0 spike's inputs). Every verdict records parse-spec fingerprint, translator version, DuckDB version, loaded extensions, rule version, and build flavour (`musl` or `glibc`). A DuckDB upgrade, a checker upgrade, or a change of build flavour is a deliberate `tm upgrade` followed by a changed-verdict report, and `tm audit` after it.
+DuckDB pinned to an exact version with a committed lock file; extension auto-install and auto-load off; Parquet compiled in; one DuckDB thread per check; stable sort with the key as the last tie-breaker; explicit null placement and binary collation in every generated SQL; decimal arithmetic in `derive` except `log` and `exp`. The static musl binary carries its own `libm`, so `log` and `exp` are reproducible across machines for that build; the glibc fallback takes them from the host's `libm`. Measured on 2026-11-10 against glibc 2.17 on CentOS 7, DuckDB's `ln`, `exp`, and `avg` over DECIMAL and DOUBLE were bit-identical to the musl build; glibc 2.28 and later use a different implementation and have not been compared, which is why 11.6 rounds every result of `log`, `log2`, `log10`, `exp`, `mean`, and `median` to 15 significant digits: that is below the digit at which a one-unit-in-the-last-place difference shows, so the reference checker, which takes these functions from CPython's `libm`, produces the same strings and the same hashes. Every verdict records parse-spec fingerprint, translator version, DuckDB version, loaded extensions, rule version, and build flavour (`musl` or `glibc`). A DuckDB upgrade, a checker upgrade, or a change of build flavour is a deliberate `tm upgrade` followed by a changed-verdict report, and `tm audit` after it.
 
 ### Security and privacy
 
@@ -1403,10 +1413,10 @@ Each phase ends when its checkpoint command passes on CI. No phase starts before
 | --- | --- | --- |
 | P0 | Items 1-10: workspace, toolchain, CI and release workflows and scripts (jobs whose inputs do not exist yet are no-ops until their phase), spike, decision record | First, `spike/musl-duckdb` runs its fixed query under musl on CI; then one change lands item 10 (`docs/decisions/musl-spike.md` with the chosen build path), deletes the spike, and updates item 1's `mimalloc` and target settings to match |
 | P1 | Items 11-25, 88, 90, 93 (`formats.md`), 94: `tm-formats`, conformance cases, Python formats cross-check, generated error catalog | `cargo test -p tm-formats` and `python3 reference/formats/test_formats.py` pass with identical hashes for every case |
-| P2 | Items 26-42 (including 26a), 93 (`record.md`): `tm-fsfacts`, `tm-duckdb`, `tm-record`, record conformance | `cargo test -p tm-fsfacts -p tm-record` passes; every tampering case in `conformance/record/tamper/` is reported by name |
+| P2 | Items 26-42 (including 26a, 26b, 30a), 91, 93 (`record.md`): `tm-fsfacts`, `tm-duckdb`, `tm-index`, `tm-record`, record conformance | `cargo test -p tm-fsfacts -p tm-record` passes; every tampering case in `conformance/record/tamper/` is reported by name |
 | P3 | Items 43-52, 82a: `tm-owner-cap`, `tm-files`, the workspace fixture tables | `cargo test -p tm-files` passes on `fixtures/` |
 | P4 | Items 53-62, 92, 93 (`checker.md`): `tm-checker`, hand-checked cases, snapshots, properties, fuzz targets; owner review of `checker.md` | `cargo test -p tm-checker` passes; `cargo insta test -p tm-checker` reports no pending snapshots; owner has signed off `docs/spec/checker.md` (recorded in `docs/decisions/checker-spec-review.md`) |
-| P5 | Items 87 and 89: Python reference checker by a separate agent session from `checker.md` and the conformance cases only; generator and differential script | `python3 reference/checker/refcheck.py conformance/checker` matches every expected file; `python3 reference/checker/validate.py conformance/formats/steps/invalid conformance/formats/assertions` rejects every invalid case with the named code and field; `scripts/differential.sh 10000` reports no difference outside the tolerance list on both runner classes |
+| P5 | Items 87 and 89: Python reference checker by a separate agent session from `checker.md` and the conformance cases only; generator and differential script | `python3 reference/checker/refcheck.py conformance/checker` matches every expected file; `python3 reference/checker/validate.py conformance/formats/steps/invalid conformance/formats/assertions` rejects every invalid case with the named code and field; `scripts/differential.sh 10000` reports no difference in any field on both runner classes |
 | P6 | Items 63-71, 93 (`claims.md`): `tm-claims` | `cargo test -p tm-claims` passes, including the span fixtures |
 | P7 | Items 72-78, 80, 81: `tm-core` without the view | `cargo test -p tm-core` unit tests pass; `scripts/ci/bench-index.sh` under 60 s |
 | P8 | Items 79, 82-86, 95-97: static view, CLI, scenarios, docs, smoke | `cargo test -p tm-core --test scenarios` and `cargo test -p tm-cli` pass; `scripts/ci/smoke.sh` passes on the three distributions; the owner has re-derived one paper's claims (item 82's acceptance checklist signed) |
@@ -1458,6 +1468,10 @@ Each phase ends when its checkpoint command passes on CI. No phase starts before
 #### 2a. `crates/tm-duckdb/` (DuckDB engine, shared)
 
 26a. `src/lib.rs`. `open(settings: EngineSettings) -> Engine`; `Engine::register_arrow(name, batch)`, `Engine::query(sql) -> RecordBatch`, `Engine::facts() -> {version, extensions}`; settings applied on open: `threads=1`, `memory_limit`, `temp_directory`, `autoinstall_known_extensions=false`, `autoload_known_extensions=false`, each set both in the `Config` the connection is created from and by a `SET` statement afterwards, because DuckDB's bundled build defaults both to on (P0); a per-call `interrupt` timer from `checker.call_seconds`; `facts()` also reports the build flavour (`musl` or `glibc`) for the verdict's `versions` block; the `duckdb` dependency lives only here. Rationale: 4.1; rule 1 (libraries never call each other); D24.
+
+#### 2b. `crates/tm-index/` (index transaction, shared)
+
+26b. `src/lib.rs`. `IndexTx` over `rusqlite::Transaction` with `execute(sql, params)`, `query_rows(sql, params) -> Vec<Row>`, and `head(chain) -> Head`; the `Param` and `Row` types the folds pass and receive; the `rusqlite` dependency lives only here. Rationale: rule 6 gives every library a fold signature naming this type, and no library may depend on the Core (rule 1).
 
 #### 3. `crates/tm-record/` (Record library)
 
@@ -1520,7 +1534,7 @@ Each phase ends when its checkpoint command passes on CI. No phase starts before
 73. `src/project.rs`. Per-command resolution: read `.toulmin/project.json`, read the binding under `~/.config/toulmin/projects/`, open `record.json`, cross-check IDs (`E2004`, `E2005`). Rationale: OQ6.
 74. `src/ops/mod.rs` and one file per gate A operation: `project_init.rs`, `settings_set.rs` (also `show` and `unset`), `read_in.rs` (gate A: scans nothing; the entry point exists so every locked command has one path), `file_register.rs`, `file_hash.rs` (the explicit hash step behind `--defer-hash`), `table_spec.rs`, `file_attrs.rs`, `file_panels.rs`, `claim_add.rs`, `claim_check.rs`, `claim_review.rs`, `claim_update_text.rs`, `claim_retract.rs`, `claim_supersede.rs`, `report_add.rs`, `report_check.rs`, `view_export.rs`, `apply.rs` (gate A: `claim.review` items only; `E8102` for others), `audit.rs`, `lock.rs`, `doctor.rs`, `status.rs`. Rationale: section 9, one file per row.
 75. `src/batch.rs`. Batch assembly per 11.21: a queued `chain.torn_tail_truncated` first, then the command's events; `seq`, `prev`, `batch`, `epoch`, IDs; hand-off to `tm-record::append` with the `&OwnerCap`. Rationale: all-or-nothing writes.
-76. `src/index/mod.rs`, `src/index/schema.sql` (the 11.17 text), `src/index/apply.rs` (runs the folds and writes the Core-owned tables `head`, `events`, `opaque_events`, `settings`, `audits`, `claim_events`), `src/index/locate.rs` (path resolution order of 3.4, `PRAGMA integrity_check`, rebuild trigger). Rationale: 11.17; 3.4.
+76. `src/index/mod.rs` (opens the database and hands `tm-index`'s `IndexTx` to each fold; it does not define the type), `src/index/schema.sql` (the 11.17 text), `src/index/apply.rs` (runs the folds and writes the Core-owned tables `head`, `events`, `opaque_events`, `settings`, `audits`, `claim_events`), `src/index/locate.rs` (path resolution order of 3.4, `PRAGMA integrity_check`, rebuild trigger). Rationale: 11.17; 3.4.
 77. `src/stat_cache.rs`. The node-local stat cache of 3.4: the `stat_cache` table defined in 11.17, excluded from rebuilds; `tm status` writes `file.version_added` with origin `changed_outside_run` for a registered input whose confirmed fingerprint differs from disk (6.2, CUJ 7). Rationale: 3.4.
 78. `src/read/mod.rs` and one file per gate A query family: `files.rs` (including `files.lineage`), `claims.rs`, `reports.rs`, `flags.rs` (scan-derived flags per item 66), `settings.rs`, `audit.rs`, `checker.rs`. Typed parameters and results; every function has a `--json` rendering. Rationale: G9.
 79. `src/view/mod.rs`, `src/view/pages.rs`, `src/view/templates/{index,report,claim,file,flags,audit}.html`, `src/view/static/style.css`, `src/view/static/actions.js`, `src/view/actions.rs`. Per 11.20. Rationale: D18; 11.20.
@@ -1541,7 +1555,7 @@ Each phase ends when its checkpoint command passes on CI. No phase starts before
 
 87. `reference/checker/README.md`, `refcheck.py`, `typed_values.py`, `ops.py`, `assertion.py`, `describe.py`, `validate.py` (step and assertion schema validation emitting code and field, for G2). Plain Python 3, standard library plus `reference/formats/canonical_json.py` (needed for the three hashes in 11.18.2), written by a separate agent session from `docs/spec/checker.md` and the conformance cases' inputs only. `expected.json` files are written by hand (or by a third script from the spec) before either checker runs, never by the Rust Checker. When the two checkers differ on a case, the difference is recorded in `docs/decisions/checker-diffs.md` and ruled against `checker.md`; the implementation that disagrees with the spec is fixed, and the spec is amended only through that record. Rationale: D21.
 88. `reference/formats/canonical_json.py`, `ids.py`, `test_formats.py` (standard library `unittest`, run as `python3 reference/formats/test_formats.py`). Rationale: 11.1 cross-check.
-89. `scripts/differential.sh` and `crates/tm-checker/examples/gencases.rs`. The Rust generator (owned by the Rust side, not the Python session) writes N cases covering every op, every type, missing and NaN values, ties, composite keys, and both join kinds; the script runs `examples/refcheck.rs` and `refcheck.py` on each, compares with the tolerance list in `reference/checker/tolerance.json` (`log`, `exp`, `mean`, `median`), and reports differences as a table. The CI job runs it on two named runner classes of different CPU generations. Rationale: G14; 11.18.2.
+89. `scripts/differential.sh` and `crates/tm-checker/examples/gencases.rs`. The Rust generator (owned by the Rust side, not the Python session) writes N cases covering every op, every type, missing and NaN values, ties, composite keys, and both join kinds; the script runs `examples/refcheck.rs` and `refcheck.py` on each, compares every field including `final_rows_hash` (11.6's 15-significant-digit rounding removes the libm difference, so no tolerance file exists), and reports differences as a table. The CI job runs it on two named runner classes of different CPU generations. Rationale: G14; 11.18.2.
 
 #### 11. Conformance cases and specifications
 
@@ -1568,7 +1582,7 @@ Each phase ends when its checkpoint command passes on CI. No phase starts before
 | Conformance: record | Chains, packing, every item 41 tampering case | `cargo test -p tm-record --test record_conformance` | Each tampering case reported by its name; untouched chains verify clean |
 | Conformance: checker | 60 or more hand-checked cases | `cargo test -p tm-checker --test conformance`; `python3 reference/checker/refcheck.py conformance/checker` | Identical per-step counts, final rows, descriptions, and verdicts in both |
 | Property and metamorphic | The five item 60 properties | `cargo test -p tm-checker --test property` | 1,000 cases per property, no failures |
-| Differential | Rust Checker against the Python reference | `scripts/differential.sh 10000` | No difference outside `reference/checker/tolerance.json` |
+| Differential | Rust Checker against the Python reference | `scripts/differential.sh 10000` | No difference in any field, including `final_rows_hash`. The six IEEE-double functions are reconciled by the 15-significant-digit rounding in 11.6, not by a comparison tolerance, so there is no tolerance file and any difference is a defect |
 | Snapshot | Generated SQL per conformance case | `cargo insta test -p tm-checker` | `cargo insta` reports no pending snapshots |
 | Fuzzing | Steps JSON, expression grammar, CSV parsing | from `crates/tm-checker/`: `cargo +nightly fuzz run steps_json`, `derive_expr`, and `csv_parse`, each with `-- -max_total_time=600`, scheduled job | No crash, hang, or panic in 600 s per target |
 | Unit | Unit tests in every crate | `cargo test --workspace` | All tests pass |
