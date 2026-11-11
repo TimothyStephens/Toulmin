@@ -1,8 +1,8 @@
 {
   "description": "a valid report.registered line",
-  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"path\":\"report/paper.md\",\"report\":\"R1\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"report.registered\",\"id\":\"sha256:56b4a21ac845ee9af42380a6428c43387ef0d9ad3018eb8836da6c651d6996ea\"}",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"path\":\"report/paper.md\",\"report\":\"T1\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"report.registered\",\"id\":\"sha256:0e523ce2768573d4a5ecd7f4621806b07c4320ebdacd976440789a45771d14fd\"}",
   "expect": {
-    "id": "sha256:56b4a21ac845ee9af42380a6428c43387ef0d9ad3018eb8836da6c651d6996ea",
+    "id": "sha256:0e523ce2768573d4a5ecd7f4621806b07c4320ebdacd976440789a45771d14fd",
     "type": "report.registered",
     "event": "known"
   }

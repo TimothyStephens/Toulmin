@@ -300,7 +300,7 @@ pub(crate) fn check(v: &Value, form: &Form, at: &str) -> Result<(), Error> {
         Form::Report => s
             .and_then(ReportHandle::parse)
             .map(|_| ())
-            .ok_or_else(|| e(at, "a report handle R<n>")),
+            .ok_or_else(|| e(at, "a report handle T<n>")),
         Form::Version => s
             .and_then(VersionHandle::parse)
             .map(|_| ())

@@ -1,0 +1,20 @@
+{
+  "description": "rank of an absent row fails",
+  "input": {
+    "assert": 1,
+    "kind": "rank",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "expected": {
+      "t": "int",
+      "v": "1"
+    }
+  },
+  "observed": {
+    "position": null
+  }
+}

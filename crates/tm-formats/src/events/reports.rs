@@ -1,4 +1,4 @@
-//! `report.` events (11.16). `report` is the `R<n>` handle `report.add`
+//! `report.` events (11.16). `report` is the `T<n>` handle `report.add`
 //! allocates; `path` the report's repository-relative path.
 
 use super::{EventType, Form, TypeDef};

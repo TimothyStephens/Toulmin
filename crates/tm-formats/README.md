@@ -7,7 +7,7 @@ optional `TM_ERROR_LOG` append when an error is constructed.
 | Module | Design | What |
 | --- | --- | --- |
 | `canonical` | 11.1 | Strict I-JSON reader and RFC 8785 serializer; `E1001`, `E1003` |
-| `id` | 11.2, 11.16 | `sha256:` IDs, genesis strings, `F<n>`, `F<n>@v<m>`, `C<n>`, `R<n>` handles |
+| `id` | 11.2, 11.16 | `sha256:` IDs, genesis strings, `F<n>`, `F<n>@v<m>`, `C<n>`, `S<n>.<m>`, `T<n>` handles |
 | `envelope` | 11.2, 11.11 | Envelope validation, the line form with `id` appended; `E1002` |
 | `events` | 11.16 | The closed gate A event type set and each body's schema |
 | `typed_value` | 11.6 | Typed values, their lexical rules (`E1004`), IEEE-double conversions, Arrow mapping (item 47) |
@@ -51,11 +51,11 @@ applies).
 | `parse_spec/` | `input`: an 11.7 spec; optionally `header`: a file's column names | `{"valid": true, "fingerprint"}`; with `header`, `{"valid": true}` or `{"code","field"}` from the header check; or `{"code","field"}` |
 | `citations/` | `case: "json"` with `input` an 11.23 object; or `case: "cli"` with `input` the CLI spelling and `spec` a parse spec or `null` | `json`: `{"valid": true}` (the object round-trips) or `{"code","field"}`; `cli`: `{"citation": <object>}` or `{"code": "E6007", "field": null}` |
 | `assertions/schema/` | `input`: an assertion; optionally `table`: `{"columns": [[name, type], ...], "key": [names]}`, the final table's schema | `{"valid": true}` or `{"code","field"}`; with `table`, the 11.9 schema check runs after the shape check |
-| `conformance/checker/assertions/eval/` (item 92, not read by this crate's tests) | `input`: an assertion; `observed` | `{"outcome"}` or `{"code","field"}` |
+| `conformance/checker/assertions/eval/<name>/` (item 92, not read by this crate's tests) | `case.json`: `description`, `input` (an assertion), `observed` | `observed.p1.json`: `{"outcome"}` or `{"code","field"}`, the P1 Rust outcome, kept for comparison only; `expected.json` is written at P4 by the independent session |
 
 The `eval/` cases are the 11.18.3 rules, a Checker fact frozen at P4 by
-`tm-checker`'s conformance test; they are generated beside the schema
-cases and share this format. `observed` is what the Checker located: `{"cell": <typed value or null>}`
+`tm-checker`'s conformance test against `expected.json`, never against
+`observed.p1.json`. `observed` is what the Checker located: `{"cell": <typed value or null>}`
 for `value`, `{"position": <int or null>}` for `rank`, `{"count": <int>}`
 for `count`, `{"left","right"}` (typed values or `null`) for
 `compare_rows`, `{"present": <bool>}` for `exists`; `null` means the row is

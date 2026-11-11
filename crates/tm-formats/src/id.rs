@@ -164,26 +164,26 @@ impl fmt::Display for ClaimRef {
     }
 }
 
-/// `R<n>`, a report handle (11.16), allocated by `report.add`.
+/// `T<n>`, a report handle (11.16), allocated by `report.add`. `R<n>` is
+/// a run handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ReportHandle(pub u64);
 
 impl ReportHandle {
-    /// Parse `R<n>`.
+    /// Parse `T<n>`.
     #[must_use]
     pub fn parse(s: &str) -> Option<ReportHandle> {
-        number_after(s, 'R').map(ReportHandle)
+        number_after(s, 'T').map(ReportHandle)
     }
 }
 
 impl fmt::Display for ReportHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "R{}", self.0)
+        write!(f, "T{}", self.0)
     }
 }
 
-/// True for a run handle `R<n>` (11.16's `origin.run`). The design spells
-/// run handles and report handles alike; the field tells them apart.
+/// True for a run handle `R<n>` (11.16's `origin.run`).
 #[must_use]
 pub fn is_run_handle(s: &str) -> bool {
     number_after(s, 'R').is_some()
@@ -206,9 +206,10 @@ mod tests {
             assert!(ClaimRef::parse(bad).is_none(), "{bad}");
         }
         assert!(is_run_handle("R12"));
-        assert_eq!(ReportHandle::parse("R3").unwrap().to_string(), "R3");
+        assert_eq!(ReportHandle::parse("T3").unwrap().to_string(), "T3");
         assert!(ReportHandle::parse("paper.md").is_none());
-        assert!(ReportHandle::parse("R0").is_none());
+        assert!(ReportHandle::parse("R3").is_none());
+        assert!(ReportHandle::parse("T0").is_none());
     }
 
     #[test]

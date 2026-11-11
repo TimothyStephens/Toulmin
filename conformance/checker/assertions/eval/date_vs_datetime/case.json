@@ -1,0 +1,25 @@
+{
+  "description": "a datetime cell against a date expected",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "d",
+    "op": "eq",
+    "expected": {
+      "t": "date",
+      "v": "2026-11-09"
+    }
+  },
+  "observed": {
+    "cell": {
+      "t": "datetime",
+      "v": "2026-11-09T00:00:00Z"
+    }
+  }
+}

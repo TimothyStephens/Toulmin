@@ -1,0 +1,15 @@
+{
+  "description": "count ge",
+  "input": {
+    "assert": 1,
+    "kind": "count",
+    "op": "ge",
+    "expected": {
+      "t": "int",
+      "v": "10"
+    }
+  },
+  "observed": {
+    "count": 10
+  }
+}

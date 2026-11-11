@@ -1,0 +1,40 @@
+{
+  "description": "compare_rows takes its margin from the right cell",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "x"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "MDM2"
+        }
+      ],
+      "column": "x"
+    },
+    "op": "eq",
+    "tol": {
+      "abs": "0",
+      "rel": "0.1"
+    }
+  },
+  "observed": {
+    "left": {
+      "t": "dec",
+      "v": "10.9"
+    },
+    "right": {
+      "t": "dec",
+      "v": "10"
+    }
+  }
+}
