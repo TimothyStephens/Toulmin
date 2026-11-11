@@ -201,6 +201,11 @@ one namespace the CLI and the view pages address by handle alone. Applied
 as ruled; the collision is reported for a one-letter decision before P6
 builds `report.add`.
 
+**Ruling, 2026-11-11.** The owner changed the report handle to `T<n>`;
+`R<n>` stays the run handle. 11.16, section 9's `report.add` row, 11.20's
+page path (`reports/T<n>.html`), `ReportHandle`, and the `report.registered`
+and `claim.added` cases now carry `T<n>`.
+
 ## 2026-11-11 P1 review: assertion cases split into schema and eval (M5)
 
 **What.** `conformance/formats/assertions/` holds only
@@ -214,6 +219,13 @@ P5 row, and the two Verification Plan conformance rows say so.
 **Why.** Owner's ruling on the review: an assertion's outcome is a
 Checker fact, and P1 does not freeze 11.18.3. The `evaluate` function and
 its unit tests stay in `assertion.rs` (item 18), unchanged.
+
+**Layout, 2026-11-11 (owner).** Each eval case is a directory
+`eval/<name>/` with `case.json` (the assertion and `observed`) and
+`observed.p1.json` (the outcome or error the P1 Rust side gave). P4's
+independent session writes `expected.json` from `checker.md` and
+`case.json` only, so it cannot mistake P1's outcome for the expectation;
+`observed.p1.json` is kept only for comparison. Item 92 states this.
 
 ## 2026-11-11 P1 review: integer range is plus or minus 2^53-1 (N1)
 
