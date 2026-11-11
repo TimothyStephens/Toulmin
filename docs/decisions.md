@@ -359,3 +359,144 @@ does not require, and `field` already locates each fault; N6 needs no
 change (noted: `E6006` is taken); N11, because changing ID derivation is
 a `record.json` `hash_alg` change, not an envelope version change, and a
 line's ID must be checkable to chain `prev`.
+
+## 2026-11-11 P2: everything beyond `HEAD.offset` is a torn tail
+
+**What.** 3.1 said a torn tail is a batch beyond `HEAD.offset` whose
+declared length is not satisfied or whose hash does not match, which left
+a complete, valid batch beyond `HEAD.offset` undefined. 3.1 now says
+`HEAD` is the commit point (11.21 step 3) and every byte beyond
+`HEAD.offset` is uncommitted and is truncated as a torn tail at lock
+time; `HEAD.offset` beyond the segment's end or inside a batch is
+corruption (`head_offset_mismatch`), never truncated.
+
+**Why.** A crash between 11.21's step 2 (segment synced) and step 3
+(`HEAD` renamed) leaves exactly that state, and the command that wrote
+it never finished, so its batch was never acknowledged. Treating it as a
+fork would wedge the record after an ordinary crash; truncating it is
+the rollback the write sequence implies.
+
+## 2026-11-11 P2: fencing compares `HEAD.epoch` for equality, and re-reads the lock before the `HEAD` rename
+
+**What.** 3.1's pre-append check refuses when `HEAD.epoch` differs from
+the writer's own epoch, not only when it is higher. 11.21 step 3 gains a
+re-read of `main/lock` immediately before the rename: a lock file that
+is absent or carries another epoch stops the writer with `E2102`.
+
+**Why.** A writer wrote its own epoch to `HEAD` when it took the lock, so
+any other value there is another writer's. The lock re-read closes the
+window in which a holder paused after step 2 wakes after a takeover and
+renames a stale `HEAD` over the new holder's: the new holder has by then
+truncated the paused writer's batch as a torn tail, and the stale `HEAD`
+would point into it.
+
+## 2026-11-11 P2: segment numbering, canonical small files, the initial `HEAD`, and event positions
+
+**What.** 11.3 now states what the record conformance chains freeze:
+segments are numbered from `000001`; batch headers are canonical JSON
+with `b` from 1 and the writer's epoch; `HEAD`, `lock`, and
+`record.json` are canonical JSON plus one newline; `project.init` writes
+`HEAD` as seq 0, segment 1, offset 0, `last_id` the main chain's genesis
+string, batch 0, epoch 0; the lock file's field forms; a record whose
+`format` is above the binary's opens read-only. An event's position is
+`(segment, offset)` with `offset` the byte offset of its line in the
+segment's uncompressed bytes; 11.17 says `events.segment` and
+`events.offset` hold it, and 11.21 that packed offsets are uncompressed
+offsets.
+
+**Why.** Each of these is a byte in a frozen fixture or a column the Core
+will fill, and none had one stated encoding. The genesis string as the
+initial `last_id` removes a special case from the first append.
+
+## 2026-11-11 P2: the Record never reads the index (plan-M5; runbook section 6)
+
+**What.** Item 37 no longer has `scan.rs` resolve an event ID "via the
+index's `events` table". The Record reads by position and scans linearly
+by ID; the Core resolves an ID to a position through `events` and asks
+the Record for that position. 11.17 states the same from the index side.
+
+**Why.** The readiness report's plan-M5 and the runbook's first section 6
+row: a Record that reads the Core's index inverts the crate graph (rule
+6, rule 1). The fix is the one the runbook names.
+
+## 2026-11-11 P2: `verdict_data_changed` leaves `conformance/record/tamper/` (plan-M1; runbook section 6)
+
+**What.** Item 41 lists eight tampering cases; `verdict_data_changed` is
+item 82's `audit_tampering.rs` case only, where item 82 already lists it.
+
+**Why.** `tm-record` cannot detect a changed verdict's data: the chain
+and the objects verify clean, and only the Checker's re-run sees the
+difference. A Record conformance case for it could never pass.
+
+## 2026-11-11 P2: verification reports a list of findings, with `head_field_mismatch` and a fixed check order
+
+**What.** Item 38's `VerifyReport` enum is a list of `Finding`s, one
+variant per item 41 case plus `head_field_mismatch` for a `HEAD` whose
+`seq`, `last_id`, `batch`, or `segment` disagrees with the committed
+events; an empty list is clean. Within a batch the checks run line count,
+line IDs, payload hash, then links, and the first failure names the
+finding.
+
+**Why.** One record can carry several faults and `tm audit` should list
+them all; a fixed order is what makes each tampering case report one
+name rather than whichever check happened to run first. `HEAD`'s other
+fields had no finding to land in.
+
+## 2026-11-11 P2: manifest walk rules, exclude pattern grammar, and a directory version's `size`
+
+**What.** Item 28 states what a manifest walk includes (regular files;
+subdirectories walked; symbolic links, sockets, pipes, and devices are
+not entries), the entry path form (relative, `/`-separated, NFC, UTF-8
+or `E3003`), the exclude pattern grammar (trailing `/` names a directory
+anywhere; no `/` matches the final component; `/` elsewhere matches the
+whole relative path; `*`, `?`, `[...]`, and `\` as in a shell glob), and
+that a directory version's `size` is the sum of its entries' sizes.
+
+**Why.** The `manifest.ignore` default (`.snakemake/`, `*.swp`) implies
+these rules without stating them, and two implementers would otherwise
+produce two entry sets for one directory. Links are left out so a cycle
+cannot occur and a manifest describes what the directory holds. The
+manifest fingerprint itself is not decided here: see the P2 report's
+collision on decision 10.
+
+## 2026-11-11 P2: `hashing.trust_ctime` has git's meaning; the re-hash decision is stated
+
+**What.** Item 30 defines a stat change as a difference in `size`,
+`mtime`, `mtime_ns`, or `ino`, plus `ctime` and `ctime_ns` when
+`hashing.trust_ctime` is true, and states the decision table: `Audit` is
+always `HashNow`; a new entry, a stat change, or a racy mtime is
+`HashNow`, except in a `Scan` for a file above
+`hashing.inline_threshold`, which is `Unconfirmed`; else `Unchanged`.
+Item 29 drops its clause about `trust_ctime` and points at item 30.
+
+**Why.** Item 29's "when `hashing.trust_ctime` is false, every
+stat-changed file is re-hashed" did not say what `true` skips. The
+setting is named after git's `core.trustctime`, and the design cites
+git's racy-clean rule as prior art, so it takes git's meaning: `false`
+ignores ctime differences, for filesystems whose backup or migration
+tools rewrite ctime. Item 31's "mtime-unchanged content change caught by
+ctime" case holds under the default.
+
+## 2026-11-11 P2: the racy marker's placement
+
+**What.** Item 29 says the marker is an empty `.toulmin-marker-<random>`
+file created and removed in a directory the caller names on the same
+filesystem (the repository root for a disk scan, the output's directory
+for the wrapper), compared with the file's mtime at the precision the
+filesystem reports.
+
+**Why.** "The marker file the snapshot writes to the same filesystem"
+named no directory, and the library cannot know which filesystem a
+caller's files are on without being told.
+
+## 2026-11-11 P2: `gen-chain` regenerates the record cases with a small segment limit
+
+**What.** Item 40's example takes `--events N --out DIR` (the flags
+`bench-index.sh` already passes) and `--conformance DIR`, which rewrites
+`conformance/record/` with a segment limit of a few kilobytes so sealed
+and packed segments appear in fixtures of a few kilobytes. The writer's
+default stays 64 MiB; nothing a reader does depends on the limit.
+
+**Why.** A packed segment cannot otherwise exist in a fixture smaller
+than 64 MiB, and a committed generator keeps the cases reproducible, which
+P1's uncommitted generator did not.
