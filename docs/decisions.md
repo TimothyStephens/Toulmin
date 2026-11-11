@@ -155,6 +155,11 @@ as `E3102` with no `field`.
 and item 15 places the conversion in `tm-formats`. The row and column
 `E3102` carries are added by `tm-files` (P3), which knows them.
 
+**Note, 2026-11-11 (review N9).** `to_arrow` is for parsed table values
+on their way into DuckDB (item 47) and is not on the `derive` path: a
+derived value that overflows is 11.6's `E5002`, decided at P4, and must
+not reach `to_arrow` to surface as `E3102`.
+
 ## 2026-11-11 P1 review: clarification of pre-P1 decision 3 (negative zero)
 
 **What.** Decision 3 in `docs/design/decisions-p1.md` says a computed
@@ -242,3 +247,103 @@ No other gate A row reads a JSON document the user supplies.
 **Why.** Owner's ruling on the review: section 9 names the codes each
 operation can produce, and these three were produced only by rows that
 did not list them.
+
+## 2026-11-11 P1 review: a higher nested format version makes the event opaque (M1)
+
+**What.** 11.16 says a `steps.steps`, op `v`, `assertion.assert`, or
+`spec.spec` above the reader's highest known version makes the whole
+event opaque under 11.11, like a higher `tv`; the body is not checked.
+`E6002` for an unknown version stays for author input. `envelope.rs`
+checks this before the body schema, and two envelope cases (`claim.added`
+with `filter` v2, `file.parse_spec_set` with `spec` 2) read as opaque.
+
+**Why.** Reviewer's fix. Without it a later op version would turn a valid
+later chain into `E1002` at the line level for a gate A reader, defeating
+per-op versioning.
+
+## 2026-11-11 P1 review: both ref spellings are one form; `kind` is `input` or `output` (M2)
+
+**What.** `ClaimRef` parses `C<n>` and `S<n>.<m>`; 11.16 says the ref form
+is the same in every gate and gate A operations allocate only `C<n>`.
+`file.registered.kind` is `input` or `output`. 11.22's span regex now
+follows the no-leading-zero rule. The two invalid cases that froze the
+refusals (`claim.retracted` with `S4.12`, `file.registered` with
+`output`) are replaced by other refusals, and valid cases carry each.
+
+**Why.** Reviewer's fix: the glossary, 7.1, 5.4, 11.22, and 6.1 already
+give promoted session claims and output files main-chain events at tv 1,
+so refusing them in the body form would cost gate B and C a tv bump on
+seven types.
+
+## 2026-11-11 P1 review: `src` only for owner actors; reserved `src.confirmed_by` (M3)
+
+**What.** 11.2: `src` is `null` unless `actor.kind` is `owner`, and then
+carries the three D23 facts plus the reserved `confirmed_by` (an event
+ID) when present. 11.13 lists `src.confirmed_by`. `Head.src` is an
+`Option`; the journal-line case carries `src: null`, and new cases cover
+a session actor with `src`, an owner without it, and `confirmed_by`.
+I chose `null` rather than "absent or null" so one fact has one encoding.
+
+**Why.** Reviewer's fix: 11.2 says `src` is for owner actions, and D27
+needs somewhere to put the confirming viewer event's hash without an
+`env` or `tv` bump.
+
+## 2026-11-11 P1 review: a form for every body value (M4)
+
+**What.** 11.16 states a form for every key; the one `Any` left is
+`claim.checked.assertion.observed`, decided at P4 (item 18, B3). Choices
+made here: `content_label` is `content_changed`, `carried_forward`, or
+`metadata_only` (snake_case like `origin.kind`); `size` and
+`compressed_size` are integers, a directory version's meaning being item
+28's; `algorithm` is `md5` or `sha256`; `title`, `description`,
+`sentence`, `reason`, and `description` in `claim.checked.steps` are
+non-empty strings; `source`, `qualifiers`, `note`, and `evidence.detail`
+are strings or `null`; `key_map` is a list of lists of typed values;
+`parse_specs` maps version handles to IDs. `events/*.rs` checks each.
+
+**Why.** Reviewer's fix: `Any` in a hashed body lets one fact take two
+encodings and two IDs, and tightening later at the same `tv` would break
+frozen valid lines. The reviewer's table showed each "open" form was in
+fact stated elsewhere in the design.
+
+## 2026-11-11 P1 review: assertions are checked against the table schema (M5, second part)
+
+**What.** 11.9 states a validation-time check of an assertion against the
+final table's schema (`row` arity and types, `column` existence,
+`expected` and `compare_rows` type compatibility) with the codes and
+pointers; `Assertion::check(&TableSchema)` implements it, and
+`assertions/schema/` cases with a `table` member exercise it. 11.9 also
+says a mismatch found at a re-check is verdict `error` with `E6004`.
+
+**Why.** Reviewer's fix: the type mismatches the moved eval cases raised
+at evaluation time are catchable before anything runs, since
+`TableSchema` exists, and 7.3 says re-checks record rather than refuse.
+
+## 2026-11-11 P1 review: the formats row says what Python checks when (M8)
+
+**What.** The Verification Plan's "Conformance: formats" row now says
+Python checks the meaning of `canonical/`, `ids/`, and the line level of
+`envelope/` at P1, and of `steps/` and `assertions/schema/` from P5; the
+rest of the suite is a hash agreement at P1.
+
+**Why.** Reviewer's finding: the row claimed "by both" for validation
+results the Python side does not compute until item 87's `validate.py`.
+
+## 2026-11-11 P1 review: nits taken (N7, N8, N10) and declined (N2, N5, N6, N11)
+
+**What.** N7: the Spec drift row states the normalization rule itself and
+names the script as its implementation. N8: `conformance/formats/` gains
+`parse_spec/` and `citations/` (JSON form and CLI spelling), so `E3103`,
+`E3104`, `E3105`, and `E6007` have cases; item 90 lists them. N10: the
+11.18.2 `rank` row says a table with a `rank` column must `select` it
+away first.
+
+Declined: N2 (fault precedence), because "either code is conforming"
+would make the `float_before_duplicate` case and the Python check
+ambiguous, and the rule is stated in 11.1, not left to an implementation;
+N5 (a separate code for schema faults), because it adds a code the
+catalog gates and section 9 would have to carry for a readability gain G2
+does not require, and `field` already locates each fault; N6 needs no
+change (noted: `E6006` is taken); N11, because changing ID derivation is
+a `record.json` `hash_alg` change, not an envelope version change, and a
+line's ID must be checkable to chain `prev`.
