@@ -1,0 +1,11 @@
+{
+  "description": "an int",
+  "case": "typed_value",
+  "input": {
+    "t": "int",
+    "v": "-42"
+  },
+  "expect": {
+    "valid": true
+  }
+}

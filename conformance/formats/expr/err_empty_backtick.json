@@ -1,0 +1,21 @@
+{
+  "description": "an empty backtick name",
+  "input": "`` = 1",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "code": "E6006",
+    "field": ""
+  }
+}

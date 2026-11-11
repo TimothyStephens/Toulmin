@@ -1,0 +1,8 @@
+{
+  "description": "invalid claim.retracted: session refs are gate B",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"reason\":\"wrong table\",\"ref\":\"S4.12\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.retracted\",\"id\":\"sha256:b8c7fd0fc0b99b8ff0fafef50f17e00efa086c35bb0534cf3e520b91f977a0f7\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/ref"
+  }
+}

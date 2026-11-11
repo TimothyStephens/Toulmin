@@ -1,0 +1,21 @@
+{
+  "description": "not binds looser than a comparison",
+  "input": "not   a=b",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "not a = b",
+    "type": "bool"
+  }
+}

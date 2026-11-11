@@ -1,0 +1,21 @@
+{
+  "description": "rank expects an int",
+  "input": {
+    "assert": 1,
+    "kind": "rank",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "expected": {
+      "t": "dec",
+      "v": "1.0"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/expected"
+  }
+}

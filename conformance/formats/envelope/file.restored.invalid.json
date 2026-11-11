@@ -1,0 +1,8 @@
+{
+  "description": "invalid file.restored: a key the body does not define",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"extra\":1,\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:fa7351b3e23115f335ec83aad6f556068c72786be94f2b931fa2ef233c92a3cb\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/extra"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "description": "a malformed typed value keeps its own code",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "padj",
+    "op": "eq",
+    "expected": {
+      "t": "dec",
+      "v": "1e-3"
+    }
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/expected/v"
+  }
+}

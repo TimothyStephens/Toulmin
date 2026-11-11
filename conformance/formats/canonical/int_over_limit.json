@@ -1,0 +1,7 @@
+{
+  "description": "an integer beyond 2^53 is E1001",
+  "input_text": "[9007199254740993]",
+  "expect": {
+    "code": "E1001"
+  }
+}

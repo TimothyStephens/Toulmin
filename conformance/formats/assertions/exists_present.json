@@ -1,0 +1,19 @@
+{
+  "description": "exists holds when present",
+  "input": {
+    "assert": 1,
+    "kind": "exists",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ]
+  },
+  "observed": {
+    "present": true
+  },
+  "expect": {
+    "outcome": "holds"
+  }
+}

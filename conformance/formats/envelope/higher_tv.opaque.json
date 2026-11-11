@@ -1,0 +1,9 @@
+{
+  "description": "a known type at a higher tv reads as opaque",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":7},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":2,\"type\":\"file.restored\",\"id\":\"sha256:5e6080a9e0b2f51af8161a6cd0eab81c77129140fc42daa8671b397a26e8163d\"}",
+  "expect": {
+    "id": "sha256:5e6080a9e0b2f51af8161a6cd0eab81c77129140fc42daa8671b397a26e8163d",
+    "type": "file.restored",
+    "event": "opaque"
+  }
+}

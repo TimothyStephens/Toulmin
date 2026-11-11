@@ -1,0 +1,38 @@
+{
+  "description": "tol widens both ends, each by its own |bound|",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "x",
+    "op": "between",
+    "expected": [
+      {
+        "t": "dec",
+        "v": "10"
+      },
+      {
+        "t": "dec",
+        "v": "20"
+      }
+    ],
+    "tol": {
+      "abs": "0",
+      "rel": "0.1"
+    }
+  },
+  "observed": {
+    "cell": {
+      "t": "dec",
+      "v": "21.9"
+    }
+  },
+  "expect": {
+    "outcome": "holds"
+  }
+}

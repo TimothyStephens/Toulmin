@@ -1,0 +1,8 @@
+{
+  "description": "invalid file.panels_set: a file handle where a version handle belongs",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"panels\":[\"A\",\"B\"],\"version\":\"F5\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.panels_set\",\"id\":\"sha256:aa80ac9971c934f01f639c18fe7c7bb423e220fd6e327bded833a74b0befcec8\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/version"
+  }
+}

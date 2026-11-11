@@ -1,0 +1,12 @@
+{
+  "description": "a row names at least one key value",
+  "input": {
+    "assert": 1,
+    "kind": "exists",
+    "row": []
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/row"
+  }
+}

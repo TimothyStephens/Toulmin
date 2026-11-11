@@ -1,0 +1,21 @@
+{
+  "description": "coalesce of str and int",
+  "input": "coalesce(s, a)",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "code": "E6004",
+    "field": ""
+  }
+}

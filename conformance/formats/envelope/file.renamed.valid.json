@@ -1,0 +1,9 @@
+{
+  "description": "a valid file.renamed line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\",\"from\":\"data/de.tsv\",\"to\":\"data/de_results.tsv\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.renamed\",\"id\":\"sha256:b8d1fae9f0a890dd7275bd59252e97bc4aa35a0dfa44054c85ee5c0dd4065aca\"}",
+  "expect": {
+    "id": "sha256:b8d1fae9f0a890dd7275bd59252e97bc4aa35a0dfa44054c85ee5c0dd4065aca",
+    "type": "file.renamed",
+    "event": "known"
+  }
+}

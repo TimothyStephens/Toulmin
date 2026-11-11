@@ -1,0 +1,8 @@
+{
+  "description": "invalid file.checksum_checked: mismatches is a list",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"algorithm\":\"md5\",\"file\":\"F7\",\"matched\":false,\"mismatches\":\"a.fastq.gz\",\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.checksum_checked\",\"id\":\"sha256:62d668b23050887d89089bd8eab4ff43254e0107a9e308de1b275d494a066de0\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/mismatches"
+  }
+}

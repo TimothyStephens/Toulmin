@@ -1,0 +1,8 @@
+{
+  "description": "epoch on a journal line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"body\":{\"file\":\"F7\"},\"chain\":\"S4\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:4e3a41a84109ae9fcc6972b37f0df80fa8b926c69fdd8636c01eb37f71f0d4d4\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:7af50088c29a9dc8be3f3d7f9e8baa2742e080a0eabe02bf8fe457cb4beaf42e\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/epoch"
+  }
+}

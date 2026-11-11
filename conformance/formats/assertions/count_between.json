@@ -1,0 +1,21 @@
+{
+  "description": "count between two ints",
+  "input": {
+    "assert": 1,
+    "kind": "count",
+    "op": "between",
+    "expected": [
+      {
+        "t": "int",
+        "v": "5"
+      },
+      {
+        "t": "int",
+        "v": "10"
+      }
+    ]
+  },
+  "expect": {
+    "valid": true
+  }
+}

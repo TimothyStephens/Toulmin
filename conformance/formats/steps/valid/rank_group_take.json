@@ -1,0 +1,125 @@
+{
+  "description": "rank within groups, then take",
+  "input": {
+    "steps": 1,
+    "tables": {
+      "samples": "F9@v1"
+    },
+    "from": "samples",
+    "ops": [
+      {
+        "op": "rank",
+        "v": 1,
+        "by": "count",
+        "dir": "desc",
+        "ties": "dense",
+        "missing": "exclude",
+        "scope": "group",
+        "group_by": [
+          "condition"
+        ]
+      },
+      {
+        "op": "take",
+        "v": 1,
+        "n": 3
+      }
+    ]
+  },
+  "specs": {
+    "de": {
+      "spec": 1,
+      "format": "tsv",
+      "delimiter": "\t",
+      "header": true,
+      "columns": [
+        {
+          "name": "gene_id",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "log2FoldChange",
+          "type": "dec",
+          "missing": [
+            "NA"
+          ],
+          "scale": 4
+        },
+        {
+          "name": "padj",
+          "type": "dec",
+          "missing": [
+            "NA"
+          ],
+          "scale": 5
+        },
+        {
+          "name": "baseMean",
+          "type": "float64",
+          "missing": [
+            "NA"
+          ]
+        }
+      ],
+      "key": [
+        "gene_id"
+      ],
+      "nan": "missing",
+      "inf": "missing",
+      "encoding": "utf-8"
+    },
+    "samples": {
+      "spec": 1,
+      "format": "tsv",
+      "delimiter": "\t",
+      "header": true,
+      "columns": [
+        {
+          "name": "sample_id",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "gene_id",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "condition",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "missing": [
+            "NA"
+          ]
+        },
+        {
+          "name": "count",
+          "type": "int",
+          "missing": [
+            "NA"
+          ]
+        },
+        {
+          "name": "ok",
+          "type": "bool",
+          "missing": []
+        }
+      ],
+      "key": [
+        "sample_id",
+        "gene_id"
+      ],
+      "nan": "missing",
+      "inf": "missing",
+      "encoding": "utf-8"
+    }
+  },
+  "expect": {
+    "valid": true
+  }
+}

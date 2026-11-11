@@ -1,0 +1,7 @@
+{
+  "description": "an exponent is a float",
+  "input_text": "{\"a\":1e2}",
+  "expect": {
+    "code": "E1001"
+  }
+}

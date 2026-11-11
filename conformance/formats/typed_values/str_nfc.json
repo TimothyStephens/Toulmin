@@ -1,0 +1,11 @@
+{
+  "description": "an NFC string",
+  "case": "typed_value",
+  "input": {
+    "t": "str",
+    "v": "café"
+  },
+  "expect": {
+    "valid": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "description": "an envelope version above 1 reads as opaque; only the line form and id are checked",
+  "line": "{\"anything\":true,\"env\":2,\"id\":\"sha256:7f184e0ae654466839d236977aa885c234819488d1b826f3c00fdd0dc97572a9\"}",
+  "expect": {
+    "id": "sha256:7f184e0ae654466839d236977aa885c234819488d1b826f3c00fdd0dc97572a9",
+    "type": "",
+    "event": "opaque"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "description": "count without expected",
+  "input": {
+    "assert": 1,
+    "kind": "count",
+    "op": "eq"
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/expected"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "description": "compare_rows with a missing right cell fails",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "x"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "MDM2"
+        }
+      ],
+      "column": "x"
+    },
+    "op": "lt"
+  },
+  "observed": {
+    "left": {
+      "t": "dec",
+      "v": "1"
+    },
+    "right": {
+      "t": "missing"
+    }
+  },
+  "expect": {
+    "outcome": "fails"
+  }
+}

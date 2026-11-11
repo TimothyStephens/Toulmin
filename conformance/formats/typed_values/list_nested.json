@@ -1,0 +1,17 @@
+{
+  "description": "a list inside a list",
+  "case": "typed_value",
+  "input": {
+    "t": "list",
+    "v": [
+      {
+        "t": "list",
+        "v": []
+      }
+    ]
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v/0/t"
+  }
+}

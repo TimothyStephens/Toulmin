@@ -1,0 +1,21 @@
+{
+  "description": "backticks kept for spaces and reserved words",
+  "input": "`log2 FC` > 1 and `and`",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "`log2 FC` > 1 and `and`",
+    "type": "bool"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "description": "invalid file.parse_spec_set: spec_fingerprint is not the spec's fingerprint",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\",\"spec\":{\"columns\":[{\"missing\":[],\"name\":\"gene_id\",\"type\":\"str\"},{\"missing\":[\"NA\"],\"name\":\"log2FoldChange\",\"scale\":4,\"type\":\"dec\"},{\"missing\":[\"NA\"],\"name\":\"padj\",\"scale\":5,\"type\":\"dec\"},{\"missing\":[\"NA\"],\"name\":\"baseMean\",\"type\":\"float64\"}],\"delimiter\":\"\\t\",\"encoding\":\"utf-8\",\"format\":\"tsv\",\"header\":true,\"inf\":\"missing\",\"key\":[\"gene_id\"],\"nan\":\"missing\",\"spec\":1},\"spec_fingerprint\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.parse_spec_set\",\"id\":\"sha256:b5dd74c288e65327b4a009e58d48c0d694a9ddeb7c9a6a092d7ede24e8bb43cc\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/spec_fingerprint"
+  }
+}

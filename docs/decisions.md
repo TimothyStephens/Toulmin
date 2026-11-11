@@ -73,3 +73,84 @@ pins themselves stay exact in `Cargo.toml`, so P1's first `cargo build`
 locks the same versions the spike built against; `deny.toml`'s allowed-crate
 list is kept as reviewed for P0 and re-checked when P1 regenerates the lock.
 
+
+## 2026-11-11 P1: event bodies are schema-checked JSON, not one struct per type
+
+**What.** Item 14 asks for "typed bodies for exactly the 11.16 gate A
+types". `tm-formats` has a closed `EventType` enum with one variant per
+11.16 row, and each type's body schema is a declared list of `(key, form)`
+in its namespace module (`events/{project,settings,files,...}.rs`). A
+`KnownEvent` is a type plus a body validated against that schema and held
+as a JSON object; there is no Rust struct with a field per body key.
+
+**Why.** Most body values have no form stated in 11.16 (titles, notes,
+sizes, `sql`, `versions` members), so per-type structs would hold
+`serde_json::Value` fields and add nothing a schema table does not. The
+closed set, the exact key sets, the stated forms, and "an opaque event
+cannot be written" all hold. The libraries that fold these events (P3,
+P6, P7) can add typed accessors when they read a body.
+
+## 2026-11-11 P1: no decimal arithmetic in typed_value.rs
+
+**What.** Item 15 covers "the 11.6 encoding over `bigdecimal` at 34-digit
+precision, half-even". `typed_value.rs` has the encoding, the lexical
+rules, the 34-digit context rounding (`round_to_context`), both
+IEEE-double conversions, and the Arrow mapping. It does not implement the
+arithmetic operators `derive` uses (`+`, `-`, `*`, `/` with the General
+Decimal Arithmetic ideal exponents) or the `E5002` overflow condition.
+
+**Why.** Arithmetic is evaluated by the Checker (11.18.2, item 54, P4),
+and where `E5002` begins is one of the facts the readiness report's B3
+lists for P4's 11.18.5. Building it in P1 would decide that boundary in
+code. The assertion rules item 18 needs use exact, unrounded arithmetic
+(11.18.3), which `bigdecimal` gives directly.
+
+## 2026-11-11 P1: CI gains the cross-implementation ID diff and builds the catalog for spec drift
+
+**What.** `.github/workflows/ci.yml` (item 6) changed in two jobs. The
+`conformance` job now runs the formats suite once more with
+`TM_FORMATS_IDS_OUT` set, runs `python3 -I reference/formats/test_formats.py`
+the same way, and diffs the two listings. The `spec-drift` job installs
+the toolchain and builds `tm-formats` with `TM_ERRORS_OUT` set before
+running `scripts/ci/spec-drift.sh`.
+
+**Why.** The P1 checkpoint requires identical IDs for every case, and no
+job compared the two implementations' outputs. `spec-drift.sh` (P0) fails
+when `docs/errors.md` exists and `TM_ERRORS_OUT` does not point at
+`build.rs` output, and the job as written in P0 never built anything.
+
+## 2026-11-11 P1: conformance case format documented in the crate README
+
+**What.** The shape of every file under `conformance/formats/` is
+described in `crates/tm-formats/README.md`, not in a file under
+`conformance/`.
+
+**Why.** Item 90 lists only the case directories, and every crate has a
+README (Detailed Implementation Plan preamble). The format is a test
+harness contract between `tests/conformance.rs` and
+`reference/formats/test_formats.py`, not a Toulmin format.
+
+## 2026-11-11 P1: deny.toml allow list extended, not regenerated
+
+**What.** P1's first build locked 106 packages. Six names not in the P0
+allow list were added (`bigdecimal`, `equivalent`, `indexmap`, `tinyvec`,
+`tm-formats`, `unicode-normalization`). The P0 names that the lock no
+longer holds (DuckDB, mimalloc, rustix, and their dependencies, plus the
+deleted `musl-duckdb`) were kept rather than dropped.
+
+**Why.** Those crates are pinned workspace dependencies, reviewed at P0,
+that P2 brings back with `tm-duckdb` and `tm-fsfacts`; regenerating from
+the P1 lock would delete and re-add them a phase later. `cargo deny check`
+passes (bans, licenses, sources, advisories). `musl-duckdb` should be
+removed when P2 regenerates the list.
+
+## 2026-11-11 P1: Arrow conversion errors in tm-formats use E3102
+
+**What.** `typed_value::to_arrow` and `from_arrow` report a value that does
+not fit item 47's Arrow type (scale above the column's, more than 38
+digits, a timestamp outside the nanosecond range, a value of another type)
+as `E3102` with no `field`.
+
+**Why.** Item 47 names `E3102` for exactly these failures during parsing,
+and item 15 places the conversion in `tm-formats`. The row and column
+`E3102` carries are added by `tm-files` (P3), which knows them.

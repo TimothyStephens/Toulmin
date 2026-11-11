@@ -1,0 +1,21 @@
+{
+  "description": "backticks dropped where the grammar does not need them",
+  "input": "`a` = `b`",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "a = b",
+    "type": "bool"
+  }
+}

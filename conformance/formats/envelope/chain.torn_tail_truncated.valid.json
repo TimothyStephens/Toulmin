@@ -1,0 +1,9 @@
+{
+  "description": "a valid chain.torn_tail_truncated line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"bytes\":77,\"offset\":4096,\"segment\":1},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"chain.torn_tail_truncated\",\"id\":\"sha256:7769d73e11fde950c96af7f49ff9f02f08c23a08856edb05ff139709dba4af8d\"}",
+  "expect": {
+    "id": "sha256:7769d73e11fde950c96af7f49ff9f02f08c23a08856edb05ff139709dba4af8d",
+    "type": "chain.torn_tail_truncated",
+    "event": "known"
+  }
+}

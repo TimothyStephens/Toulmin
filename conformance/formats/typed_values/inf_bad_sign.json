@@ -1,0 +1,12 @@
+{
+  "description": "inf sign is + or -",
+  "case": "typed_value",
+  "input": {
+    "t": "inf",
+    "s": "plus"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/s"
+  }
+}

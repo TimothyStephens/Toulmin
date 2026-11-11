@@ -1,0 +1,12 @@
+{
+  "description": "an unknown t",
+  "case": "typed_value",
+  "input": {
+    "t": "float",
+    "v": "1.5"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/t"
+  }
+}

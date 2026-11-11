@@ -1,0 +1,22 @@
+{
+  "description": "value with no tol",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "padj",
+    "op": "lt",
+    "expected": {
+      "t": "dec",
+      "v": "0.05"
+    }
+  },
+  "expect": {
+    "valid": true
+  }
+}

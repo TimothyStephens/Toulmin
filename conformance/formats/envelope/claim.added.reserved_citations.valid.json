@@ -1,0 +1,9 @@
+{
+  "description": "claim.added carrying the three reserved citation kinds, stored as given (11.13, 11.23)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"assertion\":null,\"citations\":[{\"kind\":\"quote\",\"text\":\"as stated\",\"version\":\"F3@v1\"},{\"box\":[0,0,100,100],\"kind\":\"page_region\",\"page\":4,\"version\":\"F3@v1\"},{\"box\":[1,2,3,4],\"kind\":\"image_region\",\"version\":\"F5@v1\"}],\"cited\":[\"F3@v1\",\"F5@v1\"],\"kind\":\"qualitative\",\"qualifiers\":\"in this dataset\",\"ref\":\"C31\",\"report\":\"paper.md\",\"sentence\":\"TP53 is significant.\",\"steps\":null,\"supersedes\":null},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.added\",\"id\":\"sha256:0a1e31f8b64d775041127bed40968111353bcc2cb17bbba3c96108bf10f90a93\"}",
+  "expect": {
+    "id": "sha256:0a1e31f8b64d775041127bed40968111353bcc2cb17bbba3c96108bf10f90a93",
+    "type": "claim.added",
+    "event": "known"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "description": "rank takes no op",
+  "input": {
+    "assert": 1,
+    "kind": "rank",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "expected": {
+      "t": "int",
+      "v": "1"
+    },
+    "op": "eq"
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/op"
+  }
+}

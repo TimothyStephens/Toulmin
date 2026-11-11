@@ -1,0 +1,28 @@
+{
+  "description": "eq with no tol: equal decimals of different scale hold",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "x",
+    "op": "eq",
+    "expected": {
+      "t": "dec",
+      "v": "0.0031"
+    }
+  },
+  "observed": {
+    "cell": {
+      "t": "dec",
+      "v": "0.00310"
+    }
+  },
+  "expect": {
+    "outcome": "holds"
+  }
+}

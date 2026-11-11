@@ -1,0 +1,11 @@
+{
+  "description": "an int beyond 64 bits",
+  "case": "typed_value",
+  "input": {
+    "t": "int",
+    "v": "123456789012345678901234567890"
+  },
+  "expect": {
+    "valid": true
+  }
+}

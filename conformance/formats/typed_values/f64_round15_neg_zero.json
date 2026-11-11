@@ -1,0 +1,11 @@
+{
+  "description": "minus zero is 0",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x8000000000000000",
+    "rule": "round15"
+  },
+  "expect": {
+    "dec": "0"
+  }
+}

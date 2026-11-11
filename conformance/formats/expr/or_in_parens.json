@@ -1,0 +1,21 @@
+{
+  "description": "or inside and keeps its parentheses",
+  "input": "(flag or a<1) and b>2",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "(flag or a < 1) and b > 2",
+    "type": "bool"
+  }
+}

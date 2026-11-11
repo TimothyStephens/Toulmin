@@ -1,0 +1,12 @@
+{
+  "description": "a datetime with an offset instead of Z",
+  "case": "typed_value",
+  "input": {
+    "t": "datetime",
+    "v": "2026-11-09T14:02:11+00:00"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v"
+  }
+}

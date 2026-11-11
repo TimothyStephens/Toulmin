@@ -1,0 +1,8 @@
+{
+  "description": "manifest entries out of 11.10 order",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"content_label\":\"content changed\",\"file\":\"F7\",\"fingerprint\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest\":{\"entries\":[{\"fingerprint\":\"sha256:2222222222222222222222222222222222222222222222222222222222222222\",\"path\":\"b.fastq.gz\",\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":4211,\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576}},{\"fingerprint\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"path\":\"a.fastq.gz\",\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":4211,\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576}}],\"fingerprint\":\"sha256:d042446010f4cc751d8a406b2e3df2938cb4646440a0d209f0756dd560f5abd0\",\"ignore\":[\".snakemake/\",\"*.swp\"]},\"origin\":{\"kind\":\"registered\",\"run\":null},\"size\":1048576,\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":4211,\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576},\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.version_added\",\"id\":\"sha256:5f4b47f878aeb362cda84f9722f8e48b79b89a5aaa14d197f0f5efd9d0f91400\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/manifest/entries/1/path"
+  }
+}

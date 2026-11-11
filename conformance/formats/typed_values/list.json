@@ -1,0 +1,16 @@
+{
+  "description": "a list of str (settings)",
+  "case": "typed_value",
+  "input": {
+    "t": "list",
+    "v": [
+      {
+        "t": "str",
+        "v": ".DS_Store"
+      }
+    ]
+  },
+  "expect": {
+    "valid": true
+  }
+}

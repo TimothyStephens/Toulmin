@@ -1,0 +1,11 @@
+{
+  "description": "minus infinity",
+  "case": "typed_value",
+  "input": {
+    "t": "inf",
+    "s": "-"
+  },
+  "expect": {
+    "valid": true
+  }
+}

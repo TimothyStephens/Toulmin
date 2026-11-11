@@ -1,0 +1,8 @@
+{
+  "description": "invalid lock.taken_over: previous has a key it does not define",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"epoch\":4,\"previous\":{\"epoch\":3,\"heartbeat\":\"2026-11-09T14:02:11Z\",\"host\":\"login1\",\"node\":\"x\",\"pid\":4242}},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"lock.taken_over\",\"id\":\"sha256:1266c845059b1c197bfdd7b3fbfb4d66e74d376e7e4186bc74a251c7f4e14f26\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/previous/node"
+  }
+}

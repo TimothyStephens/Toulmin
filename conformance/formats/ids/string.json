@@ -1,0 +1,7 @@
+{
+  "description": "ID of a bare string",
+  "input": "hello",
+  "expect": {
+    "id": "sha256:5aa762ae383fbb727af3c7a36d4940a5b8c40a989452d2304fc958ff3f354e7a"
+  }
+}

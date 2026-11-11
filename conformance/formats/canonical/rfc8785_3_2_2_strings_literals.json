@@ -1,0 +1,8 @@
+{
+  "description": "RFC 8785 section 3.2.2 example without the numbers member: string escaping and literals",
+  "input_text": "{\n  \"string\": \"\\u20ac$\\u000F\\u000aA'\\u0042\\u0022\\u005c\\\\\\\"\\/\",\n  \"literals\": [null, true, false]\n}",
+  "expect": {
+    "canonical": "{\"literals\":[null,true,false],\"string\":\"€$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}",
+    "id": "sha256:834b0ae0dd68944f19836aa49d608aa4975f03998f927466f8b648d5f927ecee"
+  }
+}

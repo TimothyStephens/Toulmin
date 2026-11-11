@@ -1,0 +1,10 @@
+{
+  "description": "genesis string of chain main (11.2)",
+  "genesis": {
+    "chain": "main",
+    "project_id": "8f14e45fceea167a5a36dedd4bea2543"
+  },
+  "expect": {
+    "id": "sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "description": "a valid file.panels_set line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"panels\":[\"A\",\"B\"],\"version\":\"F5@v1\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.panels_set\",\"id\":\"sha256:811e1ba23143bc06a31cb137ca4278a2668ea4379b2291afc1de7f77c7e3e15f\"}",
+  "expect": {
+    "id": "sha256:811e1ba23143bc06a31cb137ca4278a2668ea4379b2291afc1de7f77c7e3e15f",
+    "type": "file.panels_set",
+    "event": "known"
+  }
+}

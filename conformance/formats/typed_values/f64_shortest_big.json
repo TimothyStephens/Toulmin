@@ -1,0 +1,11 @@
+{
+  "description": "1e21 positional",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x444b1ae4d6e2ef50",
+    "rule": "shortest"
+  },
+  "expect": {
+    "dec": "1000000000000000000000"
+  }
+}

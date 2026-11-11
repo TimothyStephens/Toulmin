@@ -1,0 +1,9 @@
+{
+  "description": "a valid settings.changed line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"key\":\"manifest.ignore\",\"previous\":null,\"value\":{\"t\":\"list\",\"v\":[{\"t\":\"str\",\"v\":\".snakemake/\"},{\"t\":\"str\",\"v\":\"*.swp\"}]}},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"settings.changed\",\"id\":\"sha256:58748f116bb3f29dac69e860a9a172f29e27dc6875adce33431c690a858a0dd2\"}",
+  "expect": {
+    "id": "sha256:58748f116bb3f29dac69e860a9a172f29e27dc6875adce33431c690a858a0dd2",
+    "type": "settings.changed",
+    "event": "known"
+  }
+}

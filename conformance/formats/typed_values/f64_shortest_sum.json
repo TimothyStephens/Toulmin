@@ -1,0 +1,11 @@
+{
+  "description": "0.1 + 0.2, shortest round trip",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x3fd3333333333334",
+    "rule": "shortest"
+  },
+  "expect": {
+    "dec": "0.30000000000000004"
+  }
+}

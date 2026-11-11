@@ -1,0 +1,28 @@
+{
+  "description": "strings compare by NFC bytes",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "g",
+    "op": "eq",
+    "expected": {
+      "t": "str",
+      "v": "TP53"
+    }
+  },
+  "observed": {
+    "cell": {
+      "t": "str",
+      "v": "TP53"
+    }
+  },
+  "expect": {
+    "outcome": "holds"
+  }
+}

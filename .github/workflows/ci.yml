@@ -69,6 +69,13 @@ jobs:
         run: |
           if [ ! -d crates/tm-formats ]; then echo "::notice::no-op until P1: crates/tm-formats absent"; exit 0; fi
           cargo test -p tm-formats --test conformance --locked
+      - name: formats, identical IDs in Rust and Python (P1 checkpoint)
+        run: |
+          if [ ! -f reference/formats/test_formats.py ]; then echo "::notice::no-op until P1: reference/formats absent"; exit 0; fi
+          TM_FORMATS_IDS_OUT="$RUNNER_TEMP/ids-rust.txt" cargo test -p tm-formats --test conformance --locked
+          TM_FORMATS_IDS_OUT="$RUNNER_TEMP/ids-python.txt" python3 -I reference/formats/test_formats.py
+          diff -u "$RUNNER_TEMP/ids-rust.txt" "$RUNNER_TEMP/ids-python.txt"
+          echo "identical IDs for $(wc -l < "$RUNNER_TEMP/ids-rust.txt") cases"
       - name: record
         run: |
           if [ ! -d crates/tm-record ]; then echo "::notice::no-op until P2: crates/tm-record absent"; exit 0; fi
@@ -347,7 +354,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: scripts/ci/spec-drift.sh
+      - run: rustup toolchain install && rustup show
+      - uses: Swatinem/rust-cache@v2
+      # docs/errors.md is compared with the catalog build.rs writes to
+      # $TM_ERRORS_OUT (item 25), so the generator runs first.
+      - run: |
+          if [ -d crates/tm-formats ]; then
+            export TM_ERRORS_OUT="$RUNNER_TEMP/errors.md"
+            cargo build -p tm-formats --locked
+          fi
+          scripts/ci/spec-drift.sh
 
   error-codes:
     name: every gate A error code is produced

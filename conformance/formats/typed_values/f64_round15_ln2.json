@@ -1,0 +1,11 @@
+{
+  "description": "ln 2",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x3fe62e42fefa39ef",
+    "rule": "round15"
+  },
+  "expect": {
+    "dec": "0.693147180559945"
+  }
+}

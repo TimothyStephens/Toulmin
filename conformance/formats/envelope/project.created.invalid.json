@@ -1,0 +1,8 @@
+{
+  "description": "invalid project.created: a required body key is absent",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"project_id\":\"8f14e45fceea167a5a36dedd4bea2543\",\"record_format\":1,\"repo_root_hash\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"project.created\",\"id\":\"sha256:f6b68b275a3ddfb45aac920fd3bd90da98744adcbddb029281bff2c8e642fff1\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/owner_id"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "description": "between expects [lo, hi]",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "padj",
+    "op": "between",
+    "expected": {
+      "t": "dec",
+      "v": "1"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/expected"
+  }
+}

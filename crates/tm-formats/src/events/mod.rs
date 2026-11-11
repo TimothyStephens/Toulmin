@@ -1,0 +1,407 @@
+//! Event bodies for exactly the gate A types (design 11.16, item 14).
+//!
+//! The type set is closed: [`EventType`] has one variant per 11.16 row and
+//! nothing for the reserved namespaces, which read as opaque (11.11).
+//! Each type's body schema is declared in its namespace's module as a list
+//! of `(key, Form)`; a body of a known type and `tv` has exactly those keys
+//! and every value of a stated form is checked. Every error is `E1002`
+//! with `field` under `/body`.
+//!
+//! An [`Event`] is either a validated [`KnownEvent`] or an [`OpaqueEvent`];
+//! only a `KnownEvent` can be written (see `envelope::write_line`).
+
+mod audit;
+mod chain;
+mod claims;
+mod files;
+mod lock;
+mod project;
+mod reports;
+mod settings;
+
+use serde_json::{Map, Value};
+
+use crate::assertion::Assertion;
+use crate::citation::Citation;
+use crate::errors::{Code, Error, ptr};
+use crate::id::{ClaimRef, FileHandle, VersionHandle, id_of, is_run_handle, is_sha256};
+use crate::parse_spec::ParseSpec;
+use crate::steps::Steps;
+use crate::typed_value::{DateTime, TypedValue};
+
+/// The form a body value must have. `Any` is a value whose form 11.16 does
+/// not state, accepted as any JSON value in gate A.
+#[derive(Debug)]
+pub(crate) enum Form {
+    Any,
+    Str,
+    NonEmptyStr,
+    Int,
+    File,
+    Version,
+    Claim,
+    Id,
+    Choice(&'static [&'static str]),
+    Typed,
+    Snapshot,
+    Manifest,
+    Origin,
+    Spec,
+    Steps,
+    Assertion,
+    Citation,
+    List(&'static Form),
+    Null(&'static Form),
+    Object(&'static [(&'static str, Form)]),
+}
+
+/// One gate A event type.
+#[derive(Debug)]
+pub(crate) struct TypeDef {
+    pub ty: EventType,
+    pub name: &'static str,
+    pub tv: u64,
+    pub keys: &'static [(&'static str, Form)],
+}
+
+/// The gate A event types (11.16).
+#[allow(missing_docs, reason = "each variant is named after its 11.16 type")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EventType {
+    ProjectCreated,
+    SettingsChanged,
+    FileRegistered,
+    FileVersionAdded,
+    FileChecksumChecked,
+    FileParseSpecSet,
+    FileKept,
+    FileMarkedRemovable,
+    FileRestored,
+    FileRenamed,
+    FilePanelsSet,
+    ReportRegistered,
+    ClaimAdded,
+    ClaimChecked,
+    ClaimRevised,
+    ClaimReviewed,
+    ClaimRetracted,
+    ClaimSuperseded,
+    AuditCompleted,
+    ChainTornTailTruncated,
+    LockTakenOver,
+}
+
+const NAMESPACES: &[&[TypeDef]] = &[
+    project::TYPES,
+    settings::TYPES,
+    files::TYPES,
+    reports::TYPES,
+    claims::TYPES,
+    audit::TYPES,
+    chain::TYPES,
+    lock::TYPES,
+];
+
+fn defs() -> impl Iterator<Item = &'static TypeDef> {
+    NAMESPACES.iter().flat_map(|n| n.iter())
+}
+
+fn def_of(ty: EventType) -> &'static TypeDef {
+    defs().find(|d| d.ty == ty).unwrap_or(&project::TYPES[0])
+}
+
+impl EventType {
+    /// Every gate A type, in 11.16 order.
+    #[must_use]
+    pub fn all() -> Vec<EventType> {
+        defs().map(|d| d.ty).collect()
+    }
+
+    /// The type by its namespaced name, if it is a gate A type.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<EventType> {
+        defs().find(|d| d.name == name).map(|d| d.ty)
+    }
+
+    /// The namespaced name, for example `claim.added`.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        def_of(self).name
+    }
+
+    /// The type's version (`tv`) in gate A.
+    #[must_use]
+    pub fn tv(self) -> u64 {
+        def_of(self).tv
+    }
+}
+
+/// A validated event of a gate A type at its known `tv`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct KnownEvent {
+    ty: EventType,
+    body: Map<String, Value>,
+}
+
+impl KnownEvent {
+    /// Validate a body for a type; errors point under `/body`.
+    ///
+    /// # Errors
+    /// `E1002` with `field` at the offending member.
+    pub fn new(ty: EventType, body: &Value) -> Result<KnownEvent, Error> {
+        let def = def_of(ty);
+        let Some(m) = body.as_object() else {
+            return Err(Error::at(Code::E1002, "/body", "a body is an object"));
+        };
+        check_object(m, def.keys, "/body")?;
+        if ty == EventType::FileParseSpecSet {
+            let fp = ParseSpec::from_json(&m["spec"])
+                .map_err(|x| x.in_envelope("/body/spec"))?
+                .fingerprint();
+            if m["spec_fingerprint"].as_str() != Some(fp.as_str()) {
+                return Err(e(
+                    "/body/spec_fingerprint",
+                    "`spec_fingerprint` is the fingerprint of `spec`",
+                ));
+            }
+        }
+        Ok(KnownEvent {
+            ty,
+            body: m.clone(),
+        })
+    }
+
+    /// The type.
+    #[must_use]
+    pub fn ty(&self) -> EventType {
+        self.ty
+    }
+
+    /// The body.
+    #[must_use]
+    pub fn body(&self) -> &Map<String, Value> {
+        &self.body
+    }
+
+    /// One body member.
+    #[must_use]
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.body.get(key)
+    }
+}
+
+/// An event this reader does not interpret: an unknown type, a `tv` above
+/// the known one, or an envelope version above 1. Kept as given; it cannot
+/// be written.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OpaqueEvent {
+    /// The `type` as given (empty when the envelope itself is opaque).
+    pub ty: String,
+    /// The `tv` as given (0 when the envelope itself is opaque).
+    pub tv: u64,
+    /// The whole envelope without `id`.
+    pub envelope: Value,
+}
+
+/// A read event.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Event {
+    /// Validated and interpreted.
+    Known(KnownEvent),
+    /// Kept as given, never interpreted (11.11).
+    Opaque(OpaqueEvent),
+}
+
+fn e(at: &str, msg: impl Into<String>) -> Error {
+    Error::at(Code::E1002, at, msg)
+}
+
+pub(crate) fn check_object(
+    m: &Map<String, Value>,
+    keys: &[(&str, Form)],
+    at: &str,
+) -> Result<(), Error> {
+    for (k, _) in keys {
+        if !m.contains_key(*k) {
+            return Err(e(&ptr(at, k), format!("required member `{k}` is absent")));
+        }
+    }
+    let mut extra: Vec<&String> = m
+        .keys()
+        .filter(|k| !keys.iter().any(|(n, _)| n == k))
+        .collect();
+    extra.sort_by(|a, b| crate::canonical::utf16_cmp(a, b));
+    if let Some(k) = extra.first() {
+        return Err(e(&ptr(at, k), format!("member `{k}` is not defined here")));
+    }
+    for (k, form) in keys {
+        check(&m[*k], form, &ptr(at, k))?;
+    }
+    Ok(())
+}
+
+fn whole_second_utc(s: &str) -> bool {
+    s.len() == 20 && DateTime::parse(s).is_some()
+}
+
+/// The envelope's `at` form, also used for snapshot times.
+pub(crate) fn is_at(s: &str) -> bool {
+    whole_second_utc(s)
+}
+
+pub(crate) fn check(v: &Value, form: &Form, at: &str) -> Result<(), Error> {
+    let s = v.as_str();
+    match form {
+        Form::Any => Ok(()),
+        Form::Str => s.map(|_| ()).ok_or_else(|| e(at, "a string")),
+        Form::NonEmptyStr => s
+            .filter(|s| !s.is_empty())
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a non-empty string")),
+        Form::Int => v
+            .as_u64()
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a non-negative integer")),
+        Form::File => s
+            .and_then(FileHandle::parse)
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a file handle F<n>")),
+        Form::Version => s
+            .and_then(VersionHandle::parse)
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a version handle F<n>@v<m>")),
+        Form::Claim => s
+            .and_then(ClaimRef::parse)
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a claim ref C<n>")),
+        Form::Id => s
+            .filter(|s| is_sha256(s))
+            .map(|_| ())
+            .ok_or_else(|| e(at, "sha256: and 64 hex digits")),
+        Form::Choice(allowed) => match s {
+            Some(s) if allowed.contains(&s) => Ok(()),
+            _ => Err(e(at, format!("one of {allowed:?}"))),
+        },
+        Form::Typed => TypedValue::from_json(v, at)
+            .map(|_| ())
+            .map_err(|x| x.in_envelope("")),
+        Form::Spec => ParseSpec::from_json(v)
+            .map(|_| ())
+            .map_err(|x| x.in_envelope(at)),
+        Form::Steps => Steps::from_json(v)
+            .map(|_| ())
+            .map_err(|x| x.in_envelope(at)),
+        Form::Assertion => Assertion::from_json(v)
+            .map(|_| ())
+            .map_err(|x| x.in_envelope(at)),
+        Form::Citation => Citation::from_json(v, at)
+            .map(|_| ())
+            .map_err(|x| x.in_envelope("")),
+        Form::List(inner) => {
+            let a = v.as_array().ok_or_else(|| e(at, "a list"))?;
+            for (i, item) in a.iter().enumerate() {
+                check(item, inner, &ptr(at, i))?;
+            }
+            Ok(())
+        }
+        Form::Null(inner) => {
+            if v.is_null() {
+                Ok(())
+            } else {
+                check(v, inner, at)
+            }
+        }
+        Form::Object(keys) => {
+            let m = v.as_object().ok_or_else(|| e(at, "an object"))?;
+            check_object(m, keys, at)
+        }
+        Form::Origin => {
+            let m = v.as_object().ok_or_else(|| e(at, "an object"))?;
+            check_object(
+                m,
+                &[
+                    (
+                        "kind",
+                        Form::Choice(&["registered", "run", "changed_outside_run"]),
+                    ),
+                    ("run", Form::Any),
+                ],
+                at,
+            )?;
+            let run = &m["run"];
+            if !(run.is_null() || run.as_str().is_some_and(is_run_handle)) {
+                return Err(e(&ptr(at, "run"), "a run handle R<n> or null"));
+            }
+            Ok(())
+        }
+        Form::Snapshot => check_snapshot(v, at),
+        Form::Manifest => check_manifest(v, at),
+    }
+}
+
+fn check_snapshot(v: &Value, at: &str) -> Result<(), Error> {
+    let m = v
+        .as_object()
+        .ok_or_else(|| e(at, "a snapshot is an object"))?;
+    check_object(
+        m,
+        &[
+            ("size", Form::Int),
+            ("mtime", Form::Str),
+            ("mtime_ns", Form::Int),
+            ("ctime", Form::Str),
+            ("ctime_ns", Form::Int),
+            ("ino", Form::Int),
+        ],
+        at,
+    )?;
+    for k in ["mtime", "ctime"] {
+        if !m[k].as_str().is_some_and(is_at) {
+            return Err(e(&ptr(at, k), "an RFC 3339 UTC time in whole seconds"));
+        }
+        let ns = format!("{k}_ns");
+        if m[&ns].as_u64().is_none_or(|n| n > 999_999_999) {
+            return Err(e(&ptr(at, &ns), "nanoseconds, 0 to 999999999"));
+        }
+    }
+    Ok(())
+}
+
+static ENTRY: [(&str, Form); 3] = [
+    ("path", Form::NonEmptyStr),
+    ("snapshot", Form::Snapshot),
+    ("fingerprint", Form::Id),
+];
+static ENTRIES: Form = Form::List(&Form::Object(&ENTRY));
+static MANIFEST: [(&str, Form); 3] = [
+    ("fingerprint", Form::Id),
+    ("ignore", Form::List(&Form::Str)),
+    ("entries", Form::Any),
+];
+
+fn check_manifest(v: &Value, at: &str) -> Result<(), Error> {
+    let m = v
+        .as_object()
+        .ok_or_else(|| e(at, "a manifest is an object"))?;
+    check_object(m, &MANIFEST, at)?;
+    check(&m["entries"], &ENTRIES, &ptr(at, "entries"))?;
+    let entries = m["entries"].as_array().map_or(&[][..], Vec::as_slice);
+    for i in 1..entries.len() {
+        let a = entries[i - 1]["path"].as_str().unwrap_or_default();
+        let b = entries[i]["path"].as_str().unwrap_or_default();
+        if crate::sort_order::cmp_text(a, b).is_ge() {
+            return Err(e(
+                &ptr(&ptr(&ptr(at, "entries"), i), "path"),
+                "entries are sorted by path in 11.10 order, without repeats",
+            ));
+        }
+    }
+    let fp = id_of(&m["entries"]).map_err(|x| x.in_envelope(at))?;
+    if m["fingerprint"].as_str() != Some(fp.as_str()) {
+        return Err(e(
+            &ptr(at, "fingerprint"),
+            "the fingerprint is the ID of the canonical entries",
+        ));
+    }
+    Ok(())
+}

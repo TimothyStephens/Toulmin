@@ -1,0 +1,21 @@
+{
+  "description": "log of an int gives dec",
+  "input": "log10(a) + exp(d) - log(d) + log2(a)",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "log10(a) + exp(d) - log(d) + log2(a)",
+    "type": "dec"
+  }
+}
