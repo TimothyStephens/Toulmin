@@ -133,8 +133,16 @@ Recorded so they are not lost, with where each surfaces. Do not fix them now.
 | 11.18.4's `{col}`, `{as}`, `{left_col}`, `{right_col}` have no backtick rule | P4, writing `describe.rs` | Same rule as `{expr}`: as written, backticks only where the grammar requires |
 | The gate A half of `action_file.rs` has no `tm-formats` item | P8, writing `apply.rs` | Add it to item 20's neighbourhood |
 | `tm-data` block layout cannot hold a query called twice on one page | P8, the parity test | A list of `{query, params, result}` |
+| Item 83's `claim add --report PATH` takes a path; bodies carry a `T<n>` report handle (P1 ruling, 2026-11-11) | P7, writing `claim_add.rs` | `report add` allocates `T<n>`; `claim add --report` accepts a path or a handle and resolves a path through `reports` |
+| Verification Plan's Scenario row says eight tests; item 82 lists ten | P8, writing `tests/scenarios.rs` | Make the row say ten |
+| Fuzz job is wired to `pull_request`; the Verification Plan says scheduled | P4, when `tm-checker` gives it targets | Move it to a schedule, or it adds ten minutes to every PR from P4 on |
+| `conformance/checker/assertions/eval/<name>/observed.p1.json` holds outcomes the Rust side chose in P1 | P4, before the third session starts | That session writes `expected.json` from `checker.md` and `case.json` only and must not open `observed.p1.json`; put that line in its prompt |
 
 ---
+
+## 6a. After P1 merges
+
+`.local-tools/` in the agentbox checkout holds about 2 GB of P0 toolchain material the builder said could go once P1 landed. `du -sh .local-tools && rm -rf .local-tools` there, not in the Toulmin repo.
 
 ## 7. agentbox artifacts, on a host with podman and OMP
 
