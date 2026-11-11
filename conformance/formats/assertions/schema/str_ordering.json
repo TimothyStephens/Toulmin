@@ -1,0 +1,23 @@
+{
+  "description": "strings take only eq and ne",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "gene",
+    "op": "lt",
+    "expected": {
+      "t": "str",
+      "v": "A"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/op"
+  }
+}

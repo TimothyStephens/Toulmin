@@ -1,0 +1,8 @@
+{
+  "description": "invalid file.registered: kind is input or output (6.1)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"description\":\"DESeq2 output\",\"file\":\"F7\",\"kind\":\"derived\",\"path\":\"data/de.tsv\",\"source\":null,\"title\":\"DE results\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.registered\",\"id\":\"sha256:adca8793387f253696f97bc4140d58825ce12e251a07f5f23b371b88ab9ba792\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/kind"
+  }
+}

@@ -11,7 +11,7 @@
 
 [workspace]
 resolver = "3"
-members = []
+members = ["crates/tm-formats"]
 
 [workspace.package]
 edition = "2024"

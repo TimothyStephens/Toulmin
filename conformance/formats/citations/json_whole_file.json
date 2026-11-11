@@ -1,0 +1,11 @@
+{
+  "description": "whole_file",
+  "case": "json",
+  "input": {
+    "kind": "whole_file",
+    "version": "F7@v2"
+  },
+  "expect": {
+    "valid": true
+  }
+}

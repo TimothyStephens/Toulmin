@@ -1,0 +1,13 @@
+{
+  "description": "page is at least 1",
+  "case": "json",
+  "input": {
+    "kind": "page",
+    "version": "F3@v1",
+    "page": 0
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/page"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "description": "a parse spec version above the known one makes the event opaque (11.16)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\",\"spec\":{\"columns\":[{\"missing\":[],\"name\":\"gene_id\",\"type\":\"str\"},{\"missing\":[\"NA\"],\"name\":\"log2FoldChange\",\"scale\":4,\"type\":\"dec\"},{\"missing\":[\"NA\"],\"name\":\"padj\",\"scale\":5,\"type\":\"dec\"},{\"missing\":[\"NA\"],\"name\":\"baseMean\",\"type\":\"float64\"}],\"delimiter\":\"\\t\",\"encoding\":\"utf-8\",\"format\":\"tsv\",\"header\":true,\"inf\":\"missing\",\"key\":[\"gene_id\"],\"nan\":\"missing\",\"spec\":2},\"spec_fingerprint\":\"sha256:58007c4c2e2dbab16d824563afa477035a7263ada21b756a835a0d7ee0249192\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.parse_spec_set\",\"id\":\"sha256:6d47a89b4e2d3f3d102754d8cec877e7540e01e0c0e5d1322ed0c604754d57b5\"}",
+  "expect": {
+    "id": "sha256:6d47a89b4e2d3f3d102754d8cec877e7540e01e0c0e5d1322ed0c604754d57b5",
+    "type": "file.parse_spec_set",
+    "event": "opaque"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "description": "key is required",
+  "input": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "gene_id",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "log2FoldChange",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 4
+      },
+      {
+        "name": "padj",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 5
+      },
+      {
+        "name": "baseMean",
+        "type": "float64",
+        "missing": [
+          "NA"
+        ]
+      }
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E3105",
+    "field": "/key"
+  }
+}

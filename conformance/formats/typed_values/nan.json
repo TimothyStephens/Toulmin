@@ -1,0 +1,10 @@
+{
+  "description": "nan",
+  "case": "typed_value",
+  "input": {
+    "t": "nan"
+  },
+  "expect": {
+    "valid": true
+  }
+}

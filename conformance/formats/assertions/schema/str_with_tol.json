@@ -1,0 +1,27 @@
+{
+  "description": "tol does not apply to strings",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "gene",
+    "op": "eq",
+    "expected": {
+      "t": "str",
+      "v": "A"
+    },
+    "tol": {
+      "abs": "1",
+      "rel": "0"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/tol"
+  }
+}

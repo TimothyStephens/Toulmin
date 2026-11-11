@@ -1,0 +1,8 @@
+{
+  "description": "non-ASCII written as UTF-8, solidus unescaped",
+  "input_text": "\"caf\\u00e9 \\u2028 \\/\"",
+  "expect": {
+    "canonical": "\"café   /\"",
+    "id": "sha256:434bfdf12dafc2d116ab20681df8a7812a946dc09f5f8f74c6b6e03e690c23b7"
+  }
+}

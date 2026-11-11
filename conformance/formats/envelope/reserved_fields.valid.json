@@ -1,0 +1,9 @@
+{
+  "description": "reserved envelope fields sig and collab are accepted and stored as given (11.13)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"collab\":null,\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"sig\":{\"alg\":\"none\"},\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:6ba53e728c885e06733cf439cd66c8b0070d493a60fde24437d9180d4694492d\"}",
+  "expect": {
+    "id": "sha256:6ba53e728c885e06733cf439cd66c8b0070d493a60fde24437d9180d4694492d",
+    "type": "file.restored",
+    "event": "known"
+  }
+}

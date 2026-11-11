@@ -1,0 +1,9 @@
+{
+  "description": "a valid file.kept line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"compressed_size\":20480,\"fingerprint_only\":false,\"object\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"reason\":\"promotion\",\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.kept\",\"id\":\"sha256:4a132817d04c16b9d71b97b09fdf965550c6f2345c0448b4aa5b90e229819889\"}",
+  "expect": {
+    "id": "sha256:4a132817d04c16b9d71b97b09fdf965550c6f2345c0448b4aa5b90e229819889",
+    "type": "file.kept",
+    "event": "known"
+  }
+}

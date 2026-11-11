@@ -1,0 +1,62 @@
+{
+  "description": "one key column",
+  "case": "cli",
+  "input": "F7@v2#gene_id=TP53",
+  "spec": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "gene_id",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "log2FoldChange",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 4
+      },
+      {
+        "name": "padj",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 5
+      },
+      {
+        "name": "baseMean",
+        "type": "float64",
+        "missing": [
+          "NA"
+        ]
+      }
+    ],
+    "key": [
+      "gene_id"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "citation": {
+      "kind": "cells",
+      "version": "F7@v2",
+      "keys": [
+        [
+          {
+            "t": "str",
+            "v": "TP53"
+          }
+        ]
+      ],
+      "columns": null
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "description": "invalid claim.reviewed: outcome is confirmed, disputed, or question",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"note\":\"checked against Table 2\",\"outcome\":\"approved\",\"ref\":\"C31\",\"report_fingerprint\":\"sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"revision\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.reviewed\",\"id\":\"sha256:ffcbdd1904e4464b86667e9563252b2d3f4cf19c8b316defd5ae0d3b15bcfeda\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/outcome"
+  }
+}

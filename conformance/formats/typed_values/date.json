@@ -1,0 +1,11 @@
+{
+  "description": "a leap day",
+  "case": "typed_value",
+  "input": {
+    "t": "date",
+    "v": "2024-02-29"
+  },
+  "expect": {
+    "valid": true
+  }
+}

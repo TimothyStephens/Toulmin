@@ -1,0 +1,33 @@
+{
+  "description": "compare_rows with a relative tolerance",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "padj"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "MDM2"
+        }
+      ],
+      "column": "padj"
+    },
+    "op": "lt",
+    "tol": {
+      "abs": "0",
+      "rel": "0.1"
+    }
+  },
+  "expect": {
+    "valid": true
+  }
+}

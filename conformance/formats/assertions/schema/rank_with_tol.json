@@ -1,0 +1,24 @@
+{
+  "description": "rank with a tolerance",
+  "input": {
+    "assert": 1,
+    "kind": "rank",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "expected": {
+      "t": "int",
+      "v": "1"
+    },
+    "tol": {
+      "abs": "1",
+      "rel": "0"
+    }
+  },
+  "expect": {
+    "valid": true
+  }
+}

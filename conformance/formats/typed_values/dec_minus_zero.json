@@ -1,0 +1,12 @@
+{
+  "description": "a dec negative zero keeps no sign",
+  "case": "typed_value",
+  "input": {
+    "t": "dec",
+    "v": "-0.00"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v"
+  }
+}

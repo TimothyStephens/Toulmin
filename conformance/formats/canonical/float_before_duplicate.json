@@ -1,0 +1,7 @@
+{
+  "description": "a float inside an object wins over its duplicate name, reported at close",
+  "input_text": "{\"a\":1,\"a\":2.5}",
+  "expect": {
+    "code": "E1001"
+  }
+}

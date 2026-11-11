@@ -1,0 +1,27 @@
+{
+  "description": "tol does not apply to dates",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "day",
+    "op": "eq",
+    "expected": {
+      "t": "date",
+      "v": "2026-01-01"
+    },
+    "tol": {
+      "abs": "1",
+      "rel": "0"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/tol"
+  }
+}

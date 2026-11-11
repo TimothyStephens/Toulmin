@@ -1,0 +1,13 @@
+{
+  "description": "#page= without a spec is a PDF page",
+  "case": "cli",
+  "input": "F3@v1#page=4",
+  "spec": null,
+  "expect": {
+    "citation": {
+      "kind": "page",
+      "version": "F3@v1",
+      "page": 4
+    }
+  }
+}

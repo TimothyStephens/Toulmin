@@ -1,0 +1,10 @@
+{
+  "description": "no leading zeros",
+  "case": "cli",
+  "input": "F3@v1#page=03",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

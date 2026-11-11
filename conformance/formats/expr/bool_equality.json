@@ -1,0 +1,21 @@
+{
+  "description": "= on two bools",
+  "input": "flag = true",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "flag = true",
+    "type": "bool"
+  }
+}

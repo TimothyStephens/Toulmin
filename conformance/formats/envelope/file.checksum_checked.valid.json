@@ -1,0 +1,9 @@
+{
+  "description": "a valid file.checksum_checked line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"algorithm\":\"md5\",\"file\":\"F7\",\"matched\":false,\"mismatches\":[\"a.fastq.gz\"],\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.checksum_checked\",\"id\":\"sha256:ca30589d5eb21c658b05fb06f2c233c47cdf95448869a5113ff959801d640da6\"}",
+  "expect": {
+    "id": "sha256:ca30589d5eb21c658b05fb06f2c233c47cdf95448869a5113ff959801d640da6",
+    "type": "file.checksum_checked",
+    "event": "known"
+  }
+}

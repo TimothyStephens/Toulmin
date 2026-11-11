@@ -1,0 +1,12 @@
+{
+  "description": "a dec with no integer digit",
+  "case": "typed_value",
+  "input": {
+    "t": "dec",
+    "v": ".5"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v"
+  }
+}

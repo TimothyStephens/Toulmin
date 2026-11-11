@@ -1,0 +1,31 @@
+{
+  "description": "bounds are not reordered",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "x",
+    "op": "between",
+    "expected": [
+      {
+        "t": "int",
+        "v": "20"
+      },
+      {
+        "t": "int",
+        "v": "10"
+      }
+    ]
+  },
+  "observed": {
+    "cell": {
+      "t": "int",
+      "v": "15"
+    }
+  }
+}

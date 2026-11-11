@@ -1,0 +1,9 @@
+{
+  "description": "a journal line: no batch or epoch on chain S4, src null for a session actor (11.2)",
+  "line": "{\"actor\":{\"id\":\"S4\",\"kind\":\"session\"},\"at\":\"2026-11-09T14:02:11Z\",\"body\":{\"file\":\"F7\"},\"chain\":\"S4\",\"env\":1,\"prev\":\"sha256:4e3a41a84109ae9fcc6972b37f0df80fa8b926c69fdd8636c01eb37f71f0d4d4\",\"seq\":1,\"src\":null,\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:c5383f5bc0078731d29915407f72b0045b2de456311daa9ad61488cc03f3da70\"}",
+  "expect": {
+    "id": "sha256:c5383f5bc0078731d29915407f72b0045b2de456311daa9ad61488cc03f3da70",
+    "type": "file.restored",
+    "event": "known"
+  }
+}

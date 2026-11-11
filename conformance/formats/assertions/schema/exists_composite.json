@@ -1,0 +1,20 @@
+{
+  "description": "exists with a composite key",
+  "input": {
+    "assert": 1,
+    "kind": "exists",
+    "row": [
+      {
+        "t": "str",
+        "v": "S1"
+      },
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ]
+  },
+  "expect": {
+    "valid": true
+  }
+}

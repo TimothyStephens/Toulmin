@@ -1,0 +1,25 @@
+{
+  "description": "a str cell against a dec expected",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "x",
+    "op": "eq",
+    "expected": {
+      "t": "dec",
+      "v": "1"
+    }
+  },
+  "observed": {
+    "cell": {
+      "t": "str",
+      "v": "1"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "description": "tol parts are non-negative",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "padj",
+    "op": "eq",
+    "expected": {
+      "t": "dec",
+      "v": "1"
+    },
+    "tol": {
+      "abs": "-0.1",
+      "rel": "0"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/tol/abs"
+  }
+}

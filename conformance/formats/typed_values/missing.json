@@ -1,0 +1,10 @@
+{
+  "description": "missing",
+  "case": "typed_value",
+  "input": {
+    "t": "missing"
+  },
+  "expect": {
+    "valid": true
+  }
+}

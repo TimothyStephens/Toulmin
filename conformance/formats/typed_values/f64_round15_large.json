@@ -1,0 +1,11 @@
+{
+  "description": "1.2345678901234567e17 rounded, written positionally",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x437b69b4ba630f34",
+    "rule": "round15"
+  },
+  "expect": {
+    "dec": "123456789012346000"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "description": "a parse spec's fingerprint is the ID of its canonical JSON (11.7)",
+  "input": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "gene_id",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "padj",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 5
+      }
+    ],
+    "key": [
+      "gene_id"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "id": "sha256:7094b43c23a695dbefef3582ca99f4aae54fdb8dd037e4ce0d9be6bd893e312d"
+  }
+}

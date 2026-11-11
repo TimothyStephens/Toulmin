@@ -1,0 +1,11 @@
+{
+  "description": "an exact binary value with a tie at the 16th digit rounds half-even",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x4271f71fb04cb200",
+    "rule": "round15"
+  },
+  "expect": {
+    "dec": "1234567890123.12"
+  }
+}

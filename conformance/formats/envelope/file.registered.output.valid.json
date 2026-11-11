@@ -1,0 +1,9 @@
+{
+  "description": "kind output is a valid body form; gate A operations register only input (6.1)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"description\":\"DESeq2 output\",\"file\":\"F7\",\"kind\":\"output\",\"path\":\"results/de.tsv\",\"source\":null,\"title\":\"DE results\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.registered\",\"id\":\"sha256:3571a422522c0301dae1eae1123ee9b91f7d8dc52c71846cbaed793aa553866f\"}",
+  "expect": {
+    "id": "sha256:3571a422522c0301dae1eae1123ee9b91f7d8dc52c71846cbaed793aa553866f",
+    "type": "file.registered",
+    "event": "known"
+  }
+}

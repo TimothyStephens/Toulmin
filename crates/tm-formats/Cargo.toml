@@ -1,0 +1,18 @@
+[package]
+name = "tm-formats"
+version = "0.1.0"
+description = "Toulmin shared formats: canonical JSON, IDs, envelopes, typed values, steps, assertions, citations, error catalog"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[dependencies]
+arrow.workspace = true
+bigdecimal.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+unicode-normalization.workspace = true
+
+[lints]
+workspace = true

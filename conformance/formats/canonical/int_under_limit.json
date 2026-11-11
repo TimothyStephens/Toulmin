@@ -1,0 +1,7 @@
+{
+  "description": "minus 2^53 is outside RFC 7493's range and is E1001",
+  "input_text": "[-9007199254740992]",
+  "expect": {
+    "code": "E1001"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "description": "compare_rows whose left row has the wrong arity",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [],
+      "column": "padj"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "padj"
+    },
+    "op": "lt"
+  },
+  "table": {
+    "columns": [
+      [
+        "gene_id",
+        "str"
+      ],
+      [
+        "padj",
+        "dec"
+      ],
+      [
+        "day",
+        "date"
+      ],
+      [
+        "n",
+        "int"
+      ],
+      [
+        "at",
+        "datetime"
+      ],
+      [
+        "flag",
+        "bool"
+      ]
+    ],
+    "key": [
+      "gene_id"
+    ]
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/left/row"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "description": "genesis string of chain S4 (11.2)",
+  "genesis": {
+    "chain": "S4",
+    "project_id": "8f14e45fceea167a5a36dedd4bea2543"
+  },
+  "expect": {
+    "id": "sha256:4e3a41a84109ae9fcc6972b37f0df80fa8b926c69fdd8636c01eb37f71f0d4d4"
+  }
+}

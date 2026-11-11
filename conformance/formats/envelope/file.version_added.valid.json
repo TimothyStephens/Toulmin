@@ -1,0 +1,9 @@
+{
+  "description": "a valid file.version_added line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"content_label\":\"content_changed\",\"file\":\"F7\",\"fingerprint\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest\":null,\"origin\":{\"kind\":\"registered\",\"run\":null},\"size\":1048576,\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":\"4211\",\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576},\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.version_added\",\"id\":\"sha256:5e9c805293b71cbcb41cf1108faf362c6a82b308924fe7561d3f963f5ce21566\"}",
+  "expect": {
+    "id": "sha256:5e9c805293b71cbcb41cf1108faf362c6a82b308924fe7561d3f963f5ce21566",
+    "type": "file.version_added",
+    "event": "known"
+  }
+}

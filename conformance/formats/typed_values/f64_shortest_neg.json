@@ -1,0 +1,11 @@
+{
+  "description": "a negative value",
+  "case": "from_f64",
+  "input": {
+    "f64": "0xc004000000000000",
+    "rule": "shortest"
+  },
+  "expect": {
+    "dec": "-2.5"
+  }
+}

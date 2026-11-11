@@ -1,0 +1,29 @@
+{
+  "description": "|a - b| equal to abs holds",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "x",
+    "op": "eq",
+    "expected": {
+      "t": "dec",
+      "v": "1.0"
+    },
+    "tol": {
+      "abs": "0.1",
+      "rel": "0"
+    }
+  },
+  "observed": {
+    "cell": {
+      "t": "dec",
+      "v": "1.1"
+    }
+  }
+}

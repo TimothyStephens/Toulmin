@@ -1,0 +1,12 @@
+{
+  "description": "an int with a leading zero",
+  "case": "typed_value",
+  "input": {
+    "t": "int",
+    "v": "042"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "description": "NaN is not JSON",
+  "input_text": "[NaN]",
+  "expect": {
+    "code": "E1003"
+  }
+}

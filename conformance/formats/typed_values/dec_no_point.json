@@ -1,0 +1,11 @@
+{
+  "description": "a dec without a fraction",
+  "case": "typed_value",
+  "input": {
+    "t": "dec",
+    "v": "2"
+  },
+  "expect": {
+    "valid": true
+  }
+}

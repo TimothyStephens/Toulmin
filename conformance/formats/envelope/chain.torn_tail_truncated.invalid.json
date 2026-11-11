@@ -1,0 +1,8 @@
+{
+  "description": "invalid chain.torn_tail_truncated: a required body key is absent",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"offset\":4096,\"segment\":1},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"chain.torn_tail_truncated\",\"id\":\"sha256:995f933302b8809cddf0cbb46c6c3f2350fe8b5ad2f4ba7f3393dd951f54a025\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/bytes"
+  }
+}

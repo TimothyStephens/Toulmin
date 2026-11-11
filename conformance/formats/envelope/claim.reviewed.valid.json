@@ -1,0 +1,9 @@
+{
+  "description": "a valid claim.reviewed line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"note\":\"checked against Table 2\",\"outcome\":\"confirmed\",\"ref\":\"C31\",\"report_fingerprint\":\"sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"revision\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.reviewed\",\"id\":\"sha256:99a1c6dde89772151550ad5a1235b9bba0de53e2cc9b7df4b5cf7892929941a9\"}",
+  "expect": {
+    "id": "sha256:99a1c6dde89772151550ad5a1235b9bba0de53e2cc9b7df4b5cf7892929941a9",
+    "type": "claim.reviewed",
+    "event": "known"
+  }
+}

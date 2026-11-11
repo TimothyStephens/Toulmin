@@ -1,0 +1,28 @@
+{
+  "description": "cells with columns",
+  "case": "json",
+  "input": {
+    "kind": "cells",
+    "version": "F7@v2",
+    "keys": [
+      [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      [
+        {
+          "t": "str",
+          "v": "MDM2"
+        }
+      ]
+    ],
+    "columns": [
+      "padj"
+    ]
+  },
+  "expect": {
+    "valid": true
+  }
+}

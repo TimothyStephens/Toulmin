@@ -1,0 +1,27 @@
+{
+  "description": "scale is 0 to 38",
+  "input": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "p",
+        "type": "dec",
+        "missing": [],
+        "scale": 39
+      }
+    ],
+    "key": [
+      "p"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E3105",
+    "field": "/columns/0/scale"
+  }
+}

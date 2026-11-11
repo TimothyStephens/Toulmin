@@ -1,0 +1,48 @@
+{
+  "description": "a key value of the wrong type",
+  "input": {
+    "assert": 1,
+    "kind": "exists",
+    "row": [
+      {
+        "t": "int",
+        "v": "7"
+      }
+    ]
+  },
+  "table": {
+    "columns": [
+      [
+        "gene_id",
+        "str"
+      ],
+      [
+        "padj",
+        "dec"
+      ],
+      [
+        "day",
+        "date"
+      ],
+      [
+        "n",
+        "int"
+      ],
+      [
+        "at",
+        "datetime"
+      ],
+      [
+        "flag",
+        "bool"
+      ]
+    ],
+    "key": [
+      "gene_id"
+    ]
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/row/0"
+  }
+}

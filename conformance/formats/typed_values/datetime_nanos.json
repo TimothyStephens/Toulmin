@@ -1,0 +1,11 @@
+{
+  "description": "a datetime with nanoseconds",
+  "case": "typed_value",
+  "input": {
+    "t": "datetime",
+    "v": "2026-11-09T14:02:11.000000001Z"
+  },
+  "expect": {
+    "valid": true
+  }
+}

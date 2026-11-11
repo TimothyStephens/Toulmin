@@ -1,0 +1,8 @@
+{
+  "description": "invalid claim.checked: build is musl or glibc",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"against\":[\"F7@v2\"],\"assertion\":{\"expected\":{\"t\":\"dec\",\"v\":\"0.01\"},\"observed\":{\"t\":\"dec\",\"v\":\"0.00310\"},\"outcome\":\"holds\"},\"error\":null,\"evidence\":{\"detail\":null,\"outcome\":\"holds\"},\"final_rows_hash\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"key_map\":[[{\"t\":\"str\",\"v\":\"TP53\"}]],\"key_map_hash\":\"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"ref\":\"C31\",\"revision\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"sql\":\"SELECT ...\",\"steps\":[{\"description\":\"Keep rows where padj < 0.05 (missing values excluded); 120 of 20,000 rows remain.\",\"op\":\"filter\",\"rows_out\":120}],\"versions\":{\"build\":\"macos\",\"duckdb\":\"2.0.0\",\"extensions\":[],\"parse_specs\":{\"F7@v2\":\"sha256:58007c4c2e2dbab16d824563afa477035a7263ada21b756a835a0d7ee0249192\"},\"rules\":\"1\",\"translator\":\"1\"}},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.checked\",\"id\":\"sha256:ccaccdb4d479d467f539428069e9400a3825c0044b0486790381c41956a6677a\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/versions/build"
+  }
+}

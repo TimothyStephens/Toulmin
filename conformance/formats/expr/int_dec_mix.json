@@ -1,0 +1,21 @@
+{
+  "description": "int with dec gives dec",
+  "input": "a * 1.50",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "a * 1.50",
+    "type": "dec"
+  }
+}

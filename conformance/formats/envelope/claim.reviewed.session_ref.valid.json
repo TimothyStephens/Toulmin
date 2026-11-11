@@ -1,0 +1,9 @@
+{
+  "description": "a session ref is the same ref form in every gate (11.16, M2)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"note\":\"checked against Table 2\",\"outcome\":\"confirmed\",\"ref\":\"S4.12\",\"report_fingerprint\":\"sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"revision\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.reviewed\",\"id\":\"sha256:5365a165b7e4ef3c65fb499029fae6fe0ecdd91a0cec3cd9cce5c821c6bf3515\"}",
+  "expect": {
+    "id": "sha256:5365a165b7e4ef3c65fb499029fae6fe0ecdd91a0cec3cd9cce5c821c6bf3515",
+    "type": "claim.reviewed",
+    "event": "known"
+  }
+}

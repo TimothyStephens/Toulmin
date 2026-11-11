@@ -1,0 +1,22 @@
+{
+  "description": "a date compared chronologically",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "day",
+    "op": "ge",
+    "expected": {
+      "t": "date",
+      "v": "2026-01-01"
+    }
+  },
+  "expect": {
+    "valid": true
+  }
+}

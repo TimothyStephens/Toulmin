@@ -1,0 +1,11 @@
+{
+  "description": "1e-5, positional not 1e-05",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x3ee4f8b588e368f1",
+    "rule": "shortest"
+  },
+  "expect": {
+    "dec": "0.00001"
+  }
+}

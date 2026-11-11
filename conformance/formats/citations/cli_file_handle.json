@@ -1,0 +1,10 @@
+{
+  "description": "a file handle is not a version handle",
+  "case": "cli",
+  "input": "F7",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

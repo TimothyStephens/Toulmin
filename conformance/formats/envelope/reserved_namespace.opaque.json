@@ -1,0 +1,9 @@
+{
+  "description": "a reserved-namespace type reads as opaque and its body is not checked (11.11, 11.16)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"anything\":[1]},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"run.started\",\"id\":\"sha256:9b64f4aafd9b18ac9233e4c760074b3d3ee29de794713820709c3a75aa9294ee\"}",
+  "expect": {
+    "id": "sha256:9b64f4aafd9b18ac9233e4c760074b3d3ee29de794713820709c3a75aa9294ee",
+    "type": "run.started",
+    "event": "opaque"
+  }
+}

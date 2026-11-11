@@ -1,0 +1,11 @@
+{
+  "description": "1e-7 written positionally",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x3e7ad7f29abcaf48",
+    "rule": "round15"
+  },
+  "expect": {
+    "dec": "0.0000001"
+  }
+}

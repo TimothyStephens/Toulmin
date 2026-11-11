@@ -1,0 +1,7 @@
+{
+  "description": "a syntax error is E1003",
+  "input_text": "[1,2,]",
+  "expect": {
+    "code": "E1003"
+  }
+}

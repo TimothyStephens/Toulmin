@@ -1,0 +1,12 @@
+{
+  "description": "a dec in exponent form",
+  "case": "typed_value",
+  "input": {
+    "t": "dec",
+    "v": "1.5e3"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v"
+  }
+}

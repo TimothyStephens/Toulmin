@@ -1,0 +1,8 @@
+{
+  "description": "invalid claim.retracted: reason is a non-empty string",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"reason\":\"\",\"ref\":\"C31\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.retracted\",\"id\":\"sha256:b4d3d91b1f0ba2ff6ddb640407edd157253f8591a3c7186b3541f33251e06d5d\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/reason"
+  }
+}

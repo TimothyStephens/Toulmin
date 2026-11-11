@@ -1,0 +1,9 @@
+{
+  "description": "a valid audit.completed line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"counts\":{\"files_rehashed\":3,\"mismatches\":0,\"open_flags\":1,\"verdicts_changed\":0,\"verdicts_rerun\":5},\"report_hash\":\"sha256:9999999999999999999999999999999999999999999999999999999999999999\",\"since\":null},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"audit.completed\",\"id\":\"sha256:a553d10fbf8593d5148ca9d4fba50553abc35401b3d1f4d1f727d76625aa2a17\"}",
+  "expect": {
+    "id": "sha256:a553d10fbf8593d5148ca9d4fba50553abc35401b3d1f4d1f727d76625aa2a17",
+    "type": "audit.completed",
+    "event": "known"
+  }
+}

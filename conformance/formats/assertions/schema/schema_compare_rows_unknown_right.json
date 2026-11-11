@@ -1,0 +1,61 @@
+{
+  "description": "compare_rows whose right column is unknown",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "padj"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "MDM2"
+        }
+      ],
+      "column": "q"
+    },
+    "op": "lt"
+  },
+  "table": {
+    "columns": [
+      [
+        "gene_id",
+        "str"
+      ],
+      [
+        "padj",
+        "dec"
+      ],
+      [
+        "day",
+        "date"
+      ],
+      [
+        "n",
+        "int"
+      ],
+      [
+        "at",
+        "datetime"
+      ],
+      [
+        "flag",
+        "bool"
+      ]
+    ],
+    "key": [
+      "gene_id"
+    ]
+  },
+  "expect": {
+    "code": "E6005",
+    "field": "/right/column"
+  }
+}

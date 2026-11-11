@@ -1,0 +1,24 @@
+{
+  "description": "rank compares the 1-based position as eq",
+  "input": {
+    "assert": 1,
+    "kind": "rank",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "expected": {
+      "t": "int",
+      "v": "3"
+    },
+    "tol": {
+      "abs": "1",
+      "rel": "0"
+    }
+  },
+  "observed": {
+    "position": 2
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "description": "parquet takes no delimiter",
+  "input": {
+    "spec": 1,
+    "format": "parquet",
+    "delimiter": ",",
+    "header": null,
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "missing": []
+      },
+      {
+        "name": "x",
+        "type": "float64",
+        "missing": []
+      }
+    ],
+    "key": [
+      "id"
+    ],
+    "nan": "value",
+    "inf": "value",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E3105",
+    "field": "/delimiter"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "description": "a datetime with no fraction",
+  "case": "typed_value",
+  "input": {
+    "t": "datetime",
+    "v": "2026-11-09T14:02:11Z"
+  },
+  "expect": {
+    "valid": true
+  }
+}

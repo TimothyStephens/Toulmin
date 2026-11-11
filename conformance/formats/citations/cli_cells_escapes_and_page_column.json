@@ -1,0 +1,49 @@
+{
+  "description": "escapes, and page as an ordinary key column when the spec has one",
+  "case": "cli",
+  "input": "F7@v2#sample=a\\#b\\=c\\\\d#page=3",
+  "spec": {
+    "spec": 1,
+    "format": "csv",
+    "delimiter": ",",
+    "header": true,
+    "columns": [
+      {
+        "name": "sample",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "page",
+        "type": "int",
+        "missing": []
+      }
+    ],
+    "key": [
+      "sample",
+      "page"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "citation": {
+      "kind": "cells",
+      "version": "F7@v2",
+      "keys": [
+        [
+          {
+            "t": "str",
+            "v": "a#b=c\\d"
+          },
+          {
+            "t": "int",
+            "v": "3"
+          }
+        ]
+      ],
+      "columns": null
+    }
+  }
+}

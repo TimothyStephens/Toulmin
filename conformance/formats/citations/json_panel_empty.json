@@ -1,0 +1,13 @@
+{
+  "description": "panel is a non-empty string",
+  "case": "json",
+  "input": {
+    "kind": "panel",
+    "version": "F5@v1",
+    "panel": ""
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/panel"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "description": "an empty argument",
+  "case": "cli",
+  "input": "",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

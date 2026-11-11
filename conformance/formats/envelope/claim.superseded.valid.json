@@ -1,0 +1,9 @@
+{
+  "description": "a valid claim.superseded line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"ref\":\"C31\",\"replacement\":\"C32\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.superseded\",\"id\":\"sha256:0edef73b487be24fd29427c8018f7b54650d100c6374e3663e4d194a9af56cb0\"}",
+  "expect": {
+    "id": "sha256:0edef73b487be24fd29427c8018f7b54650d100c6374e3663e4d194a9af56cb0",
+    "type": "claim.superseded",
+    "event": "known"
+  }
+}

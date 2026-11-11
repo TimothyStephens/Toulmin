@@ -1,0 +1,13 @@
+{
+  "description": "a member the kind does not define",
+  "case": "json",
+  "input": {
+    "kind": "whole_file",
+    "version": "F7@v2",
+    "page": 1
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/page"
+  }
+}

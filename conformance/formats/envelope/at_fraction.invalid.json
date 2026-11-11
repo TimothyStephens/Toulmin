@@ -1,0 +1,8 @@
+{
+  "description": "at carries no fraction",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11.5Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:b861a2bd6062f9440d0e77ef65c4b013faefa40e4bcf6961e6a95f573a699018\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/at"
+  }
+}

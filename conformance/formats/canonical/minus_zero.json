@@ -1,0 +1,7 @@
+{
+  "description": "minus zero counts as a float",
+  "input_text": "[-0]",
+  "expect": {
+    "code": "E1001"
+  }
+}

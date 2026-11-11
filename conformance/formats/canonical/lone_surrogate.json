@@ -1,0 +1,7 @@
+{
+  "description": "a lone surrogate is not I-JSON",
+  "input_text": "[\"\\ud800\"]",
+  "expect": {
+    "code": "E1003"
+  }
+}

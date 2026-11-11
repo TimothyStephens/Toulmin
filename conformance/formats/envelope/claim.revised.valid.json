@@ -1,0 +1,9 @@
+{
+  "description": "a valid claim.revised line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"assertion\":null,\"citations\":[{\"columns\":[\"padj\"],\"keys\":[[{\"t\":\"str\",\"v\":\"TP53\"}],[{\"t\":\"str\",\"v\":\"MDM2\"}]],\"kind\":\"cells\",\"version\":\"F7@v2\"}],\"cited\":[\"F7@v2\"],\"qualifiers\":null,\"reason\":\"update_text\",\"ref\":\"C31\",\"sentence\":\"TP53 is strongly significant.\",\"steps\":null},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.revised\",\"id\":\"sha256:3b3ab9ee68bf6e57ec7bbb0979997a002c95f5ff8f3464281abee1265931bfec\"}",
+  "expect": {
+    "id": "sha256:3b3ab9ee68bf6e57ec7bbb0979997a002c95f5ff8f3464281abee1265931bfec",
+    "type": "claim.revised",
+    "event": "known"
+  }
+}

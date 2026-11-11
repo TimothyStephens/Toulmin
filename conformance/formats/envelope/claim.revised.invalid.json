@@ -1,0 +1,8 @@
+{
+  "description": "invalid claim.revised: every revision carries its citations",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"assertion\":null,\"cited\":[\"F7@v2\"],\"qualifiers\":null,\"reason\":\"update_text\",\"ref\":\"C31\",\"sentence\":\"TP53 is strongly significant.\",\"steps\":null},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.revised\",\"id\":\"sha256:c13edc0f97009cb2ac00f99c4d080b630972ccc178019b0869b8fa318337a1d7\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/citations"
+  }
+}

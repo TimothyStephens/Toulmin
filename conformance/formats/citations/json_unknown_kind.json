@@ -1,0 +1,12 @@
+{
+  "description": "an unknown kind",
+  "case": "json",
+  "input": {
+    "kind": "table",
+    "version": "F7@v2"
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/kind"
+  }
+}

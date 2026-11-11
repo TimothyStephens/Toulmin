@@ -1,0 +1,11 @@
+{
+  "description": "a bool",
+  "case": "typed_value",
+  "input": {
+    "t": "bool",
+    "v": false
+  },
+  "expect": {
+    "valid": true
+  }
+}

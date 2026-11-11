@@ -1,0 +1,11 @@
+{
+  "description": "a dec keeps its trailing zeros",
+  "case": "typed_value",
+  "input": {
+    "t": "dec",
+    "v": "0.00310"
+  },
+  "expect": {
+    "valid": true
+  }
+}

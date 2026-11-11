@@ -1,0 +1,10 @@
+{
+  "description": "without a spec only page and panel",
+  "case": "cli",
+  "input": "F3@v1#x=1",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "description": "columns is null or a non-empty list",
+  "case": "json",
+  "input": {
+    "kind": "cells",
+    "version": "F7@v2",
+    "keys": [
+      [
+        {
+          "t": "str",
+          "v": "a"
+        }
+      ]
+    ],
+    "columns": []
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/columns"
+  }
+}

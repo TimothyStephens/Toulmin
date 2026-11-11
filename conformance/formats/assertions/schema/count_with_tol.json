@@ -1,0 +1,20 @@
+{
+  "description": "count takes no tol",
+  "input": {
+    "assert": 1,
+    "kind": "count",
+    "op": "eq",
+    "expected": {
+      "t": "int",
+      "v": "3"
+    },
+    "tol": {
+      "abs": "1",
+      "rel": "0"
+    }
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/tol"
+  }
+}

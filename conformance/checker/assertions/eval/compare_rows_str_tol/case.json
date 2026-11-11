@@ -1,0 +1,40 @@
+{
+  "description": "tol on string cells",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "g"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "MDM2"
+        }
+      ],
+      "column": "g"
+    },
+    "op": "eq",
+    "tol": {
+      "abs": "0",
+      "rel": "0"
+    }
+  },
+  "observed": {
+    "left": {
+      "t": "str",
+      "v": "a"
+    },
+    "right": {
+      "t": "str",
+      "v": "a"
+    }
+  }
+}

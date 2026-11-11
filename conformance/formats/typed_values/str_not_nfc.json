@@ -1,0 +1,15 @@
+{
+  "description": "a string not in NFC is read as its NFC form, not refused (11.6)",
+  "case": "typed_value",
+  "input": {
+    "t": "str",
+    "v": "café"
+  },
+  "expect": {
+    "valid": true,
+    "normalized": {
+      "t": "str",
+      "v": "café"
+    }
+  }
+}

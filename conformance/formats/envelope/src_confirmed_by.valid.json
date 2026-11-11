@@ -1,0 +1,9 @@
+{
+  "description": "the reserved src.confirmed_by (11.13, D27) is accepted and checked as an event ID",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"confirmed_by\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"harness_env\":false,\"source\":\"viewer\",\"tty\":false},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:6af528dfed0ddc7085e5b7bab3101a16554805db7afe7455c5023ed0be0906fa\"}",
+  "expect": {
+    "id": "sha256:6af528dfed0ddc7085e5b7bab3101a16554805db7afe7455c5023ed0be0906fa",
+    "type": "file.restored",
+    "event": "known"
+  }
+}

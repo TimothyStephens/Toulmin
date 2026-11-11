@@ -1,0 +1,21 @@
+{
+  "description": "an identifier not followed by ( is a column, even log",
+  "input": "log > 0.5",
+  "columns": {
+    "a": "int",
+    "b": "int",
+    "c": "int",
+    "d": "dec",
+    "s": "str",
+    "flag": "bool",
+    "day": "date",
+    "at": "datetime",
+    "log": "dec",
+    "log2 FC": "dec",
+    "and": "bool"
+  },
+  "expect": {
+    "render": "log > 0.5",
+    "type": "bool"
+  }
+}

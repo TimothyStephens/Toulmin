@@ -1,0 +1,12 @@
+{
+  "description": "version is a version handle",
+  "case": "json",
+  "input": {
+    "kind": "whole_file",
+    "version": "F7"
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/version"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "description": "a valid project.created line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"owner_id\":\"tim\",\"project_id\":\"8f14e45fceea167a5a36dedd4bea2543\",\"record_format\":1,\"repo_root_hash\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"project.created\",\"id\":\"sha256:a6f2b50ec6b51ff66348dd12bc33c1362a736cb2620b9903ef5b7851d76b3c14\"}",
+  "expect": {
+    "id": "sha256:a6f2b50ec6b51ff66348dd12bc33c1362a736cb2620b9903ef5b7851d76b3c14",
+    "type": "project.created",
+    "event": "known"
+  }
+}

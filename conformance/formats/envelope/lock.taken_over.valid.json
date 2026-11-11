@@ -1,0 +1,9 @@
+{
+  "description": "a valid lock.taken_over line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"epoch\":4,\"previous\":{\"epoch\":3,\"heartbeat\":\"2026-11-09T14:02:11Z\",\"host\":\"login1\",\"pid\":4242}},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"lock.taken_over\",\"id\":\"sha256:4880ec46fd4e5dd26ef0fee283f5c6c7454870201c51fea62e33746656cc8db2\"}",
+  "expect": {
+    "id": "sha256:4880ec46fd4e5dd26ef0fee283f5c6c7454870201c51fea62e33746656cc8db2",
+    "type": "lock.taken_over",
+    "event": "known"
+  }
+}

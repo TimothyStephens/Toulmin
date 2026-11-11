@@ -1,0 +1,49 @@
+{
+  "description": "the example spec and its fingerprint (11.7)",
+  "input": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "gene_id",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "log2FoldChange",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 4
+      },
+      {
+        "name": "padj",
+        "type": "dec",
+        "missing": [
+          "NA"
+        ],
+        "scale": 5
+      },
+      {
+        "name": "baseMean",
+        "type": "float64",
+        "missing": [
+          "NA"
+        ]
+      }
+    ],
+    "key": [
+      "gene_id"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "valid": true,
+    "fingerprint": "sha256:58007c4c2e2dbab16d824563afa477035a7263ada21b756a835a0d7ee0249192"
+  }
+}

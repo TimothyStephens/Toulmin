@@ -1,0 +1,10 @@
+{
+  "description": "an unknown escape",
+  "case": "cli",
+  "input": "F5@v1#panel=a\\n",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

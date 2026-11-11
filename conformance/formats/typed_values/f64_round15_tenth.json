@@ -1,0 +1,11 @@
+{
+  "description": "0.1 through 15 significant digits",
+  "case": "from_f64",
+  "input": {
+    "f64": "0x3fb999999999999a",
+    "rule": "round15"
+  },
+  "expect": {
+    "dec": "0.1"
+  }
+}

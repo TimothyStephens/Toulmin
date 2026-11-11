@@ -1,0 +1,12 @@
+{
+  "description": "a reserved kind is stored as given (11.13)",
+  "case": "json",
+  "input": {
+    "kind": "quote",
+    "version": "F3@v1",
+    "text": "as stated"
+  },
+  "expect": {
+    "valid": true
+  }
+}

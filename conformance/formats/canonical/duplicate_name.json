@@ -1,0 +1,7 @@
+{
+  "description": "a duplicate member name is not I-JSON",
+  "input_text": "{\"a\":1,\"a\":2}",
+  "expect": {
+    "code": "E1003"
+  }
+}

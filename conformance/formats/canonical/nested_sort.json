@@ -1,0 +1,8 @@
+{
+  "description": "nested objects and arrays, whitespace dropped",
+  "input_text": "{ \"b\": [ {\"z\":1, \"a\":2} ], \"a\": {\"y\": null, \"x\": [true, false]} }",
+  "expect": {
+    "canonical": "{\"a\":{\"x\":[true,false],\"y\":null},\"b\":[{\"a\":2,\"z\":1}]}",
+    "id": "sha256:7f36f7a91df08f8681144adda37761153a95c20b38be16d4aae5ed6d53fe208f"
+  }
+}

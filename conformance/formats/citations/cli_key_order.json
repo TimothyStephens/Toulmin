@@ -1,0 +1,34 @@
+{
+  "description": "segments follow the spec's key order",
+  "case": "cli",
+  "input": "F7@v2#page=3#sample=a",
+  "spec": {
+    "spec": 1,
+    "format": "csv",
+    "delimiter": ",",
+    "header": true,
+    "columns": [
+      {
+        "name": "sample",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "page",
+        "type": "int",
+        "missing": []
+      }
+    ],
+    "key": [
+      "sample",
+      "page"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

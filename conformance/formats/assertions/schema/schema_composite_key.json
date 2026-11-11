@@ -1,0 +1,40 @@
+{
+  "description": "a composite key row",
+  "input": {
+    "assert": 1,
+    "kind": "exists",
+    "row": [
+      {
+        "t": "str",
+        "v": "S1"
+      },
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ]
+  },
+  "table": {
+    "columns": [
+      [
+        "sample_id",
+        "str"
+      ],
+      [
+        "gene_id",
+        "str"
+      ],
+      [
+        "count",
+        "int"
+      ]
+    ],
+    "key": [
+      "sample_id",
+      "gene_id"
+    ]
+  },
+  "expect": {
+    "valid": true
+  }
+}

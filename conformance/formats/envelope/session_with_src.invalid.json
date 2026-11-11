@@ -1,0 +1,8 @@
+{
+  "description": "src is null unless the actor is the owner (11.2)",
+  "line": "{\"actor\":{\"id\":\"S4\",\"kind\":\"session\"},\"at\":\"2026-11-09T14:02:11Z\",\"body\":{\"file\":\"F7\"},\"chain\":\"S4\",\"env\":1,\"prev\":\"sha256:4e3a41a84109ae9fcc6972b37f0df80fa8b926c69fdd8636c01eb37f71f0d4d4\",\"seq\":1,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":false},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:4ea13606f141df84a551de9e61d38aa90b7a88e302c39f2d0f539dd83f7659ae\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/src"
+  }
+}

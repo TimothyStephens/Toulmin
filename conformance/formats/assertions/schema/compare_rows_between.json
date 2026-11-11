@@ -1,0 +1,30 @@
+{
+  "description": "compare_rows does not take between",
+  "input": {
+    "assert": 1,
+    "kind": "compare_rows",
+    "left": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "a"
+    },
+    "right": {
+      "row": [
+        {
+          "t": "str",
+          "v": "TP53"
+        }
+      ],
+      "column": "b"
+    },
+    "op": "between"
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/op"
+  }
+}

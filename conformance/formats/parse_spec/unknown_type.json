@@ -1,0 +1,26 @@
+{
+  "description": "an unknown column type",
+  "input": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "g",
+        "type": "text",
+        "missing": []
+      }
+    ],
+    "key": [
+      "g"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E3105",
+    "field": "/columns/0/type"
+  }
+}

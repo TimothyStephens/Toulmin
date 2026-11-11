@@ -1,0 +1,9 @@
+{
+  "description": "a valid file.registered line",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"description\":\"DESeq2 output\",\"file\":\"F7\",\"kind\":\"input\",\"path\":\"data/de.tsv\",\"source\":null,\"title\":\"DE results\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.registered\",\"id\":\"sha256:93cd241129ea368f1d5404fc14fcb7e713e5f753d614c011dc00aa09a983e68f\"}",
+  "expect": {
+    "id": "sha256:93cd241129ea368f1d5404fc14fcb7e713e5f753d614c011dc00aa09a983e68f",
+    "type": "file.registered",
+    "event": "known"
+  }
+}

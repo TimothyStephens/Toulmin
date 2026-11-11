@@ -1,0 +1,8 @@
+{
+  "description": "tv 0 is neither known nor higher",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":0,\"type\":\"file.restored\",\"id\":\"sha256:fd3119fe64fe45cc3212de4adf2b4284dd86c92b9baa60d071dae0c9e59228a1\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/tv"
+  }
+}

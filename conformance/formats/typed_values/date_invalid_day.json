@@ -1,0 +1,12 @@
+{
+  "description": "February 29 in a common year",
+  "case": "typed_value",
+  "input": {
+    "t": "date",
+    "v": "2026-02-29"
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/v"
+  }
+}

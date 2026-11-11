@@ -1,0 +1,12 @@
+{
+  "description": "a bare handle",
+  "case": "cli",
+  "input": "F7@v2",
+  "spec": null,
+  "expect": {
+    "citation": {
+      "kind": "whole_file",
+      "version": "F7@v2"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "description": "a float anywhere in a line is E1001",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7.0,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:e25a2d08203f3f7cdac461845946ae79272a5e732a114ca03be3f673bea2b2e9\"}",
+  "expect": {
+    "code": "E1001",
+    "field": null
+  }
+}

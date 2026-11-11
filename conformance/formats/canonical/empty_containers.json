@@ -1,0 +1,8 @@
+{
+  "description": "empty object and array",
+  "input_text": "{\"o\":{},\"a\":[]}",
+  "expect": {
+    "canonical": "{\"a\":[],\"o\":{}}",
+    "id": "sha256:9bee7ebfc94b459dacb8cbc72cb2900e61f0aa42189df18329f84f92568f4f89"
+  }
+}

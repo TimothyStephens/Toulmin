@@ -1,0 +1,26 @@
+{
+  "description": "tol has both abs and rel",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "padj",
+    "op": "eq",
+    "expected": {
+      "t": "dec",
+      "v": "1"
+    },
+    "tol": {
+      "abs": "0.1"
+    }
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/tol/rel"
+  }
+}
