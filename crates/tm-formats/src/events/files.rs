@@ -10,11 +10,11 @@ pub(crate) const TYPES: &[TypeDef] = &[
         tv: 1,
         keys: &[
             ("file", Form::File),
-            ("kind", Form::Choice(&["input"])),
-            ("path", Form::Str),
-            ("title", Form::Any),
-            ("description", Form::Any),
-            ("source", Form::Any),
+            ("kind", Form::Choice(&["input", "output"])),
+            ("path", Form::NonEmptyStr),
+            ("title", Form::NonEmptyStr),
+            ("description", Form::NonEmptyStr),
+            ("source", Form::Null(&Form::Str)),
         ],
     },
     TypeDef {
@@ -26,9 +26,16 @@ pub(crate) const TYPES: &[TypeDef] = &[
             ("version", Form::Version),
             ("fingerprint", Form::Id),
             ("origin", Form::Origin),
-            ("size", Form::Any),
+            ("size", Form::Int),
             ("snapshot", Form::Snapshot),
-            ("content_label", Form::Any),
+            (
+                "content_label",
+                Form::Null(&Form::Choice(&[
+                    "content_changed",
+                    "carried_forward",
+                    "metadata_only",
+                ])),
+            ),
             ("manifest", Form::Null(&Form::Manifest)),
         ],
     },
@@ -39,8 +46,8 @@ pub(crate) const TYPES: &[TypeDef] = &[
         keys: &[
             ("file", Form::File),
             ("version", Form::Version),
-            ("algorithm", Form::Any),
-            ("matched", Form::Any),
+            ("algorithm", Form::Choice(&["md5", "sha256"])),
+            ("matched", Form::Bool),
             ("mismatches", Form::List(&Form::Str)),
         ],
     },
@@ -61,9 +68,9 @@ pub(crate) const TYPES: &[TypeDef] = &[
         keys: &[
             ("version", Form::Version),
             ("object", Form::Id),
-            ("compressed_size", Form::Any),
+            ("compressed_size", Form::Int),
             ("reason", Form::Choice(&["promotion", "owner"])),
-            ("fingerprint_only", Form::Any),
+            ("fingerprint_only", Form::Bool),
         ],
     },
     TypeDef {
@@ -82,7 +89,11 @@ pub(crate) const TYPES: &[TypeDef] = &[
         ty: EventType::FileRenamed,
         name: "file.renamed",
         tv: 1,
-        keys: &[("file", Form::File), ("from", Form::Str), ("to", Form::Str)],
+        keys: &[
+            ("file", Form::File),
+            ("from", Form::NonEmptyStr),
+            ("to", Form::NonEmptyStr),
+        ],
     },
     TypeDef {
         ty: EventType::FilePanelsSet,
@@ -90,7 +101,7 @@ pub(crate) const TYPES: &[TypeDef] = &[
         tv: 1,
         keys: &[
             ("version", Form::Version),
-            ("panels", Form::List(&Form::Str)),
+            ("panels", Form::List(&Form::NonEmptyStr)),
         ],
     },
 ];

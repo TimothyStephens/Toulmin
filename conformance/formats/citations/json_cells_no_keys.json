@@ -1,0 +1,13 @@
+{
+  "description": "cells requires keys",
+  "case": "json",
+  "input": {
+    "kind": "cells",
+    "version": "F7@v2",
+    "columns": null
+  },
+  "expect": {
+    "code": "E6002",
+    "field": "/keys"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "description": "src.confirmed_by that is not an event ID",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"confirmed_by\":\"V2:17\",\"harness_env\":false,\"source\":\"viewer\",\"tty\":false},\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:992807bd8b1484128c851c87a3fe8d5720591d71b653809aff647f88b3fb5e01\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/src/confirmed_by"
+  }
+}

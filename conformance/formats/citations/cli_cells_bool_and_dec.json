@@ -1,0 +1,49 @@
+{
+  "description": "bool and float64 key values in 11.6 v form",
+  "case": "cli",
+  "input": "F9@v1#ok=true#x=1.50",
+  "spec": {
+    "spec": 1,
+    "format": "csv",
+    "delimiter": ",",
+    "header": true,
+    "columns": [
+      {
+        "name": "ok",
+        "type": "bool",
+        "missing": []
+      },
+      {
+        "name": "x",
+        "type": "float64",
+        "missing": []
+      }
+    ],
+    "key": [
+      "ok",
+      "x"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "citation": {
+      "kind": "cells",
+      "version": "F9@v1",
+      "keys": [
+        [
+          {
+            "t": "bool",
+            "v": true
+          },
+          {
+            "t": "dec",
+            "v": "1.50"
+          }
+        ]
+      ],
+      "columns": null
+    }
+  }
+}

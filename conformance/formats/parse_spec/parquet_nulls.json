@@ -1,0 +1,31 @@
+{
+  "description": "parquet: delimiter and header are null",
+  "input": {
+    "spec": 1,
+    "format": "parquet",
+    "delimiter": null,
+    "header": null,
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "missing": []
+      },
+      {
+        "name": "x",
+        "type": "float64",
+        "missing": []
+      }
+    ],
+    "key": [
+      "id"
+    ],
+    "nan": "value",
+    "inf": "value",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "valid": true,
+    "fingerprint": "sha256:ac2f67fe76bfc367210c6f1e54fdc4da2a01a0a7a692a57286357ea039d26e39"
+  }
+}

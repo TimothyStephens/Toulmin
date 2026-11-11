@@ -7,16 +7,16 @@ pub(crate) const TYPES: &[TypeDef] = &[TypeDef {
     name: "audit.completed",
     tv: 1,
     keys: &[
-        ("report_hash", Form::Any),
-        ("since", Form::Any),
+        ("report_hash", Form::Id),
+        ("since", Form::Null(&Form::Id)),
         (
             "counts",
             Form::Object(&[
-                ("files_rehashed", Form::Any),
-                ("mismatches", Form::Any),
-                ("verdicts_rerun", Form::Any),
-                ("verdicts_changed", Form::Any),
-                ("open_flags", Form::Any),
+                ("files_rehashed", Form::Int),
+                ("mismatches", Form::Int),
+                ("verdicts_rerun", Form::Int),
+                ("verdicts_changed", Form::Int),
+                ("open_flags", Form::Int),
             ]),
         ),
     ],

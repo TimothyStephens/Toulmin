@@ -22,6 +22,7 @@ use serde_json::Value;
 use tm_formats::Error;
 use tm_formats::assertion::Assertion;
 use tm_formats::canonical;
+use tm_formats::citation::Citation;
 use tm_formats::envelope;
 use tm_formats::events::Event;
 use tm_formats::expr;
@@ -72,6 +73,32 @@ fn expect_error(expect: &Value, got: Result<(), Error>) -> Result<(), String> {
             e.code, e.field, e.message, want.0, want.1
         )),
     }
+}
+
+/// A `table` member of an assertion case: `{"columns": [[name, type], ...], "key": [...]}`.
+fn table_schema(t: &Value) -> TableSchema {
+    let columns = t["columns"]
+        .as_array()
+        .map(|cols| {
+            cols.iter()
+                .filter_map(|c| {
+                    let name = c[0].as_str()?;
+                    let ty = SpecType::parse(c[1].as_str()?)?;
+                    Some((name.to_owned(), ty.tag()))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let key = t["key"]
+        .as_array()
+        .map(|k| {
+            k.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+    TableSchema { columns, key }
 }
 
 fn specs(case: &Value) -> Result<BTreeMap<String, TableSchema>, String> {
@@ -218,13 +245,75 @@ fn run_case(kind: &str, case: &Value) -> Result<(), String> {
             if case.get("observed").is_some() {
                 return Err("an evaluation case does not belong under formats".into());
             }
-            let got = Assertion::from_json(&case["input"]).map(|_| ());
+            let got = Assertion::from_json(&case["input"]).and_then(|a| match case.get("table") {
+                Some(t) => a.check(&table_schema(t)),
+                None => Ok(()),
+            });
             if expect.get("valid").is_some() {
                 got.map_err(|e| e.to_string())
             } else {
                 expect_error(expect, got)
             }
         }
+        "parse_spec" => {
+            let got = ParseSpec::from_json(&case["input"]);
+            if expect.get("code").is_some() && case.get("header").is_none() {
+                return expect_error(expect, got.map(|_| ()));
+            }
+            let spec = got.map_err(|e| format!("rejected: {e}"))?;
+            if let Some(h) = case.get("header") {
+                let header: Vec<&str> = h
+                    .as_array()
+                    .ok_or("header")?
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .collect();
+                let got = spec.check_header(&header);
+                return if expect.get("valid").is_some() {
+                    got.map_err(|e| e.to_string())
+                } else {
+                    expect_error(expect, got)
+                };
+            }
+            if Some(spec.fingerprint().as_str()) != expect["fingerprint"].as_str() {
+                return Err(format!("fingerprint {}", spec.fingerprint()));
+            }
+            Ok(())
+        }
+        "citations" => match case["case"].as_str() {
+            Some("json") => {
+                let got = Citation::from_json(&case["input"], "");
+                if expect.get("valid").is_some() {
+                    let c = got.map_err(|e| e.to_string())?;
+                    if c.to_json() != case["input"] {
+                        return Err("the citation does not round-trip".into());
+                    }
+                    Ok(())
+                } else {
+                    expect_error(expect, got.map(|_| ()))
+                }
+            }
+            Some("cli") => {
+                let text = case["input"].as_str().ok_or("input")?;
+                let spec = match case.get("spec") {
+                    Some(s) if !s.is_null() => {
+                        Some(ParseSpec::from_json(s).map_err(|e| e.to_string())?)
+                    }
+                    _ => None,
+                };
+                let got = Citation::parse_cli(text, spec.as_ref());
+                if let Some(want) = expect.get("citation") {
+                    let c = got.map_err(|e| e.to_string())?;
+                    if &c.to_json() != want {
+                        return Err(format!("parsed as {}", c.to_json()));
+                    }
+                    Ok(())
+                } else {
+                    expect_error(expect, got.map(|_| ()))
+                }
+            }
+            other => Err(format!("case {other:?}")),
+        },
         other => Err(format!("unknown case directory {other}")),
     }
 }
@@ -295,9 +384,11 @@ fn conformance_formats() {
     for k in [
         "assertions",
         "canonical",
+        "citations",
         "envelope",
         "expr",
         "ids",
+        "parse_spec",
         "steps",
         "typed_values",
     ] {

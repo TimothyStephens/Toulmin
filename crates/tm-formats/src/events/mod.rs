@@ -28,8 +28,9 @@ use crate::id::{
     ClaimRef, FileHandle, ReportHandle, VersionHandle, id_of, is_run_handle, is_sha256, positive,
 };
 use crate::parse_spec::ParseSpec;
-use crate::steps::Steps;
+use crate::steps::{OP_VERSION, Steps};
 use crate::typed_value::{DateTime, TypedValue};
+use crate::version;
 
 /// The form a body value must have. `Any` is a value whose form 11.16 does
 /// not state, accepted as any JSON value in gate A.
@@ -41,6 +42,15 @@ pub(crate) enum Form {
     Int,
     /// A non-negative integer written as a decimal string (`ino`, 11.16).
     IntStr,
+    /// An integer of at least 1.
+    IntFrom1,
+    Bool,
+    /// The 11.2 `at` form.
+    At,
+    /// The 11.9 `expected` shape: a typed value or `[lo, hi]`.
+    Expected,
+    /// An object from version handles to IDs (`versions.parse_specs`).
+    SpecMap,
     File,
     Version,
     Claim,
@@ -267,6 +277,18 @@ pub(crate) fn check(v: &Value, form: &Form, at: &str) -> Result<(), Error> {
             .as_u64()
             .map(|_| ())
             .ok_or_else(|| e(at, "a non-negative integer")),
+        Form::IntFrom1 => v
+            .as_u64()
+            .filter(|n| *n >= 1)
+            .map(|_| ())
+            .ok_or_else(|| e(at, "an integer of at least 1")),
+        Form::Bool => v.as_bool().map(|_| ()).ok_or_else(|| e(at, "a boolean")),
+        Form::At => s
+            .filter(|s| is_at(s))
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a time YYYY-MM-DDTHH:MM:SSZ")),
+        Form::Expected => check_expected(v, at),
+        Form::SpecMap => check_spec_map(v, at),
         Form::IntStr => s
             .filter(|s| *s == "0" || positive(s).is_some())
             .map(|_| ())
@@ -328,27 +350,81 @@ pub(crate) fn check(v: &Value, form: &Form, at: &str) -> Result<(), Error> {
             let m = v.as_object().ok_or_else(|| e(at, "an object"))?;
             check_object(m, keys, at)
         }
-        Form::Origin => {
-            let m = v.as_object().ok_or_else(|| e(at, "an object"))?;
-            check_object(
-                m,
-                &[
-                    (
-                        "kind",
-                        Form::Choice(&["registered", "run", "changed_outside_run"]),
-                    ),
-                    ("run", Form::Any),
-                ],
-                at,
-            )?;
-            let run = &m["run"];
-            if !(run.is_null() || run.as_str().is_some_and(is_run_handle)) {
-                return Err(e(&ptr(at, "run"), "a run handle R<n> or null"));
+        Form::Origin => check_origin(v, at),
+        Form::Snapshot => check_snapshot(v, at),
+        Form::Manifest => check_manifest(v, at),
+    }
+}
+
+/// `file.version_added.origin` (11.16).
+fn check_origin(v: &Value, at: &str) -> Result<(), Error> {
+    let m = v.as_object().ok_or_else(|| e(at, "an object"))?;
+    check_object(
+        m,
+        &[
+            (
+                "kind",
+                Form::Choice(&["registered", "run", "changed_outside_run"]),
+            ),
+            ("run", Form::Any),
+        ],
+        at,
+    )?;
+    let run = &m["run"];
+    if !(run.is_null() || run.as_str().is_some_and(is_run_handle)) {
+        return Err(e(&ptr(at, "run"), "a run handle R<n> or null"));
+    }
+    Ok(())
+}
+
+/// The 11.9 `expected` shape: a typed value, or `[lo, hi]` of two.
+fn check_expected(v: &Value, at: &str) -> Result<(), Error> {
+    match v.as_array() {
+        Some(pair) if pair.len() == 2 => {
+            for (i, x) in pair.iter().enumerate() {
+                check(x, &Form::Typed, &ptr(at, i))?;
             }
             Ok(())
         }
-        Form::Snapshot => check_snapshot(v, at),
-        Form::Manifest => check_manifest(v, at),
+        Some(_) => Err(e(at, "`expected` is a typed value or [lo, hi]")),
+        None => check(v, &Form::Typed, at),
+    }
+}
+
+/// `versions.parse_specs`: version handles to spec fingerprint IDs.
+fn check_spec_map(v: &Value, at: &str) -> Result<(), Error> {
+    let m = v.as_object().ok_or_else(|| e(at, "an object"))?;
+    for (k, x) in m {
+        if VersionHandle::parse(k).is_none() {
+            return Err(e(&ptr(at, k), "a version handle F<n>@v<m>"));
+        }
+        check(x, &Form::Id, &ptr(at, k))?;
+    }
+    Ok(())
+}
+
+/// A version above every known one (11.11). Only an integer counts: a
+/// malformed version is a body error, not a later format.
+fn above(v: &Value, known: u64) -> bool {
+    v.as_u64().is_some_and(|n| n > known)
+}
+
+/// True when a nested format inside `body` carries a version above the
+/// reader's highest known one (11.16): the event is then opaque, and the
+/// body is not checked.
+#[must_use]
+pub fn nested_version_above(ty: EventType, body: &Value) -> bool {
+    match ty {
+        EventType::ClaimAdded | EventType::ClaimRevised => {
+            let steps = &body["steps"];
+            above(&steps["steps"], version::STEPS)
+                || steps["ops"]
+                    .as_array()
+                    .is_some_and(|ops| ops.iter().any(|op| above(&op["v"], OP_VERSION)))
+                || above(&body["assertion"]["assert"], version::ASSERTION)
+        }
+        EventType::FileParseSpecSet => above(&body["spec"]["spec"], version::PARSE_SPEC),
+        _ => false,
     }
 }
 

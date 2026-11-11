@@ -1,0 +1,58 @@
+{
+  "description": "a row with more values than key columns",
+  "input": {
+    "assert": 1,
+    "kind": "value",
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      },
+      {
+        "t": "str",
+        "v": "x"
+      }
+    ],
+    "column": "padj",
+    "op": "lt",
+    "expected": {
+      "t": "dec",
+      "v": "0.05"
+    }
+  },
+  "table": {
+    "columns": [
+      [
+        "gene_id",
+        "str"
+      ],
+      [
+        "padj",
+        "dec"
+      ],
+      [
+        "day",
+        "date"
+      ],
+      [
+        "n",
+        "int"
+      ],
+      [
+        "at",
+        "datetime"
+      ],
+      [
+        "flag",
+        "bool"
+      ]
+    ],
+    "key": [
+      "gene_id"
+    ]
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/row"
+  }
+}

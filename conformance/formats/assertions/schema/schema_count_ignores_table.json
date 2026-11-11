@@ -1,0 +1,46 @@
+{
+  "description": "count names no row or column",
+  "input": {
+    "assert": 1,
+    "kind": "count",
+    "op": "ge",
+    "expected": {
+      "t": "int",
+      "v": "1"
+    }
+  },
+  "table": {
+    "columns": [
+      [
+        "gene_id",
+        "str"
+      ],
+      [
+        "padj",
+        "dec"
+      ],
+      [
+        "day",
+        "date"
+      ],
+      [
+        "n",
+        "int"
+      ],
+      [
+        "at",
+        "datetime"
+      ],
+      [
+        "flag",
+        "bool"
+      ]
+    ],
+    "key": [
+      "gene_id"
+    ]
+  },
+  "expect": {
+    "valid": true
+  }
+}

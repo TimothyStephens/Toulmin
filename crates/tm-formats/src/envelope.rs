@@ -13,7 +13,7 @@ use serde_json::{Map, Value};
 
 use crate::canonical;
 use crate::errors::{Code, Error, ptr};
-use crate::events::{Event, EventType, KnownEvent, OpaqueEvent, is_at};
+use crate::events::{Event, EventType, KnownEvent, OpaqueEvent, is_at, nested_version_above};
 use crate::id::{EventId, id_of, is_sha256, positive};
 use crate::version;
 
@@ -71,8 +71,8 @@ impl SourceKind {
     }
 }
 
-/// `src`: the D23 facts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// `src`: the D23 facts of an owner action.
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_field_names, reason = "the fields mirror the 11.2 keys")]
 pub struct Source {
     /// Where the action came from.
@@ -81,6 +81,8 @@ pub struct Source {
     pub tty: bool,
     /// A known harness variable was set.
     pub harness_env: bool,
+    /// Reserved (11.13): the viewer event that confirmed the action (D27).
+    pub confirmed_by: Option<EventId>,
 }
 
 /// Everything in an envelope except `type`, `tv`, and `body`: what a writer
@@ -97,8 +99,8 @@ pub struct Head {
     pub at: String,
     /// Who.
     pub actor: Actor,
-    /// D23 facts.
-    pub src: Source,
+    /// D23 facts; `Some` exactly when the actor is the owner (11.2).
+    pub src: Option<Source>,
     /// Batch number (main chain only).
     pub batch: Option<u64>,
     /// Lock epoch (main chain only).
@@ -260,8 +262,8 @@ pub fn check_envelope(envelope: &Value) -> Result<Event, Error> {
     if !m["at"].as_str().is_some_and(is_at) {
         return Err(e("/at", "`at` is YYYY-MM-DDTHH:MM:SSZ"));
     }
-    read_actor(&m["actor"])?;
-    read_source(&m["src"])?;
+    let actor = read_actor(&m["actor"])?;
+    read_source(&m["src"], actor.kind)?;
     if !m["body"].is_object() {
         return Err(e("/body", "`body` is an object"));
     }
@@ -276,6 +278,13 @@ pub fn check_envelope(envelope: &Value) -> Result<Event, Error> {
             envelope: envelope.clone(),
         }));
     };
+    if nested_version_above(known, &m["body"]) {
+        return Ok(Event::Opaque(OpaqueEvent {
+            ty: ty.to_owned(),
+            tv,
+            envelope: envelope.clone(),
+        }));
+    }
     match version::read_policy(&[known.tv()], tv) {
         version::Read::Known => Ok(Event::Known(KnownEvent::new(known, &m["body"])?)),
         version::Read::Opaque => Ok(Event::Opaque(OpaqueEvent {
@@ -313,38 +322,46 @@ fn read_actor(v: &Value) -> Result<Actor, Error> {
     })
 }
 
-fn read_source(v: &Value) -> Result<Source, Error> {
+/// `src` is `null` unless the actor is the owner (11.2).
+fn read_source(v: &Value, actor: ActorKind) -> Result<Option<Source>, Error> {
     use crate::events::Form;
+    if actor != ActorKind::Owner {
+        return if v.is_null() {
+            Ok(None)
+        } else {
+            Err(e("/src", "`src` is null unless the actor is the owner"))
+        };
+    }
     let m = v
         .as_object()
-        .ok_or_else(|| e("/src", "`src` is an object"))?;
-    crate::events::check_object(
-        m,
-        &[
-            (
-                "source",
-                Form::Choice(&["cli", "static-view", "viewer", "wrapper"]),
-            ),
-            ("tty", Form::Any),
-            ("harness_env", Form::Any),
-        ],
-        "/src",
-    )?;
-    let flag = |k: &str| {
-        m[k].as_bool()
-            .ok_or_else(|| e(&ptr("/src", k), format!("`{k}` is a boolean")))
-    };
+        .ok_or_else(|| e("/src", "`src` is an object for an owner action"))?;
+    let mut keys: Vec<(&str, Form)> = vec![
+        (
+            "source",
+            Form::Choice(&["cli", "static-view", "viewer", "wrapper"]),
+        ),
+        ("tty", Form::Bool),
+        ("harness_env", Form::Bool),
+    ];
+    if m.contains_key("confirmed_by") {
+        keys.push(("confirmed_by", Form::Id));
+    }
+    crate::events::check_object(m, &keys, "/src")?;
     let source = match m["source"].as_str() {
         Some("cli") => SourceKind::Cli,
         Some("static-view") => SourceKind::StaticView,
         Some("viewer") => SourceKind::Viewer,
         _ => SourceKind::Wrapper,
     };
-    Ok(Source {
+    Ok(Some(Source {
         source,
-        tty: flag("tty")?,
-        harness_env: flag("harness_env")?,
-    })
+        tty: m["tty"].as_bool().unwrap_or_default(),
+        harness_env: m["harness_env"].as_bool().unwrap_or_default(),
+        confirmed_by: m
+            .get("confirmed_by")
+            .and_then(Value::as_str)
+            .and_then(EventId::parse),
+    }))
 }
 
 /// Build the line for a known event. The writer policy (11.11) holds by
@@ -366,11 +383,19 @@ pub fn write_line(head: &Head, event: &KnownEvent) -> Result<(String, EventId), 
     actor.insert("kind".into(), head.actor.kind.as_str().into());
     actor.insert("id".into(), head.actor.id.clone().into());
     m.insert("actor".into(), Value::Object(actor));
-    let mut src = Map::new();
-    src.insert("source".into(), head.src.source.as_str().into());
-    src.insert("tty".into(), head.src.tty.into());
-    src.insert("harness_env".into(), head.src.harness_env.into());
-    m.insert("src".into(), Value::Object(src));
+    m.insert(
+        "src".into(),
+        head.src.as_ref().map_or(Value::Null, |s| {
+            let mut src = Map::new();
+            src.insert("source".into(), s.source.as_str().into());
+            src.insert("tty".into(), s.tty.into());
+            src.insert("harness_env".into(), s.harness_env.into());
+            if let Some(id) = &s.confirmed_by {
+                src.insert("confirmed_by".into(), id.as_str().into());
+            }
+            Value::Object(src)
+        }),
+    );
     if let Some(b) = head.batch {
         m.insert("batch".into(), b.into());
     }
@@ -399,11 +424,12 @@ mod tests {
                 kind: ActorKind::Owner,
                 id: "o1".into(),
             },
-            src: Source {
+            src: Some(Source {
                 source: SourceKind::Cli,
                 tty: true,
                 harness_env: false,
-            },
+                confirmed_by: None,
+            }),
             batch: Some(1),
             epoch: Some(1),
         }
@@ -440,5 +466,29 @@ mod tests {
         env["chain"] = json!("S4");
         let err = check_envelope(&env).unwrap_err();
         assert_eq!(err.field.unwrap(), "/batch");
+    }
+
+    #[test]
+    fn src_follows_the_actor() {
+        let mut env = json!({"env":1,"type":"file.restored","tv":1,"chain":"S4","seq":1,"prev":genesis("S4","p").as_str(),"at":"2026-11-09T14:02:11Z","actor":{"kind":"session","id":"S4"},"src":null,"body":{"file":"F7"}});
+        assert!(matches!(check_envelope(&env).unwrap(), Event::Known(_)));
+        env["src"] = json!({"source":"cli","tty":false,"harness_env":false});
+        assert_eq!(check_envelope(&env).unwrap_err().field.unwrap(), "/src");
+        env["actor"] = json!({"kind":"owner","id":"o"});
+        env["src"] = json!(null);
+        assert_eq!(check_envelope(&env).unwrap_err().field.unwrap(), "/src");
+        env["src"] = json!({"source":"viewer","tty":false,"harness_env":false,"confirmed_by":"x"});
+        assert_eq!(
+            check_envelope(&env).unwrap_err().field.unwrap(),
+            "/src/confirmed_by"
+        );
+    }
+
+    #[test]
+    fn higher_nested_version_is_opaque() {
+        let mut env = json!({"env":1,"type":"file.parse_spec_set","tv":1,"chain":"main","seq":1,"prev":genesis("main","p").as_str(),"at":"2026-11-09T14:02:11Z","actor":{"kind":"owner","id":"o"},"src":{"source":"cli","tty":false,"harness_env":false},"body":{"file":"F7","spec":{"spec":2},"spec_fingerprint":"x"},"batch":0,"epoch":0});
+        assert!(matches!(check_envelope(&env).unwrap(), Event::Opaque(_)));
+        env["body"]["spec"]["spec"] = json!(1);
+        assert!(check_envelope(&env).is_err());
     }
 }

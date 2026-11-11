@@ -1,0 +1,10 @@
+{
+  "description": "panel is non-empty",
+  "case": "cli",
+  "input": "F5@v1#panel=",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

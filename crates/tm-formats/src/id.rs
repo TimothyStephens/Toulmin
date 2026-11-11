@@ -133,21 +133,34 @@ impl fmt::Display for VersionHandle {
     }
 }
 
-/// A claim ref. Gate A parses only owner refs `C<n>`; `S<n>.<m>` is gate B.
+/// A claim ref: `C<n>` (owner) or `S<n>.<m>` (session). The form is the
+/// same in every gate (11.16); gate A operations allocate only `C<n>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ClaimRef(pub u64);
+pub enum ClaimRef {
+    /// `C<n>`.
+    Owner(u64),
+    /// `S<n>.<m>`: claim `m` of session `n`.
+    Session(u64, u64),
+}
 
 impl ClaimRef {
-    /// Parse `C<n>`.
+    /// Parse `C<n>` or `S<n>.<m>`.
     #[must_use]
     pub fn parse(s: &str) -> Option<ClaimRef> {
-        number_after(s, 'C').map(ClaimRef)
+        if let Some(n) = number_after(s, 'C') {
+            return Some(ClaimRef::Owner(n));
+        }
+        let (session, m) = s.strip_prefix('S')?.split_once('.')?;
+        Some(ClaimRef::Session(positive(session)?, positive(m)?))
     }
 }
 
 impl fmt::Display for ClaimRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "C{}", self.0)
+        match self {
+            ClaimRef::Owner(n) => write!(f, "C{n}"),
+            ClaimRef::Session(n, m) => write!(f, "S{n}.{m}"),
+        }
     }
 }
 
@@ -186,8 +199,12 @@ mod tests {
         assert!(VersionHandle::parse("F07@v2").is_none());
         assert!(VersionHandle::parse("F7@v0").is_none());
         assert!(FileHandle::parse("F").is_none());
-        assert_eq!(ClaimRef::parse("C31").unwrap().0, 31);
-        assert!(ClaimRef::parse("S4.12").is_none());
+        assert_eq!(ClaimRef::parse("C31"), Some(ClaimRef::Owner(31)));
+        assert_eq!(ClaimRef::parse("S4.12"), Some(ClaimRef::Session(4, 12)));
+        assert_eq!(ClaimRef::parse("S4.12").unwrap().to_string(), "S4.12");
+        for bad in ["C07", "S4", "S4.", "S04.1", "S4.0", "S4.1.2", "c3"] {
+            assert!(ClaimRef::parse(bad).is_none(), "{bad}");
+        }
         assert!(is_run_handle("R12"));
         assert_eq!(ReportHandle::parse("R3").unwrap().to_string(), "R3");
         assert!(ReportHandle::parse("paper.md").is_none());

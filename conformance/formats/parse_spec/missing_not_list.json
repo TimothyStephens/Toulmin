@@ -1,0 +1,26 @@
+{
+  "description": "missing is a list of tokens",
+  "input": {
+    "spec": 1,
+    "format": "tsv",
+    "delimiter": "\t",
+    "header": true,
+    "columns": [
+      {
+        "name": "g",
+        "type": "str",
+        "missing": "NA"
+      }
+    ],
+    "key": [
+      "g"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E3105",
+    "field": "/columns/0/missing"
+  }
+}

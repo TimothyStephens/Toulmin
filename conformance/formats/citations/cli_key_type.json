@@ -1,0 +1,34 @@
+{
+  "description": "a value not in its column's form",
+  "case": "cli",
+  "input": "F7@v2#sample=a#page=x",
+  "spec": {
+    "spec": 1,
+    "format": "csv",
+    "delimiter": ",",
+    "header": true,
+    "columns": [
+      {
+        "name": "sample",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "page",
+        "type": "int",
+        "missing": []
+      }
+    ],
+    "key": [
+      "sample",
+      "page"
+    ],
+    "nan": "missing",
+    "inf": "missing",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

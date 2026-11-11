@@ -1,0 +1,8 @@
+{
+  "description": "an owner action carries src",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"file\":\"F7\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":null,\"tv\":1,\"type\":\"file.restored\",\"id\":\"sha256:5eb1a23a7b82d1437dd9e4e4b664220b1345a2f6eab92f5ee20a98843caa4006\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/src"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "description": "page is from 1",
+  "case": "cli",
+  "input": "F3@v1#page=0",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

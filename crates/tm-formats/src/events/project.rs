@@ -9,7 +9,7 @@ pub(crate) const TYPES: &[TypeDef] = &[TypeDef {
     keys: &[
         ("project_id", Form::NonEmptyStr),
         ("owner_id", Form::NonEmptyStr),
-        ("record_format", Form::Any),
-        ("repo_root_hash", Form::Any),
+        ("record_format", Form::IntFrom1),
+        ("repo_root_hash", Form::Id),
     ],
 }];

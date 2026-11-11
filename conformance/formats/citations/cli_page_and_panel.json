@@ -1,0 +1,10 @@
+{
+  "description": "one segment without a spec",
+  "case": "cli",
+  "input": "F3@v1#page=1#panel=A",
+  "spec": null,
+  "expect": {
+    "code": "E6007",
+    "field": null
+  }
+}

@@ -7,8 +7,8 @@ pub(crate) const TYPES: &[TypeDef] = &[TypeDef {
     name: "chain.torn_tail_truncated",
     tv: 1,
     keys: &[
-        ("segment", Form::Any),
-        ("offset", Form::Any),
-        ("bytes", Form::Any),
+        ("segment", Form::Int),
+        ("offset", Form::Int),
+        ("bytes", Form::Int),
     ],
 }];

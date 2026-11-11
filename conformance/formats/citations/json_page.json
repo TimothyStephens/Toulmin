@@ -1,0 +1,12 @@
+{
+  "description": "page",
+  "case": "json",
+  "input": {
+    "kind": "page",
+    "version": "F3@v1",
+    "page": 4
+  },
+  "expect": {
+    "valid": true
+  }
+}

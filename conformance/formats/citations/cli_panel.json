@@ -1,0 +1,13 @@
+{
+  "description": "#panel= without a spec",
+  "case": "cli",
+  "input": "F5@v1#panel=B",
+  "spec": null,
+  "expect": {
+    "citation": {
+      "kind": "panel",
+      "version": "F5@v1",
+      "panel": "B"
+    }
+  }
+}

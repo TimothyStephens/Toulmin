@@ -10,12 +10,12 @@ pub(crate) const TYPES: &[TypeDef] = &[TypeDef {
         (
             "previous",
             Form::Object(&[
-                ("host", Form::Any),
-                ("pid", Form::Any),
-                ("epoch", Form::Any),
-                ("heartbeat", Form::Any),
+                ("host", Form::NonEmptyStr),
+                ("pid", Form::Int),
+                ("epoch", Form::Int),
+                ("heartbeat", Form::At),
             ]),
         ),
-        ("epoch", Form::Any),
+        ("epoch", Form::Int),
     ],
 }];

@@ -48,7 +48,9 @@ applies).
 | `typed_values/` | `case: "typed_value"` with `input` a typed value; or `case: "from_f64"` with `input` `{"f64": "0x<IEEE bits>", "rule": "round15" \| "shortest"}` | `{"valid": true}`, with `normalized` (the value as read) when it differs from `input`, or `{"code","field"}`; `{"dec"}` for `from_f64` |
 | `steps/valid/`, `steps/invalid/` | `input`: steps; `specs`: table name to parse spec | `{"valid": true}` or `{"code","field"}` |
 | `expr/` | `input`: expression string; `columns`: column name to spec type | `{"render","type"}` (`type` `null` for an untyped `missing`) or `{"code","field"}` |
-| `assertions/schema/` | `input`: an assertion | `{"valid": true}` or `{"code","field"}` |
+| `parse_spec/` | `input`: an 11.7 spec; optionally `header`: a file's column names | `{"valid": true, "fingerprint"}`; with `header`, `{"valid": true}` or `{"code","field"}` from the header check; or `{"code","field"}` |
+| `citations/` | `case: "json"` with `input` an 11.23 object; or `case: "cli"` with `input` the CLI spelling and `spec` a parse spec or `null` | `json`: `{"valid": true}` (the object round-trips) or `{"code","field"}`; `cli`: `{"citation": <object>}` or `{"code": "E6007", "field": null}` |
+| `assertions/schema/` | `input`: an assertion; optionally `table`: `{"columns": [[name, type], ...], "key": [names]}`, the final table's schema | `{"valid": true}` or `{"code","field"}`; with `table`, the 11.9 schema check runs after the shape check |
 | `conformance/checker/assertions/eval/` (item 92, not read by this crate's tests) | `input`: an assertion; `observed` | `{"outcome"}` or `{"code","field"}` |
 
 The `eval/` cases are the 11.18.3 rules, a Checker fact frozen at P4 by

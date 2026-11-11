@@ -1,0 +1,21 @@
+{
+  "description": "a malformed key value keeps its own code",
+  "case": "json",
+  "input": {
+    "kind": "cells",
+    "version": "F7@v2",
+    "keys": [
+      [
+        {
+          "t": "int",
+          "v": "01"
+        }
+      ]
+    ],
+    "columns": null
+  },
+  "expect": {
+    "code": "E1004",
+    "field": "/keys/0/0/v"
+  }
+}

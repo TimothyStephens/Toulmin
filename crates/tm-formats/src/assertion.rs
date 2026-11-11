@@ -10,6 +10,7 @@ use serde_json::{Map, Value};
 
 use crate::errors::{Code, Error, ptr};
 use crate::schema::{self, Codes};
+use crate::steps::TableSchema;
 use crate::typed_value::{Tag, TypedValue, parse_dec_text};
 use crate::version;
 
@@ -406,6 +407,77 @@ impl Assertion {
         Ok(a)
     }
 
+    /// Check against the final table's schema before anything runs (11.9):
+    /// `row` arity and types, `column` existence, and that `expected` (or
+    /// the right cell's column) is of a type the column compares with.
+    ///
+    /// # Errors
+    /// `E6004` at `/row/<i>` (under `/left` or `/right` for `compare_rows`),
+    /// `E6005` at `/column` (or `/left/column`, `/right/column`), `E6004`
+    /// at `/expected` or `/right/column`.
+    pub fn check(&self, schema: &TableSchema) -> Result<(), Error> {
+        let row_ok = |row: &[TypedValue], at: &str| -> Result<(), Error> {
+            if row.len() != schema.key.len() {
+                return Err(Error::at(
+                    Code::E6004,
+                    ptr(at, "row"),
+                    format!("`row` has one value per key column ({})", schema.key.len()),
+                ));
+            }
+            for (i, (v, k)) in row.iter().zip(&schema.key).enumerate() {
+                let want = schema.tag(k).unwrap_or(Tag::Missing);
+                if !compatible(v.tag(), want) {
+                    return Err(Error::at(
+                        Code::E6004,
+                        ptr(&ptr(at, "row"), i),
+                        format!("key column {k:?} is {want:?}"),
+                    ));
+                }
+            }
+            Ok(())
+        };
+        let cell_ok = |c: &CellRef, at: &str| -> Result<Tag, Error> {
+            row_ok(&c.row, at)?;
+            schema.tag(&c.column).ok_or_else(|| {
+                Error::at(
+                    Code::E6005,
+                    ptr(at, "column"),
+                    format!("unknown column {:?}", c.column),
+                )
+            })
+        };
+        match self {
+            Assertion::Value { cell, expected, .. } => {
+                let col = cell_ok(cell, "")?;
+                let b = match expected {
+                    Expected::One(b) | Expected::Range(b, _) => b,
+                };
+                if !compatible(b.tag(), col) {
+                    return Err(Error::at(
+                        Code::E6004,
+                        "/expected",
+                        format!("column {:?} is {col:?}", cell.column),
+                    ));
+                }
+                Ok(())
+            }
+            Assertion::Rank { row, .. } | Assertion::Exists { row } => row_ok(row, ""),
+            Assertion::Count { .. } => Ok(()),
+            Assertion::CompareRows { left, right, .. } => {
+                let l = cell_ok(left, "/left")?;
+                let r = cell_ok(right, "/right")?;
+                if !compatible(l, r) {
+                    return Err(Error::at(
+                        Code::E6004,
+                        "/right/column",
+                        format!("{l:?} does not compare with {r:?}"),
+                    ));
+                }
+                Ok(())
+            }
+        }
+    }
+
     /// Evaluate against what was located (11.18.3).
     ///
     /// # Errors
@@ -457,6 +529,12 @@ impl Assertion {
             )),
         }
     }
+}
+
+/// Two types that compare under 11.18.3: numbers with numbers, otherwise
+/// the same type (`date` and `datetime` do not compare).
+fn compatible(a: Tag, b: Tag) -> bool {
+    (is_numeric(a) && is_numeric(b)) || a == b
 }
 
 fn never_compares(v: &TypedValue) -> bool {

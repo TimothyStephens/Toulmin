@@ -1,0 +1,60 @@
+{
+  "description": "a csv spec with every column type",
+  "input": {
+    "spec": 1,
+    "format": "csv",
+    "delimiter": ",",
+    "header": true,
+    "columns": [
+      {
+        "name": "s",
+        "type": "str",
+        "missing": []
+      },
+      {
+        "name": "i",
+        "type": "int",
+        "missing": [
+          "NA"
+        ]
+      },
+      {
+        "name": "d",
+        "type": "dec",
+        "missing": [],
+        "scale": 2
+      },
+      {
+        "name": "f",
+        "type": "float64",
+        "missing": []
+      },
+      {
+        "name": "b",
+        "type": "bool",
+        "missing": []
+      },
+      {
+        "name": "day",
+        "type": "date",
+        "missing": []
+      },
+      {
+        "name": "at",
+        "type": "datetime",
+        "missing": []
+      }
+    ],
+    "key": [
+      "s",
+      "i"
+    ],
+    "nan": "missing",
+    "inf": "value",
+    "encoding": "utf-8"
+  },
+  "expect": {
+    "valid": true,
+    "fingerprint": "sha256:f8cea7ef37b10c283db7bcf71572b08f57edb7b4ff28fa69f9072a106537ca3c"
+  }
+}
