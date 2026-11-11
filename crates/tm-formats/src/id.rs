@@ -151,32 +151,26 @@ impl fmt::Display for ClaimRef {
     }
 }
 
-/// A report handle. Its format is not fixed in gate A (11.16: decided
-/// before P6), so any non-empty string is accepted.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ReportHandle(String);
+/// `R<n>`, a report handle (11.16), allocated by `report.add`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ReportHandle(pub u64);
 
 impl ReportHandle {
-    /// Accept any non-empty string.
+    /// Parse `R<n>`.
     #[must_use]
     pub fn parse(s: &str) -> Option<ReportHandle> {
-        (!s.is_empty()).then(|| ReportHandle(s.to_owned()))
-    }
-
-    /// The text form.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+        number_after(s, 'R').map(ReportHandle)
     }
 }
 
 impl fmt::Display for ReportHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        write!(f, "R{}", self.0)
     }
 }
 
-/// True for a run handle `R<n>` (11.16's `origin.run`).
+/// True for a run handle `R<n>` (11.16's `origin.run`). The design spells
+/// run handles and report handles alike; the field tells them apart.
 #[must_use]
 pub fn is_run_handle(s: &str) -> bool {
     number_after(s, 'R').is_some()
@@ -195,6 +189,9 @@ mod tests {
         assert_eq!(ClaimRef::parse("C31").unwrap().0, 31);
         assert!(ClaimRef::parse("S4.12").is_none());
         assert!(is_run_handle("R12"));
+        assert_eq!(ReportHandle::parse("R3").unwrap().to_string(), "R3");
+        assert!(ReportHandle::parse("paper.md").is_none());
+        assert!(ReportHandle::parse("R0").is_none());
     }
 
     #[test]

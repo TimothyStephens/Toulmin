@@ -16,7 +16,7 @@ pub(crate) const TYPES: &[TypeDef] = &[
                 Form::Choice(&["quantitative", "qualitative", "mixed"]),
             ),
             ("sentence", Form::Any),
-            ("report", Form::NonEmptyStr),
+            ("report", Form::Report),
             ("cited", Form::List(&Form::Version)),
             ("citations", Form::List(&Form::Citation)),
             ("steps", Form::Null(&Form::Steps)),

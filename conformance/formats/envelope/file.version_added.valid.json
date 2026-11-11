@@ -1,8 +1,8 @@
 {
   "description": "a valid file.version_added line",
-  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"content_label\":\"content changed\",\"file\":\"F7\",\"fingerprint\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest\":null,\"origin\":{\"kind\":\"registered\",\"run\":null},\"size\":1048576,\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":4211,\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576},\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.version_added\",\"id\":\"sha256:e856719a0132c2390b88003db61174405aa7db1d9146223a1883397f9df8cd8f\"}",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"content_label\":\"content changed\",\"file\":\"F7\",\"fingerprint\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest\":null,\"origin\":{\"kind\":\"registered\",\"run\":null},\"size\":1048576,\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":\"4211\",\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576},\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"file.version_added\",\"id\":\"sha256:cd23bab01b57b2b2470e85f108b0f6824fb867ab41ad18009f265b574fe43b85\"}",
   "expect": {
-    "id": "sha256:e856719a0132c2390b88003db61174405aa7db1d9146223a1883397f9df8cd8f",
+    "id": "sha256:cd23bab01b57b2b2470e85f108b0f6824fb867ab41ad18009f265b574fe43b85",
     "type": "file.version_added",
     "event": "known"
   }

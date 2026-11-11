@@ -20,7 +20,6 @@ use arrow::datatypes::{DataType, TimeUnit};
 use bigdecimal::num_bigint::{BigInt, Sign};
 use bigdecimal::{BigDecimal, RoundingMode};
 use serde_json::{Map, Value, json};
-use unicode_normalization::is_nfc;
 
 use crate::errors::{Code, Error, ptr};
 
@@ -629,11 +628,8 @@ impl TypedValue {
             }
             "str" => {
                 expect(&["t", "v"])?;
-                let s = vstr(m)?;
-                if !is_nfc(&s) {
-                    return Err(e1004(&vat, "a str is NFC"));
-                }
-                TypedValue::Str(s)
+                // 11.6: a `v` that is not NFC is normalized, never refused.
+                TypedValue::str_nfc(&vstr(m)?)
             }
             "bool" => {
                 expect(&["t", "v"])?;

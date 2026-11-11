@@ -51,18 +51,20 @@ fn section_3_2_3_sorting() {
 
 #[test]
 fn appendix_b_integers() {
-    // Appendix B values that are integers within plus or minus 2^53 keep
+    // Appendix B values that are integers within plus or minus 2^53-1 keep
     // the RFC's output; the rest are floats under 11.1.
     for (input, output) in [
         ("0", "0"),
         ("1", "1"),
-        ("9007199254740992", "9007199254740992"),
-        ("-9007199254740992", "-9007199254740992"),
+        ("9007199254740991", "9007199254740991"),
+        ("-9007199254740991", "-9007199254740991"),
     ] {
         assert_eq!(canonicalize(input).unwrap(), output);
     }
     for input in [
         "-0",
+        "9007199254740992",
+        "-9007199254740992",
         "9007199254740993",
         "1e+23",
         "5e-324",

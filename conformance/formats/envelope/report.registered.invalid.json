@@ -1,6 +1,6 @@
 {
-  "description": "invalid report.registered: an empty report handle",
-  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"path\":\"report/paper.md\",\"report\":\"\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"report.registered\",\"id\":\"sha256:e7a7a01966721472390c014d46dde55435dc804fa7087ef477f6b697511f1901\"}",
+  "description": "invalid report.registered: a path where the R<n> report handle belongs",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"path\":\"report/paper.md\",\"report\":\"paper.md\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"report.registered\",\"id\":\"sha256:e53311a1c01072c10d98774b48623dfdeb2f267e3c098d1bf07c1f34164559c5\"}",
   "expect": {
     "code": "E1002",
     "field": "/body/report"

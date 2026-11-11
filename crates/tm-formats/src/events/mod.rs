@@ -24,7 +24,9 @@ use serde_json::{Map, Value};
 use crate::assertion::Assertion;
 use crate::citation::Citation;
 use crate::errors::{Code, Error, ptr};
-use crate::id::{ClaimRef, FileHandle, VersionHandle, id_of, is_run_handle, is_sha256};
+use crate::id::{
+    ClaimRef, FileHandle, ReportHandle, VersionHandle, id_of, is_run_handle, is_sha256, positive,
+};
 use crate::parse_spec::ParseSpec;
 use crate::steps::Steps;
 use crate::typed_value::{DateTime, TypedValue};
@@ -37,9 +39,12 @@ pub(crate) enum Form {
     Str,
     NonEmptyStr,
     Int,
+    /// A non-negative integer written as a decimal string (`ino`, 11.16).
+    IntStr,
     File,
     Version,
     Claim,
+    Report,
     Id,
     Choice(&'static [&'static str]),
     Typed,
@@ -262,10 +267,18 @@ pub(crate) fn check(v: &Value, form: &Form, at: &str) -> Result<(), Error> {
             .as_u64()
             .map(|_| ())
             .ok_or_else(|| e(at, "a non-negative integer")),
+        Form::IntStr => s
+            .filter(|s| *s == "0" || positive(s).is_some())
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a non-negative integer as a decimal string")),
         Form::File => s
             .and_then(FileHandle::parse)
             .map(|_| ())
             .ok_or_else(|| e(at, "a file handle F<n>")),
+        Form::Report => s
+            .and_then(ReportHandle::parse)
+            .map(|_| ())
+            .ok_or_else(|| e(at, "a report handle R<n>")),
         Form::Version => s
             .and_then(VersionHandle::parse)
             .map(|_| ())
@@ -351,7 +364,7 @@ fn check_snapshot(v: &Value, at: &str) -> Result<(), Error> {
             ("mtime_ns", Form::Int),
             ("ctime", Form::Str),
             ("ctime_ns", Form::Int),
-            ("ino", Form::Int),
+            ("ino", Form::IntStr),
         ],
         at,
     )?;

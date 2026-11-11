@@ -20,7 +20,7 @@ use serde_json::{Map, Number, Value};
 use crate::errors::{Code, Error};
 
 /// The largest integer magnitude a hashed record may hold as a JSON number.
-pub const INT_LIMIT: u64 = 1 << 53;
+pub const INT_LIMIT: u64 = (1 << 53) - 1;
 
 /// Parse UTF-8 bytes strictly. Invalid UTF-8 is `E1003`.
 ///
@@ -334,11 +334,11 @@ impl Parser<'_> {
         let Some(mag) = mag else {
             return Err(Error::new(
                 Code::E1001,
-                format!("integer outside plus or minus 2^53: {text}"),
+                format!("integer outside plus or minus 2^53-1: {text}"),
             ));
         };
         let n = if neg {
-            // mag <= 2^53 fits i64.
+            // mag <= 2^53-1 fits i64.
             Number::from(-i64::try_from(mag).unwrap_or(i64::MAX))
         } else {
             Number::from(mag)
@@ -474,9 +474,10 @@ mod tests {
         assert_eq!(parse("1.0").unwrap_err().code, Code::E1001);
         assert_eq!(parse("-0").unwrap_err().code, Code::E1001);
         assert_eq!(parse("1e2").unwrap_err().code, Code::E1001);
-        assert_eq!(parse("9007199254740993").unwrap_err().code, Code::E1001);
-        assert!(parse("9007199254740992").is_ok());
-        assert!(parse("-9007199254740992").is_ok());
+        assert_eq!(parse("9007199254740992").unwrap_err().code, Code::E1001);
+        assert_eq!(parse("-9007199254740992").unwrap_err().code, Code::E1001);
+        assert!(parse("9007199254740991").is_ok());
+        assert!(parse("-9007199254740991").is_ok());
         assert_eq!(parse(r#"{"a":1,"a":2}"#).unwrap_err().code, Code::E1003);
         assert_eq!(parse(r#""\ud800""#).unwrap_err().code, Code::E1003);
         assert_eq!(parse("NaN").unwrap_err().code, Code::E1003);

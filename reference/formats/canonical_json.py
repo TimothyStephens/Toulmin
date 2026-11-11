@@ -6,7 +6,7 @@ Standard library only. Mirrors crates/tm-formats/src/canonical.rs:
   no lone surrogates, no NaN or Infinity. Anything else, including any JSON
   syntax error, is E1003.
 * Hashed records hold no floats. A number token with a fraction or an
-  exponent, a minus zero, or an integer outside plus or minus 2**53
+  exponent, a minus zero, or an integer outside plus or minus 2**53 - 1
   (inclusive) is E1001.
 * Output: members sorted by their names' UTF-16 code units, no whitespace,
   strings escaped as RFC 8785 section 3.2.2.2 requires, UTF-8 encoded.
@@ -18,7 +18,7 @@ lone surrogate only after the whole document parsed.
 
 import json
 
-LIMIT = 2**53
+LIMIT = 2**53 - 1
 
 
 class FormatError(Exception):
@@ -40,7 +40,7 @@ def _parse_int(text):
         raise FormatError("E1001", "minus zero in canonical JSON")
     value = int(text)
     if abs(value) > LIMIT:
-        raise FormatError("E1001", f"integer outside plus or minus 2^53: {text}")
+        raise FormatError("E1001", f"integer outside plus or minus 2^53-1: {text}")
     return value
 
 
@@ -139,7 +139,7 @@ def _serialize(value, out):
         out.append("false")
     elif isinstance(value, int):
         if abs(value) > LIMIT:
-            raise FormatError("E1001", f"integer outside plus or minus 2^53: {value}")
+            raise FormatError("E1001", f"integer outside plus or minus 2^53-1: {value}")
         out.append(str(value))
     elif isinstance(value, float):
         raise FormatError("E1001", f"float in canonical JSON: {value!r}")

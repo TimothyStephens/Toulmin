@@ -1,8 +1,8 @@
 {
-  "description": "integers at plus and minus 2^53 are kept",
-  "input_text": "[9007199254740992, -9007199254740992, 0, -1]",
+  "description": "integers at plus and minus 2^53-1 (RFC 7493) are kept",
+  "input_text": "[9007199254740991, -9007199254740991, 0, -1]",
   "expect": {
-    "canonical": "[9007199254740992,-9007199254740992,0,-1]",
-    "id": "sha256:9b272763eb769010658451146c3024ad169434becd26bd8d446a4b566148428c"
+    "canonical": "[9007199254740991,-9007199254740991,0,-1]",
+    "id": "sha256:59bc70f460ba5ec46264689490aaaec59bad9706a10b71e25d5871ac0f54a989"
   }
 }

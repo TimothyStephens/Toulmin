@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use tm_formats::Error;
-use tm_formats::assertion::{Assertion, Observed};
+use tm_formats::assertion::Assertion;
 use tm_formats::canonical;
 use tm_formats::envelope;
 use tm_formats::events::Event;
@@ -85,16 +85,6 @@ fn specs(case: &Value) -> Result<BTreeMap<String, TableSchema>, String> {
     Ok(out)
 }
 
-fn typed_opt(v: &Value) -> Result<Option<TypedValue>, String> {
-    if v.is_null() {
-        Ok(None)
-    } else {
-        TypedValue::from_json(v, "")
-            .map(Some)
-            .map_err(|e| e.to_string())
-    }
-}
-
 fn run_case(kind: &str, case: &Value) -> Result<(), String> {
     let expect = &case["expect"];
     match kind {
@@ -155,7 +145,10 @@ fn run_case(kind: &str, case: &Value) -> Result<(), String> {
         "typed_values" => match case["case"].as_str() {
             Some("typed_value") => {
                 let got = TypedValue::from_json(&case["input"], "").map(|v| {
-                    assert_eq!(v.to_json(), case["input"], "typed values round-trip");
+                    // A str that was not NFC reads as its NFC form (11.6);
+                    // every other valid value round-trips to its input.
+                    let want = expect.get("normalized").unwrap_or(&case["input"]);
+                    assert_eq!(&v.to_json(), want, "typed values round-trip");
                 });
                 if expect.get("valid").is_some() {
                     got.map_err(|e| e.to_string())
@@ -220,41 +213,16 @@ fn run_case(kind: &str, case: &Value) -> Result<(), String> {
             Ok(())
         }
         "assertions" => {
-            let parsed = Assertion::from_json(&case["input"]);
-            let Some(obs) = case.get("observed") else {
-                let got = parsed.map(|_| ());
-                return if expect.get("valid").is_some() {
-                    got.map_err(|e| e.to_string())
-                } else {
-                    expect_error(expect, got)
-                };
-            };
-            let a = parsed.map_err(|e| format!("rejected: {e}"))?;
-            let (c1, c2);
-            let observed = if let Some(c) = obs.get("cell") {
-                c1 = typed_opt(c)?;
-                Observed::Cell(c1.as_ref())
-            } else if let Some(p) = obs.get("position") {
-                Observed::Position(p.as_u64())
-            } else if let Some(n) = obs.get("count") {
-                Observed::Count(n.as_u64().ok_or("count")?)
-            } else if let Some(p) = obs.get("present") {
-                Observed::Present(p.as_bool().ok_or("present")?)
+            // Schema only (11.9). Evaluation cases live under
+            // conformance/checker/assertions/eval/ and are a P4 fact.
+            if case.get("observed").is_some() {
+                return Err("an evaluation case does not belong under formats".into());
+            }
+            let got = Assertion::from_json(&case["input"]).map(|_| ());
+            if expect.get("valid").is_some() {
+                got.map_err(|e| e.to_string())
             } else {
-                c1 = typed_opt(&obs["left"])?;
-                c2 = typed_opt(&obs["right"])?;
-                Observed::Cells(c1.as_ref(), c2.as_ref())
-            };
-            let got = a.evaluate(observed);
-            if let Some(o) = expect.get("outcome") {
-                let got = got.map_err(|e| e.to_string())?;
-                if Some(got.as_str()) == o.as_str() {
-                    Ok(())
-                } else {
-                    Err(format!("outcome {}", got.as_str()))
-                }
-            } else {
-                expect_error(expect, got.map(|_| ()))
+                expect_error(expect, got)
             }
         }
         other => Err(format!("unknown case directory {other}")),
