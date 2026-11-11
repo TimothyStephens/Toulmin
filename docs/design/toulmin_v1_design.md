@@ -701,20 +701,22 @@ One Core function per row. The CLI, the MCP tool schemas, and the view pages are
 | `runs.diff_since_approved` | code version | Diff and attribution | Yes |
 | `staleness.list` | none | Out-of-date analyses in dependency order with recorded commands and reasons | Yes |
 | `claims.list` | ref prefix, state, kind, cited version, flag, report, session | Claims with current revision, verdicts, flags, reviews | Yes |
-| `claims.show` | ref | Full claim, all revisions, verdicts with SQL and versions, reviews, flags, spans | Yes |
-| `claims.evidence` | ref | Cited rows in full rows with neighbors, per-step outputs and counts, descriptions, assertion result | Yes |
+| `claims.show` | ref | Full claim, all revisions, verdicts with SQL and versions, reviews, flags with reason and next command, spans | Yes |
+| `claims.evidence` | ref, limit (default `view.rows_per_page`) | Cited rows in full rows with neighbors, capped at `limit`, with `truncated` giving the number of cited rows not returned; per-step outputs and counts, descriptions, assertion result | Yes |
 | `claims.citing_rows` | version handle, key values | Other claims citing the same rows | Yes |
 | `claims.history` | ref | Events in order | Yes |
 | `reports.list` | none | Registered reports with span counts and drift counts | Yes |
-| `reports.spans` | report | Spans with refs, recorded sentence, current text, drift state | Yes |
+| `reports.spans` | report | Spans with refs, recorded sentence, current text, drift state, in file order: by line, then by position on the line | Yes |
 | `sessions.list` | state | Sessions with isolation, harness, counts, open rejections | Yes (own and others' summaries) |
 | `sessions.rejections` | session or all | Sent-back items with notes | Yes |
 | `flags.list` | kind, subject | Open flags with reasons and next command | Yes |
 | `settings.show` | none | Settings with the event that set each | Yes (read) |
-| `audit.last` | none | Summary of the last audit | Yes |
+| `audit.last` | none | Summary of the last audit: `counts`, `since`, `report_hash`, and the report's path relative to an export directory (`audit/<report_hash>.html`) | Yes |
 | `pending.list` | none | Pending viewer actions, receipts in `new`, quarantined receipts | Owner only |
 | `checker.preview_steps` | tables (version handles), steps | Per-step outputs and counts without recording anything | Yes (limits) |
 | `checker.describe_steps` | steps | Plain-language description and validation result | Yes |
+
+A flag is returned in one shape wherever it appears, the shape `flags.list` returns: kind, subject, reason, and next command. One renderer serves every page, and the G9 parity test covers the shape once.
 
 MCP tools in `tm-agent`: `query` (dispatches to the agent-allowed rows above by name), `preview_steps`, `propose_claim`, `revise_claim`, `propose_title`, `propose_accept`, `propose_supersede`, `draft_declaration`, and `draft_note`. Each tool schema carries the typed value, citation, step, and assertion schemas from `tm-formats`, so the schema is the agent's guide to writing valid claims.
 
@@ -1093,9 +1095,9 @@ Written by `tm view --out DIR`; `tm audit --out DIR` writes into `DIR/audit/` so
 | Path | Queries | Sections |
 | --- | --- | --- |
 | `index.html` | `files.list`, `claims.list`, `reports.list`, `flags.list`, `audit.last`, `settings.show` | counts, open flags with next commands, current settings, links |
-| `reports/<report>.html` | `reports.spans`, `claims.list` (by report) | spans in file order with ref, recorded sentence, current text, drift state |
-| `claims/<ref>.html` | `claims.show`, `claims.evidence`, `claims.citing_rows`, `claims.history`, `files.lineage` (per cited version) | sentence, kind, qualifiers; cited rows highlighted in full rows with neighbors, paged at `view.rows_per_page` so a claim over a large final table still renders; per-step output and description; assertion and verdict with version block; flags with clearing actions; reviews; other claims citing these rows; analysis tree (gate A: the registered input itself as the only node); review tick boxes |
-| `files/<file>.html` | `files.show`, `files.lineage` (latest version), `claims.list` (by cited version) | title, description, source; versions with fingerprints and labels; parse spec; claims citing each version |
+| `reports/<report>.html` | `reports.spans`, `claims.list` (by report) | spans in file order with ref, recorded sentence, current text, drift state; beside each span, that claim's current verdict, assertion outcome, and open flags from `claims.list` |
+| `claims/<ref>.html` | `claims.show`, `claims.evidence`, `claims.citing_rows`, `claims.history`, `files.lineage` (per cited version) | sentence, kind, qualifiers; cited rows highlighted in full rows with neighbors, capped at `view.rows_per_page` with the number not shown stated and `tm claim evidence --json` named as the way to read the rest; per-step output and description; assertion and verdict with version block; flags with clearing actions; reviews; other claims citing these rows; analysis tree (gate A: the registered input itself as the only node); review tick boxes |
+| `files/<file>.html` | `files.show`, `claims.list` (by cited version) | title, description, source; versions with fingerprints and labels; parse spec; claims citing each version |
 | `flags.html` | `flags.list` | every open flag grouped by kind |
 | `audit.html` | `audit.last` | the last audit summary with a link to its report |
 
