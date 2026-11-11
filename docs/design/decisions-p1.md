@@ -152,6 +152,8 @@ Answer compactly, for example `1a 2a 3a 4a 5a 6a 7b 8a 9b 10a 11a 12a`, with a n
 
 **Changes.** 11.16, item 26, item 28, item 90.
 
+**Note, 2026-11-11 (review B2).** `ino` is a decimal string, not an integer. 11.1 caps JSON integers at 2^53-1, and inode numbers are unsigned 64-bit: Lustre, GPFS, and XFS with `inode64` issue numbers above 2^53, which the integer form would refuse at the first `file.register` on such a filesystem. The other snapshot integers stay integers (`size` is bounded by the file, the `_ns` fields by 10^9). 11.16's `snapshot` row carries the form.
+
 ## 11. List-valued settings
 
 **Question.** `settings.changed` carries `value` and `previous` as "typed values or null", and 11.6 has no list type, but `manifest.ignore` and `harness.env_vars` are lists of strings.

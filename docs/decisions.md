@@ -154,3 +154,91 @@ as `E3102` with no `field`.
 **Why.** Item 47 names `E3102` for exactly these failures during parsing,
 and item 15 places the conversion in `tm-formats`. The row and column
 `E3102` carries are added by `tm-files` (P3), which knows them.
+
+## 2026-11-11 P1 review: clarification of pre-P1 decision 3 (negative zero)
+
+**What.** Decision 3 in `docs/design/decisions-p1.md` says a computed
+negative zero "is written `0`". 11.6 and `typed_value.rs` read that as
+"written without its sign, scale kept": `-0.00` is `0.00`, not `0`. The
+owner confirmed this reading on the P1 review (M6).
+
+**Why.** Decision 3 fixes the sign, and the scale rules it adopts (the
+General Decimal Arithmetic ideal exponents) fix the scale; dropping the
+scale as well would make zero the one value whose scale the arithmetic
+rules do not predict. No design text changed.
+
+## 2026-11-11 P1 review: snapshot `ino` is a decimal string (B2)
+
+**What.** 11.16's `snapshot` object carries `ino` as a decimal string
+(`0|[1-9][0-9]*`) instead of a JSON integer; `size`, `mtime_ns`, and
+`ctime_ns` stay integers. `events/mod.rs` checks the string form and the
+`file.version_added` conformance cases carry it.
+
+**Why.** Owner's ruling on the review: 11.1 caps JSON integers at 2^53-1
+and inode numbers are unsigned 64-bit, so Lustre, GPFS, and XFS with
+`inode64` would hit `E1001` at `file.register`. Recorded as a dated note
+under decision 10 in `decisions-p1.md`.
+
+## 2026-11-11 P1 review: report handle is `R<n>` (M7)
+
+**What.** 11.16 fixes the report handle as `R<n>`, allocated by
+`report.add` like `F<n>`; `report.registered` carries `report` and
+`path`; `claim.added.report` is an `R<n>`; 11.20's report page is
+`reports/R<n>.html`. The "format not fixed in gate A" sentence is gone,
+`ReportHandle` parses `R<n>`, and the `report.registered` and
+`claim.added` conformance cases carry `R1`.
+
+**Why.** Owner's ruling on the review. Disagreement recorded: the design
+already uses `R<n>` for run handles (the glossary's `R12`, 11.16's
+`origin.run`, `tm run again R10`, the CUJs). The field a handle sits in
+tells the two apart in the record, but the glossary presents handles as
+one namespace the CLI and the view pages address by handle alone. Applied
+as ruled; the collision is reported for a one-letter decision before P6
+builds `report.add`.
+
+## 2026-11-11 P1 review: assertion cases split into schema and eval (M5)
+
+**What.** `conformance/formats/assertions/` holds only
+`schema/*.json` (11.9 validity and refusal). The evaluation cases, which
+name an `observed` value and an 11.18.3 outcome or error, moved unchanged
+to `conformance/checker/assertions/eval/`; `tests/conformance.rs` in
+`tm-formats` no longer reads them, and no test runs them until
+`tm-checker`'s conformance test (item 59) at P4. Items 59, 90, and 92, the
+P5 row, and the two Verification Plan conformance rows say so.
+
+**Why.** Owner's ruling on the review: an assertion's outcome is a
+Checker fact, and P1 does not freeze 11.18.3. The `evaluate` function and
+its unit tests stay in `assertion.rs` (item 18), unchanged.
+
+## 2026-11-11 P1 review: integer range is plus or minus 2^53-1 (N1)
+
+**What.** 11.1, `canonical.rs`, and `canonical_json.py` accept integers
+within plus or minus 2^53-1 and refuse 2^53 itself with `E1001`. The
+`int_limits` canonical case and the RFC 8785 test changed accordingly.
+
+**Why.** RFC 7493 (I-JSON) gives `[-(2^53)+1, 2^53-1]` as the range every
+implementation represents exactly; the earlier text, inclusive of 2^53,
+did not match the standard 11.1 cites.
+
+## 2026-11-11 P1 review: a non-NFC `str` is normalized, not refused (N3)
+
+**What.** 11.6 says a `str` `v` that is not NFC is replaced by its NFC
+form when read, never refused. `TypedValue::from_json` normalizes instead
+of raising `E1004`; the `str_not_nfc` typed-value case now expects the
+normalized value.
+
+**Why.** Owner's ruling on the review: 11.6's table said "NFC-normalized"
+and its lexical-form paragraph said "must already be NFC", and the two
+disagreed on whether a reader refuses. Normalizing matches the table and
+11.22's drift normalization, which also normalizes rather than refuses.
+
+## 2026-11-11 P1 review: formats codes on the section 9 rows (N4)
+
+**What.** `claim.add` (and `claim.supersede`, which reads "as
+`claim.add`") lists `E1001`, `E1003`, and `E1004` for its `--steps` and
+`--assert` files; `apply` lists `E1001` and `E1003` for the action file.
+No other gate A row reads a JSON document the user supplies.
+
+**Why.** Owner's ruling on the review: section 9 names the codes each
+operation can produce, and these three were produced only by rows that
+did not list them.
