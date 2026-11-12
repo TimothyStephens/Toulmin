@@ -1,0 +1,23 @@
+{
+  "assert": 1,
+  "kind": "compare_rows",
+  "left": {
+    "row": [
+      {
+        "t": "str",
+        "v": "G01"
+      }
+    ],
+    "column": "ctrl_mean"
+  },
+  "right": {
+    "row": [
+      {
+        "t": "str",
+        "v": "G11"
+      }
+    ],
+    "column": "ctrl_mean"
+  },
+  "op": "lt"
+}

@@ -1,0 +1,28 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1",
+    "counts": "F3@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "join",
+      "v": 1,
+      "right": "counts",
+      "on": [
+        {
+          "left": "gene_id",
+          "right": "gene_id"
+        }
+      ],
+      "kind": "inner"
+    },
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "ctrl_mean",
+      "expr": "(`counts.S1` + `counts.S2` + `counts.S3`) / 3"
+    }
+  ]
+}

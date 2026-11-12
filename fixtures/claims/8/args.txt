@@ -1,0 +1,10 @@
+--report
+report.md
+--ref
+C8
+--sentence
+The second page of the figure shows the treated samples
+--cited
+F4@v1#page=2
+--kind
+qualitative

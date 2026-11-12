@@ -1,0 +1,30 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "padj < 0.05"
+    },
+    {
+      "op": "sort",
+      "v": 1,
+      "by": [
+        {
+          "column": "log2FoldChange",
+          "dir": "desc"
+        }
+      ],
+      "missing": "last"
+    },
+    {
+      "op": "take",
+      "v": 1,
+      "n": 5
+    }
+  ]
+}

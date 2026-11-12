@@ -1,0 +1,39 @@
+{
+  "spec": 1,
+  "format": "tsv",
+  "delimiter": "\t",
+  "header": true,
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8",
+  "columns": [
+    {
+      "name": "gene_id",
+      "type": "str",
+      "missing": []
+    },
+    {
+      "name": "log2FoldChange",
+      "type": "dec",
+      "missing": [],
+      "scale": 2
+    },
+    {
+      "name": "padj",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 4
+    },
+    {
+      "name": "baseMean",
+      "type": "dec",
+      "missing": [],
+      "scale": 1
+    }
+  ],
+  "key": [
+    "gene_id"
+  ]
+}

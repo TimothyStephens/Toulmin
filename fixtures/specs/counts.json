@@ -1,0 +1,49 @@
+{
+  "spec": 1,
+  "format": "tsv",
+  "delimiter": "\t",
+  "header": true,
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8",
+  "columns": [
+    {
+      "name": "gene_id",
+      "type": "str",
+      "missing": []
+    },
+    {
+      "name": "S1",
+      "type": "int",
+      "missing": []
+    },
+    {
+      "name": "S2",
+      "type": "int",
+      "missing": []
+    },
+    {
+      "name": "S3",
+      "type": "int",
+      "missing": []
+    },
+    {
+      "name": "S4",
+      "type": "int",
+      "missing": []
+    },
+    {
+      "name": "S5",
+      "type": "int",
+      "missing": []
+    },
+    {
+      "name": "S6",
+      "type": "int",
+      "missing": []
+    }
+  ],
+  "key": [
+    "gene_id"
+  ]
+}

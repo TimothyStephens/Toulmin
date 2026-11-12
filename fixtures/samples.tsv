@@ -1,0 +1,7 @@
+sample_id	condition	batch
+S1	control	1
+S2	control	2
+S3	control	3
+S4	treated	1
+S5	treated	2
+S6	treated	3

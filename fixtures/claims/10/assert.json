@@ -1,0 +1,20 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "treated"
+    },
+    {
+      "t": "int",
+      "v": "2"
+    }
+  ],
+  "column": "sample_id",
+  "op": "eq",
+  "expected": {
+    "t": "str",
+    "v": "S5"
+  }
+}

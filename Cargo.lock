@@ -1497,6 +1497,7 @@ name = "tm-files"
 version = "0.1.0"
 dependencies = [
  "arrow",
+ "bigdecimal",
  "lopdf",
  "parquet",
  "serde_json",

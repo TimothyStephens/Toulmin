@@ -1,0 +1,14 @@
+--report
+report.md
+--ref
+C3
+--sentence
+Eight genes are upregulated
+--cited
+F1@v1
+--steps
+steps.json
+--assert
+assert.json
+--kind
+quantitative

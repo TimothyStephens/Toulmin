@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "padj < 0.01"
+    }
+  ]
+}

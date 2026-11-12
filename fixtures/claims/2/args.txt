@@ -1,0 +1,14 @@
+--report
+report.md
+--ref
+C2
+--sentence
+G10 is downregulated 2.5-fold (log2) among the genes with padj below 0.01
+--cited
+F1@v1
+--steps
+steps.json
+--assert
+assert.json
+--kind
+quantitative

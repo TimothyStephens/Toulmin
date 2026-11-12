@@ -1,0 +1,10 @@
+--report
+report.md
+--ref
+C7
+--sentence
+Six samples were sequenced, three per condition, one per batch
+--cited
+F2@v1
+--kind
+qualitative
