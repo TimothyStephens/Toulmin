@@ -9,6 +9,10 @@ use tm_formats::id::EventId;
 use crate::lock::read_lock_file;
 use crate::{Code, Error, Result, fsync_dir, read_small_json, refresh_dir, write_small_json};
 
+/// The `HEAD` format this binary writes (11.3); it follows
+/// `record.json`'s `format`.
+pub const HEAD_FORMAT: u64 = 1;
+
 /// `{"seq","segment","offset","last_id","batch","epoch","format":1}`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Head {
@@ -57,11 +61,21 @@ impl Head {
         })
     }
 
-    /// Parse the JSON object; `None` when it is not a `HEAD`.
+    /// Parse the JSON object; `None` when it is not a `HEAD` of format 1.
     #[must_use]
     pub fn from_json(v: &Value) -> Option<Head> {
+        Head::from_json_with(v, HEAD_FORMAT)
+    }
+
+    /// Parse a `HEAD` whose `format` is at most `max_format` (11.3): format
+    /// 1 has exactly the seven fields; a higher format, which only a
+    /// read-only open accepts, needs the seven fields present and well
+    /// formed and may carry others.
+    #[must_use]
+    pub fn from_json_with(v: &Value, max_format: u64) -> Option<Head> {
         let m = v.as_object()?;
-        if m.len() != 7 {
+        let format = m.get("format")?.as_u64()?;
+        if format == 0 || format > max_format || (format == HEAD_FORMAT && m.len() != 7) {
             return None;
         }
         let int = |k: &str| m.get(k)?.as_u64();
@@ -72,25 +86,39 @@ impl Head {
             last_id: EventId::parse(m.get("last_id")?.as_str()?)?,
             batch: int("batch")?,
             epoch: int("epoch")?,
-            format: int("format")?,
+            format,
         })
     }
 
-    /// Read `main/HEAD` after refreshing the directory (3.1).
+    /// Read `main/HEAD` after refreshing the directory (3.1), as a writer
+    /// does: the format must be this binary's.
     ///
     /// # Errors
-    /// `E2103` when `HEAD` is missing or malformed; `Error::Io`.
+    /// `E2103` when `HEAD` is missing, malformed, or of another format;
+    /// `Error::Io`.
     pub fn read(main: &Path) -> Result<Head> {
+        Head::read_with(main, HEAD_FORMAT)
+    }
+
+    /// Read `main/HEAD` accepting a `format` up to `max_format`: a record
+    /// opened read-only passes its `record.json` format, which `HEAD.format`
+    /// never exceeds (11.3).
+    ///
+    /// # Errors
+    /// `E2103` when `HEAD` is missing, malformed, has segment 0, or names a
+    /// format above `max_format`; `Error::Io`.
+    pub fn read_with(main: &Path, max_format: u64) -> Result<Head> {
         refresh_dir(main);
         let path = main.join("HEAD");
         let v = read_small_json(&path)?;
-        let head = Head::from_json(&v)
-            .ok_or_else(|| Error::code(Code::E2103, "main/HEAD is not a HEAD file"))?;
-        if head.segment == 0 || head.format != 1 {
-            return Err(Error::code(
+        let head = Head::from_json_with(&v, max_format).ok_or_else(|| {
+            Error::code(
                 Code::E2103,
-                "main/HEAD has segment 0 or an unknown format",
-            ));
+                format!("main/HEAD is not a HEAD file of format 1 to {max_format}"),
+            )
+        })?;
+        if head.segment == 0 {
+            return Err(Error::code(Code::E2103, "main/HEAD has segment 0"));
         }
         Ok(head)
     }
@@ -154,6 +182,23 @@ mod tests {
         assert_eq!(v["segment"], 1);
         assert_eq!(v["last_id"], g.as_str());
         assert_eq!(Head::from_json(&v), Some(h.clone()));
+        // A higher format reads only when allowed, and then may carry more.
+        let mut newer = v.clone();
+        newer["format"] = serde_json::json!(3);
+        newer["later"] = serde_json::json!(true);
+        assert_eq!(Head::from_json(&newer), None);
+        assert_eq!(Head::from_json_with(&newer, 2), None);
+        assert_eq!(
+            Head::from_json_with(&newer, 3).map(|h| (h.format, h.seq)),
+            Some((3, 0))
+        );
+        let mut extra = v.clone();
+        extra["later"] = serde_json::json!(true);
+        assert_eq!(
+            Head::from_json(&extra),
+            None,
+            "format 1 has exactly seven fields"
+        );
         let dir = tempfile::tempdir().unwrap();
         h.write(dir.path()).unwrap();
         assert_eq!(Head::read(dir.path()).unwrap(), h);

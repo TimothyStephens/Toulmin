@@ -148,7 +148,7 @@ impl Record {
     /// all.
     pub fn verify(&self) -> Result<Vec<Finding>> {
         let main = self.main_dir();
-        let head = Head::read(&main)?;
+        let head = self.head()?;
         let mut findings = Vec::new();
         let mut link = Link {
             prev_id: Some(self.genesis()),

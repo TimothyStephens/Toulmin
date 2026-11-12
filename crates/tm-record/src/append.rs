@@ -490,6 +490,27 @@ mod tests {
             Ok(_) => panic!("a newer-format record took the lock"),
         }
         assert_eq!(r.events().unwrap().count(), 0);
+        // 11.3: HEAD.format follows record.json's; the read-only open reads a
+        // higher one that carries the seven fields, a writable record does not.
+        let mut h = Head::read(&r.main_dir()).unwrap().to_json();
+        h["format"] = json!(99);
+        h["later"] = json!(true);
+        crate::write_small_json(&r.main_dir().join("HEAD"), &h).unwrap();
+        assert_eq!(
+            r.events().unwrap().count(),
+            0,
+            "read-only: newer HEAD reads"
+        );
+        assert_eq!(r.verify().unwrap(), vec![]);
+        assert!(Head::read(&r.main_dir()).is_err(), "a writer refuses it");
+        v["format"] = json!(1);
+        crate::write_small_json(&dir.path().join("record.json"), &v).unwrap();
+        let writable = Record::open(dir.path()).unwrap();
+        assert!(!writable.is_read_only());
+        match writable.events() {
+            Err(e) => assert_eq!(e.catalog_code(), Some(Code::E2103), "{e}"),
+            Ok(_) => panic!("HEAD.format above record.json's format must be corruption"),
+        }
         assert_eq!(
             Record::open(&dir.path().join("nowhere"))
                 .unwrap_err()

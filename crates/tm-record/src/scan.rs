@@ -198,7 +198,7 @@ impl Record {
     /// # Errors
     /// `E2103` from the iterator on corruption; `Error::Io`.
     pub fn events(&self) -> Result<Scan<'_>> {
-        let head = Head::read(&self.main_dir())?;
+        let head = self.head()?;
         Ok(Scan {
             record: self,
             head,
@@ -214,7 +214,7 @@ impl Record {
     /// # Errors
     /// As [`Record::events`].
     pub fn events_after(&self, position: Position) -> Result<Scan<'_>> {
-        let head = Head::read(&self.main_dir())?;
+        let head = self.head()?;
         Ok(Scan {
             record: self,
             head,
@@ -245,7 +245,7 @@ impl Record {
     /// `E2103` when no committed event line starts there; `Error::Io`.
     pub fn read_at(&self, position: Position) -> Result<StoredEvent> {
         let main = self.main_dir();
-        let head = Head::read(&main)?;
+        let head = self.head()?;
         if position.segment == 0 || position.segment > head.segment {
             return Err(corrupt(format!(
                 "segment {} is not on the chain",

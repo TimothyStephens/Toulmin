@@ -156,6 +156,15 @@ impl Record {
         self
     }
 
+    /// `main/HEAD` as a reader sees it: a read-only record (11.3) may carry
+    /// a `HEAD.format` up to its `record.json` format.
+    ///
+    /// # Errors
+    /// As [`Head::read_with`].
+    pub fn head(&self) -> Result<Head> {
+        Head::read_with(&self.main_dir(), self.header.format.max(head::HEAD_FORMAT))
+    }
+
     pub(crate) fn writable(&self) -> Result<()> {
         if self.read_only {
             return Err(Error::code(
