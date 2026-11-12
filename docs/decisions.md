@@ -574,3 +574,17 @@ and every write in `tm-record` report them in place of `E2004` and
 already "binding conflicts or config directory unwritable" (section 9,
 catalog, errors.md), so the next free codes were taken with the owner's
 agreement rather than renumbering a settled P1 code.
+
+## 2026-11-12 P2: dev builds compile the bundled DuckDB without debuginfo
+
+**What.** `Cargo.toml` sets `[profile.dev.package.libduckdb-sys] debug =
+false`. The design (item 5, D24) fixes the release profile and the lint
+levels; it says nothing about the dev profile, so this is a build-setting
+addition, not a change to anything settled. The release build is
+unaffected.
+
+**Why.** With debuginfo on, the dev `libduckdb.a` is 2.9 GiB and the
+`tm-duckdb` test binary 1 GiB. In the 4 GiB sandbox the link thrashed the
+page cache for three hours and read 540 GB before it was stopped (P2,
+2026-11-12). Nothing in the workspace debugs DuckDB's internals.
+
