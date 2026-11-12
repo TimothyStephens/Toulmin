@@ -137,6 +137,7 @@ Recorded so they are not lost, with where each surfaces. Do not fix them now.
 | Verification Plan's Scenario row says eight tests; item 82 lists ten | P8, writing `tests/scenarios.rs` | Make the row say ten |
 | Fuzz job is wired to `pull_request`; the Verification Plan says scheduled | P4, when `tm-checker` gives it targets | Move it to a schedule, or it adds ten minutes to every PR from P4 on |
 | `conformance/checker/assertions/eval/<name>/observed.p1.json` holds outcomes the Rust side chose in P1 | P4, before the third session starts | That session writes `expected.json` from `checker.md` and `case.json` only and must not open `observed.p1.json`; put that line in its prompt |
+| 11.10's `COLLATE BINARY` spelling was rejected by DuckDB's parser in a P2 test | P4, writing the translator | State the spelling DuckDB accepts, or state that no `COLLATE` clause is the binary default and 11.10 means that |
 
 ---
 
