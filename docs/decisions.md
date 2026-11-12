@@ -724,3 +724,64 @@ The writer never produces it (a seal happens only when the plain length
 equals `HEAD.offset`), so it is reachable by tampering only, and nothing
 truncates a packed segment.
 
+## 2026-11-12 P3: tests and the generator append through the crate-private path
+
+**What.** Items 40 and 42: `tm-record`'s lock cases live in
+`src/lock_tests.rs` and the generator's logic in `src/gen_chain.rs`, both
+appending through the crate-private function behind the public
+`Record::append(&OwnerCap, &Lock, &Batch)`. The example and the CI NFS job
+call them; the NFS job runs `cargo test -p tm-record --lib -- --ignored nfs`.
+
+**Why.** Rule 4 and item 8: no crate other than `tm-cli` names
+`OwnerCap::new_for_cli`, and `tm-cli` does not exist before P8, so no test
+outside the crate can hold a capability. A test-only constructor would be
+a second way to make the one value the design wants constructible in one
+place; moving the tests inside the crate changes nothing the CI check
+guards.
+
+## 2026-11-12 P3: an input path's form (item 44)
+
+**What.** Files accepts an input path that is repository-relative,
+`/`-separated, NFC, non-empty, with no empty, `.`, or `..` component, and
+refuses any other form as `E3001`; the Core checks that the path exists
+inside the project.
+
+**Why.** 6.1 makes the path the identity, so one spelling per file is
+needed before anything is keyed on it, and section 9 lists `E3001` as the
+code for a path outside the project.
+
+## 2026-11-12 P3: when an input gets a new version (item 45)
+
+**What.** A candidate equivalent to the latest version under any of the
+three equivalences adds no version; one that differs under all three is
+the next version with `content_label` `content_changed`. `carried_forward`
+and `metadata_only` are run-output labels for gate C.
+
+**Why.** Item 45's "new version if different content" said nothing about
+the equal case; decision 9's review note (a touch is no version) and 5.6's
+placement of the two other labels on output versions fix it.
+
+## 2026-11-12 P3: the transition table (item 46), reading rules (item 47), cache path (item 48), image signature (item 49), fold updates (item 51)
+
+**What.** Each item now states what its code does: the allowed and refused
+transitions behind `E3201`; RFC 4180 reading, the empty-field token, row
+numbering in `E3102`, the scale rule, and Parquet's Arrow path; the cache
+file layout; the image signatures behind `E3301`; which rows each Files
+event writes.
+
+**Why.** None was stated, and each is a fact a second implementation or a
+reviewer needs; none touches a frozen format.
+
+## 2026-11-12 P3: `samples.tsv` is keyed by `(condition, batch)`; `expected.json` is a stub (item 82a)
+
+**What.** Claim 10's composite-key `cells` citation names `samples.tsv`,
+whose key is `(condition, batch)`; no fourth table. `expected.json` holds
+`{"claims":{"<n>":{"verdict","flags"}}}` with `null` for every claim until
+P8; `fixtures/README.md` carries each claim's intended answer in prose.
+
+**Why.** The readiness report (impl-M7) found claim 10 impossible on
+single-key tables; six samples in two conditions and three batches give a
+natural composite key without a new table. Verdicts are P8 scenario
+outcomes, and freezing them before the Checker exists would freeze a
+guess.
+
