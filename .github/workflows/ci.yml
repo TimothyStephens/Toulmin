@@ -92,6 +92,18 @@ jobs:
         run: |
           if [ ! -d crates/tm-record ]; then echo "::notice::no-op until P2: crates/tm-record absent"; exit 0; fi
           cargo test -p tm-record --test record_conformance --locked
+      - name: record cases regenerate byte-identically (item 40)
+        # The cases are only as frozen as the generator: regenerate them into
+        # a temporary directory and fail on any difference. Empty directories
+        # are dropped first because git does not keep them.
+        run: |
+          if [ ! -f crates/tm-record/examples/gen-chain.rs ]; then echo "::notice::no-op until P2: gen-chain absent"; exit 0; fi
+          regen="$RUNNER_TEMP/record-cases"
+          rm -rf "$regen"
+          cargo run -q -p tm-record --example gen-chain --locked -- --conformance "$regen"
+          find "$regen" -type d -empty -delete
+          diff -r "$regen" conformance/record
+          echo "conformance/record regenerates byte-identically"
       - name: checker
         run: |
           if [ ! -d crates/tm-checker ]; then echo "::notice::no-op until P4: crates/tm-checker absent"; exit 0; fi
