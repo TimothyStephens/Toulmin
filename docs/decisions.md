@@ -712,3 +712,15 @@ nothing and queued nothing, so the epoch moved but no `lock.taken_over`
 was recorded. The side file is exactly the broken lock's content, so
 reading it completes the audit trail whichever waiter wins.
 
+## 2026-11-12 P2 re-audit: a packed open segment longer than `HEAD.offset` is `head_offset_mismatch`
+
+**What.** 3.1 says it in one clause; `verify` reports it so, as the lock's
+`truncate_torn_tail` already refused it (`E2103 head_offset_mismatch`). No
+new tamper case: item 41's set is fixed; a unit test in `verify.rs`
+covers it.
+
+**Why.** The re-audit: the two paths named the same state differently.
+The writer never produces it (a seal happens only when the plain length
+equals `HEAD.offset`), so it is reachable by tampering only, and nothing
+truncates a packed segment.
+
