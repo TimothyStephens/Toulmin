@@ -56,6 +56,11 @@ clap = { version = "=4.6.7", features = ["derive"] }
 # (docs/decisions/musl-spike.md).
 mimalloc = { version = "=0.1.52", default-features = false }
 
+# Workspace crates, by path with their version, so the requirement is
+# pinned like every other (item 4's wildcard check).
+tm-formats = { path = "crates/tm-formats", version = "=0.1.0" }
+tm-fsfacts = { path = "crates/tm-fsfacts", version = "=0.1.0" }
+
 # Test and fuzz.
 proptest = "=1.12.0"
 insta = { version = "=1.49.0", features = ["json"] }

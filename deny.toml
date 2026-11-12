@@ -111,6 +111,7 @@ allow = [
     "errno",
     "fallible-iterator",
     "fallible-streaming-iterator",
+    "fastrand",
     "filetime",
     "find-msvc-tools",
     "flate2",
@@ -181,6 +182,7 @@ allow = [
     "strum_macros",
     "syn",
     "tar",
+    "tempfile",
     "thiserror",
     "thiserror-impl",
     "tiny-keccak",
@@ -216,6 +218,9 @@ allow = [
     "zerocopy-derive",
     "zlib-rs",
     "zmij",
+    "zstd",
+    "zstd-safe",
+    "zstd-sys",
 ]
 skip = []
 skip-tree = []

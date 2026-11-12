@@ -41,6 +41,13 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      # rust-cache keeps only the directory skeleton of the target/ entries it
+      # does not know, and libduckdb-sys refuses to unpack over a source tree
+      # that exists without its .complete marker. Drop the skeleton first; the
+      # unpack takes seconds and the compiled archive under target/*/build is
+      # what the cache is for.
+      - name: drop stale DuckDB sources
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       # cargo refuses a workspace with no members, which is the state between
       # the spike's deletion (P0) and the first crate (P1).
       - run: |
@@ -55,6 +62,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: |
           if [ ! -d crates ]; then echo "::notice::no-op until P1: crates/ does not exist"; exit 0; fi
           cargo test --workspace --locked
@@ -66,6 +75,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - name: formats
         run: |
           if [ ! -d crates/tm-formats ]; then echo "::notice::no-op until P1: crates/tm-formats absent"; exit 0; fi
@@ -116,6 +127,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -152,6 +165,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: scripts/ci/check-owner-cap.sh
 
   musl-build:
@@ -167,6 +182,9 @@ jobs:
       - run: rustup toolchain install && rustup show
         if: steps.pkg.outputs.name != ''
       - uses: Swatinem/rust-cache@v2
+        if: steps.pkg.outputs.name != ''
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
         if: steps.pkg.outputs.name != ''
       - name: musl cross toolchain
         if: steps.pkg.outputs.name != ''
@@ -206,6 +224,9 @@ jobs:
       - run: rustup toolchain install && rustup show
         if: steps.pkg.outputs.name != ''
       - uses: Swatinem/rust-cache@v2
+        if: steps.pkg.outputs.name != ''
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
         if: steps.pkg.outputs.name != ''
       - uses: actions/setup-python@v5
         if: steps.pkg.outputs.name != ''
@@ -288,6 +309,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: scripts/ci/bench-index.sh
 
   coverage:
@@ -297,6 +320,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: |
           if [ ! -d crates/tm-formats ]; then echo "::notice::no-op until P1: no library crate yet"; exit 0; fi
           rustup component add llvm-tools
@@ -313,6 +338,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: |
           if [ ! -d crates/tm-checker ]; then echo "::notice::no-op until P4: crates/tm-checker absent"; exit 0; fi
           cargo install cargo-insta --locked
@@ -340,6 +367,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: |
           if [ ! -f crates/tm-record/tests/lock.rs ]; then echo "::notice::no-op until P2: crates/tm-record/tests/lock.rs absent"; exit 0; fi
           sudo apt-get update && sudo apt-get install -y nfs-kernel-server
@@ -357,6 +386,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       # docs/errors.md is compared with the catalog build.rs writes to
       # $TM_ERRORS_OUT (item 25), so the generator runs first.
       - run: |
@@ -373,6 +404,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup toolchain install && rustup show
       - uses: Swatinem/rust-cache@v2
+      - name: drop stale DuckDB sources (see the lint job)
+        run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: |
           if [ ! -f crates/tm-cli/tests/error_codes.rs ]; then echo "::notice::no-op until P8: crates/tm-cli/tests/error_codes.rs absent"; exit 0; fi
           export TM_ERROR_LOG="$RUNNER_TEMP/tm-error-log"

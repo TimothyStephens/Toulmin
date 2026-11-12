@@ -10,7 +10,7 @@ publish.workspace = true
 rustix = { workspace = true, features = ["rand", "system"] }
 serde_json.workspace = true
 sha2.workspace = true
-tm-formats = { path = "../tm-formats" }
+tm-formats.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
