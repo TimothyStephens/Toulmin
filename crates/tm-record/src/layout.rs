@@ -108,13 +108,15 @@ impl Record {
     /// Open an existing record directory.
     ///
     /// # Errors
-    /// `E2103` when `record.json` is missing or malformed; `Error::Io`.
+    /// `E2007` when there is no `record.json`; `E2103` when it is malformed;
+    /// `Error::Io`. A `format` above this binary's opens read-only (`E2008`
+    /// on every write).
     pub fn open(root: &Path) -> Result<Record> {
         let path = root.join("record.json");
         let v = read_small_json(&path).map_err(|e| match e {
             Error::Io { source, .. } if source.kind() == std::io::ErrorKind::NotFound => {
                 Error::code(
-                    Code::E2004,
+                    Code::E2007,
                     format!(
                         "{} is not a record directory (no record.json)",
                         root.display()

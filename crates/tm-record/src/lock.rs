@@ -298,7 +298,7 @@ impl Record {
     /// # Errors
     /// `E2201` when `opts.wait` passes with the heartbeat still changing;
     /// `E2103` when the open segment is shorter than `HEAD.offset`;
-    /// `Error::NewerFormat`; `Error::Io`.
+    /// `E2008` on a read-only record; `Error::Io`.
     pub fn lock(
         &self,
         opts: &LockOptions,

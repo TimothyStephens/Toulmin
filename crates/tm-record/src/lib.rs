@@ -39,16 +39,10 @@ pub enum Error {
         /// The cause.
         source: std::io::Error,
     },
-    /// A catalog error: `E2001` to `E2201`, `E3203`, or a formats error.
+    /// A catalog error: `E2001` to `E2201` (`E2008` for a write to a record
+    /// whose format is newer than this binary's), `E3203`, or a formats
+    /// error.
     Format(FormatError),
-    /// `record.json` names a format this binary does not know; the record
-    /// opens for reading and refuses every write (NFR Rollout).
-    NewerFormat {
-        /// The record's format.
-        format: u64,
-        /// The highest this binary writes.
-        supported: u64,
-    },
 }
 
 /// Alias for results in this crate.
@@ -71,7 +65,7 @@ impl Error {
     pub fn catalog_code(&self) -> Option<Code> {
         match self {
             Error::Format(e) => Some(e.code),
-            Error::Io { .. } | Error::NewerFormat { .. } => None,
+            Error::Io { .. } => None,
         }
     }
 }
@@ -81,10 +75,6 @@ impl fmt::Display for Error {
         match self {
             Error::Io { path, source } => write!(f, "{}: {source}", path.display()),
             Error::Format(e) => write!(f, "{e}"),
-            Error::NewerFormat { format, supported } => write!(
-                f,
-                "record format {format} is newer than this binary's {supported}; a newer tm is needed to write"
-            ),
         }
     }
 }
@@ -168,10 +158,14 @@ impl Record {
 
     pub(crate) fn writable(&self) -> Result<()> {
         if self.read_only {
-            return Err(Error::NewerFormat {
-                format: self.header.format,
-                supported: tm_formats::version::RECORD_FORMAT,
-            });
+            return Err(Error::code(
+                Code::E2008,
+                format!(
+                    "record format {} is newer than this binary's {}; a newer tm is needed to write",
+                    self.header.format,
+                    tm_formats::version::RECORD_FORMAT
+                ),
+            ));
         }
         Ok(())
     }

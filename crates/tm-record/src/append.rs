@@ -212,7 +212,7 @@ impl Record {
     /// # Errors
     /// `E2102` when `HEAD` has another epoch, the open segment's length is
     /// not `HEAD.offset`, or the batch does not continue the chain;
-    /// `Error::NewerFormat`; `Error::Io`.
+    /// `E2008` on a read-only record; `Error::Io`.
     pub fn append(&self, lock: &Lock, batch: &Batch) -> Result<Head> {
         self.writable()?;
         let main = self.main_dir();
@@ -468,16 +468,19 @@ mod tests {
         crate::write_small_json(&dir.path().join("record.json"), &v).unwrap();
         let r = Record::open(dir.path()).unwrap();
         assert!(r.is_read_only());
-        assert!(matches!(
-            r.lock(&opts(), |_, _| {}),
-            Err(Error::NewerFormat { format: 99, .. })
-        ));
+        match r.lock(&opts(), |_, _| {}) {
+            Err(e) => {
+                assert_eq!(e.catalog_code(), Some(Code::E2008));
+                assert!(e.to_string().contains("99"), "{e}");
+            }
+            Ok(_) => panic!("a newer-format record took the lock"),
+        }
         assert_eq!(r.events().unwrap().count(), 0);
         assert_eq!(
             Record::open(&dir.path().join("nowhere"))
                 .unwrap_err()
                 .catalog_code(),
-            Some(Code::E2004)
+            Some(Code::E2007)
         );
     }
 }

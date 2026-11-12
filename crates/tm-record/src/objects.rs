@@ -46,8 +46,8 @@ impl Record {
     /// `expected`, store under it.
     ///
     /// # Errors
-    /// `E3203` when the bytes do not hash to `expected`; `Error::Io`;
-    /// `Error::NewerFormat`.
+    /// `E3203` when the bytes do not hash to `expected`; `E2008` on a
+    /// read-only record; `Error::Io`.
     pub fn keep(&self, source: &mut dyn Read, expected: &EventId) -> Result<Kept> {
         self.writable()?;
         let final_path = self.object_path(expected);
