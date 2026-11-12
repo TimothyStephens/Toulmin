@@ -12,7 +12,7 @@ use tm_formats::id::EventId;
 
 use crate::head::Head;
 use crate::lock::Lock;
-use crate::segment::{self, BatchHeader, payload_hash, plain_len, plain_path};
+use crate::segment::{self, BatchHeader, payload_hash, plain_path};
 use crate::{Code, Error, Record, Result, fsync_dir};
 
 /// A framed batch: validated lines that link to one another, with their
@@ -205,14 +205,42 @@ impl Batch {
     }
 }
 
+/// The batch carries the lock's epoch and continues `HEAD`.
+fn check_continues(head: &Head, lock: &Lock, batch: &Batch) -> Result<()> {
+    if batch.epoch != lock.epoch() {
+        return Err(Error::code(
+            Code::E2102,
+            format!(
+                "batch carries epoch {}, the lock's is {}",
+                batch.epoch,
+                lock.epoch()
+            ),
+        ));
+    }
+    if batch.number != head.batch + 1
+        || batch.first_seq != head.seq + 1
+        || batch.first_prev != head.last_id
+    {
+        return Err(Error::code(
+            Code::E2102,
+            format!(
+                "batch {} (first seq {}, prev {}) does not continue HEAD (batch {}, seq {}, last_id {})",
+                batch.number, batch.first_seq, batch.first_prev, head.batch, head.seq, head.last_id
+            ),
+        ));
+    }
+    Ok(())
+}
+
 impl Record {
     /// Append one batch under the lock (11.21 Batch write), with the
     /// pre-append fencing re-read of 3.1. Returns the new `HEAD`.
     ///
     /// # Errors
-    /// `E2102` when `HEAD` has another epoch, the open segment's length is
-    /// not `HEAD.offset`, or the batch does not continue the chain;
-    /// `E2008` on a read-only record; `Error::Io`.
+    /// `E2102` when `HEAD` has another epoch, the open segment's length (in
+    /// whichever form exists) is not `HEAD.offset`, or the batch does not
+    /// continue the chain; `E2103` when the segment the writer would roll to
+    /// already exists; `E2008` on a read-only record; `Error::Io`.
     pub fn append(&self, lock: &Lock, batch: &Batch) -> Result<Head> {
         self.writable()?;
         let main = self.main_dir();
@@ -228,7 +256,8 @@ impl Record {
                 ),
             ));
         }
-        let len = plain_len(&main, head.segment)?;
+        let (plain, packed) = segment::forms(&main, head.segment);
+        let len = segment::open_len(&main, head.segment)?;
         if len != head.offset {
             return Err(Error::code(
                 Code::E2102,
@@ -238,44 +267,29 @@ impl Record {
                 ),
             ));
         }
-        if batch.epoch != lock.epoch() {
-            return Err(Error::code(
-                Code::E2102,
-                format!(
-                    "batch carries epoch {}, the lock's is {}",
-                    batch.epoch,
-                    lock.epoch()
-                ),
-            ));
-        }
-        if batch.number != head.batch + 1
-            || batch.first_seq != head.seq + 1
-            || batch.first_prev != head.last_id
-        {
-            return Err(Error::code(
-                Code::E2102,
-                format!(
-                    "batch {} (first seq {}, prev {}) does not continue HEAD (batch {}, seq {}, last_id {})",
-                    batch.number,
-                    batch.first_seq,
-                    batch.first_prev,
-                    head.batch,
-                    head.seq,
-                    head.last_id
-                ),
-            ));
-        }
+        check_continues(&head, lock, batch)?;
         // Step 0: finish a sealing that stopped early, then seal the open
-        // segment if this batch would carry it past the limit.
+        // segment if this batch would carry it past the limit. A HEAD.segment
+        // that is already packed-only was sealed by a writer that died before
+        // its HEAD rename (3.1): roll without sealing again.
         for n in 1..head.segment {
             segment::resume_seal(&main, n)?;
         }
         let mut segment_no = head.segment;
         let mut offset = head.offset;
-        if offset > 0 && offset + batch.framed_len() > self.segment_limit {
-            segment::seal(&main, segment_no)?;
+        let sealed_already = packed && !plain;
+        if sealed_already || (offset > 0 && offset + batch.framed_len() > self.segment_limit) {
+            if !sealed_already {
+                segment::seal(&main, segment_no)?;
+            }
             segment_no += 1;
             offset = 0;
+            if segment::forms(&main, segment_no) != (false, false) {
+                return Err(Error::code(
+                    Code::E2103,
+                    format!("segment {segment_no} exists before the chain reached it"),
+                ));
+            }
         }
         // Steps 1 and 2: header line and event lines, one write each, fsync.
         let header = batch.header();
@@ -453,7 +467,7 @@ mod tests {
         let lock3 = r.lock(&opts(), |_, _| {}).unwrap();
         assert_eq!(lock3.torn_tail().map(|t| t.bytes), Some(5));
         assert_eq!(
-            plain_len(&r.main_dir(), 2).unwrap(),
+            segment::plain_len(&r.main_dir(), 2).unwrap(),
             Head::read(&r.main_dir()).unwrap().offset
         );
         drop(lock3);

@@ -25,7 +25,9 @@ pub enum FindingKind {
     SegmentByteChanged,
     /// A batch's payload does not hash to its header's `h`.
     BatchHashMismatch,
-    /// Bytes beyond `HEAD.offset` in the open segment.
+    /// Bytes beyond `HEAD.offset` in the open segment, or a plain segment
+    /// after a packed-only `HEAD.segment` (a sealing whose batch never
+    /// reached its `HEAD` rename, 3.1).
     TornTailBeyondHead,
     /// A `prev`, `seq`, `batch`, or `epoch` that does not follow its predecessor.
     ForkPrevMismatch,
@@ -154,10 +156,33 @@ impl Record {
             batch: 0,
             epoch: 0,
         };
+        let mut open_clean = true;
         for n in 1..=head.segment {
+            let before = findings.len();
             self.verify_segment(n, &head, &mut link, &mut findings)?;
+            if n == head.segment {
+                open_clean = findings.len() == before;
+            }
         }
-        if segment::forms(&main, head.segment + 1) != (false, false) {
+        let next = segment::forms(&main, head.segment + 1);
+        if next == (true, false)
+            && segment::forms(&main, head.segment) == (false, true)
+            && open_clean
+        {
+            // 3.1: the uncommitted segment a crash after a completed sealing
+            // leaves behind; the next lock removes it.
+            let len = segment::plain_len(&main, head.segment + 1)?;
+            findings.push(at(
+                FindingKind::TornTailBeyondHead,
+                head.segment + 1,
+                0,
+                format!(
+                    "{len} bytes in segment {} after the sealed HEAD.segment {}",
+                    head.segment + 1,
+                    head.segment
+                ),
+            ));
+        } else if next != (false, false) {
             findings.push(Finding {
                 kind: FindingKind::HeadFieldMismatch,
                 segment: Some(head.segment + 1),

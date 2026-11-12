@@ -204,6 +204,26 @@ pub fn plain_len(main: &Path, n: u64) -> Result<u64> {
     }
 }
 
+/// The open segment's length (3.1): the plain file's when it exists, else
+/// the packed file's uncompressed length, else 0.
+///
+/// # Errors
+/// `Error::Io`; `E2103` when only a packed file exists and it does not
+/// decode.
+pub fn open_len(main: &Path, n: u64) -> Result<u64> {
+    let p = plain_path(main, n);
+    match std::fs::metadata(&p) {
+        Ok(md) => return Ok(md.len()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(Error::io(p, e)),
+    }
+    match load(main, n) {
+        Ok(Some(l)) => Ok(l.bytes.len() as u64),
+        Ok(None) => Ok(0),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// One framed batch inside a segment's bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame<'a> {

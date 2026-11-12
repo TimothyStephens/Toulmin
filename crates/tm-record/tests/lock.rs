@@ -15,7 +15,9 @@ use std::time::{Duration, Instant};
 use serde_json::json;
 use tm_formats::envelope::{Actor, ActorKind, Source, SourceKind};
 use tm_formats::events::{EventType, KnownEvent};
-use tm_record::{Batch, Code, LockOptions, Record};
+use tm_record::head::Head;
+use tm_record::segment;
+use tm_record::{Batch, Code, LockOptions, Record, TornTail};
 
 const AT: &str = "2026-11-11T12:00:00Z";
 
@@ -216,6 +218,104 @@ fn src() -> Source {
         harness_env: false,
         confirmed_by: None,
     }
+}
+
+/// One batch under a fresh lock, as the Core does per command.
+fn append_one(record: &Record, i: u64) -> Head {
+    let lock = record
+        .lock(&opts(300, Some(1000)), |_, _| {})
+        .expect("lock");
+    let head = record.append(&lock, &batch(&lock, i)).expect("append");
+    lock.release().expect("release");
+    head
+}
+
+/// 3.1: a sealing completed, then the writer died before its batch's HEAD
+/// rename. The lock succeeds, the orphan segment is removed and recorded,
+/// and the next append rolls to the next segment without sealing again.
+fn crash_after_seal(dir: &Path) {
+    let record = new_record(dir).with_segment_limit(1200);
+    let main = record.main_dir();
+    let mut before = Head::read(&main).expect("HEAD");
+    let mut i = 1;
+    loop {
+        let head = append_one(&record, i);
+        if head.segment > before.segment {
+            break;
+        }
+        before = head;
+        i += 1;
+    }
+    // Put HEAD back to the state before the batch that rolled; the epoch is
+    // the one the dying writer held.
+    let now = Head::read(&main).expect("HEAD");
+    Head {
+        epoch: now.epoch,
+        ..before.clone()
+    }
+    .write(&main)
+    .expect("HEAD rewritten");
+    let sealed = before.segment;
+    assert_eq!(
+        segment::forms(&main, sealed),
+        (false, true),
+        "HEAD.segment packed-only"
+    );
+    assert_eq!(
+        segment::forms(&main, sealed + 1),
+        (true, false),
+        "orphan plain segment"
+    );
+    let orphan_len = segment::plain_len(&main, sealed + 1).expect("len");
+    assert!(orphan_len > 0);
+    let names: Vec<String> = record
+        .verify()
+        .expect("verify")
+        .iter()
+        .map(|f| f.kind.name().to_owned())
+        .collect();
+    assert_eq!(names, ["torn_tail_beyond_head"], "audit names the state");
+
+    let lock = record
+        .lock(&opts(300, Some(1000)), |_, _| {})
+        .expect("the lock succeeds after a crash between the seal and the HEAD rename");
+    assert_eq!(
+        lock.torn_tail(),
+        Some(TornTail {
+            segment: sealed + 1,
+            offset: 0,
+            bytes: orphan_len
+        })
+    );
+    assert_eq!(
+        segment::forms(&main, sealed + 1),
+        (false, false),
+        "the orphan is gone"
+    );
+    let b = batch(&lock, 99);
+    let head = record.append(&lock, &b).expect("append rolls");
+    assert_eq!(head.segment, sealed + 1);
+    assert_eq!(head.offset, b.framed_len());
+    assert_eq!(
+        segment::forms(&main, sealed),
+        (false, true),
+        "not sealed again"
+    );
+    lock.release().expect("release");
+    assert_eq!(record.verify().expect("verify"), vec![]);
+    let truncations = record
+        .events()
+        .expect("scan")
+        .map(|e| e.expect("event"))
+        .filter(|e| e.type_name() == "chain.torn_tail_truncated")
+        .count();
+    assert_eq!(truncations, 1);
+}
+
+#[test]
+fn crash_after_seal_local() {
+    let dir = tempfile::tempdir().expect("tmp");
+    crash_after_seal(dir.path());
 }
 
 #[test]

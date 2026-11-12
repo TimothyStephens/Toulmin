@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 
 use crate::head::Head;
-use crate::segment::{plain_len, plain_path};
+use crate::segment::{forms, open_len, plain_path};
 use crate::{Code, Error, Record, Result, fsync_dir, now_at, refresh_dir};
 
 /// How to take the lock.
@@ -279,6 +279,74 @@ fn write_in_place(file: &File, holder: &LockHolder) -> std::io::Result<()> {
     file.sync_data()
 }
 
+/// The torn tail at lock time (3.1): the open segment's length is that of
+/// whichever form exists; bytes beyond `HEAD.offset` in a plain segment are
+/// truncated, and a plain segment after a packed-only `HEAD.segment` (a
+/// sealing whose batch never reached its `HEAD` rename) is removed.
+///
+/// # Errors
+/// `E2103` when `HEAD.offset` is beyond the open segment's end, or a packed
+/// open segment is longer than `HEAD.offset`; `Error::Io`.
+fn truncate_torn_tail(main: &Path, head: &Head) -> Result<Option<TornTail>> {
+    let (plain, packed) = forms(main, head.segment);
+    let len = open_len(main, head.segment)?;
+    let mut torn_tail = match len.cmp(&head.offset) {
+        std::cmp::Ordering::Greater if !plain => {
+            return Err(Error::code(
+                Code::E2103,
+                format!(
+                    "packed segment {} holds {len} bytes but HEAD.offset is {}: head_offset_mismatch",
+                    head.segment, head.offset
+                ),
+            ));
+        }
+        std::cmp::Ordering::Greater => {
+            let seg = plain_path(main, head.segment);
+            let f = OpenOptions::new()
+                .write(true)
+                .open(&seg)
+                .map_err(|e| Error::io(&seg, e))?;
+            f.set_len(head.offset).map_err(|e| Error::io(&seg, e))?;
+            f.sync_all().map_err(|e| Error::io(&seg, e))?;
+            fsync_dir(main)?;
+            Some(TornTail {
+                segment: head.segment,
+                offset: head.offset,
+                bytes: len - head.offset,
+            })
+        }
+        std::cmp::Ordering::Less => {
+            return Err(Error::code(
+                Code::E2103,
+                format!(
+                    "HEAD.offset {} is beyond the end of segment {} ({len} bytes): head_offset_mismatch",
+                    head.offset, head.segment
+                ),
+            ));
+        }
+        std::cmp::Ordering::Equal => None,
+    };
+    // A sealing that completed before its batch's HEAD rename (3.1): the
+    // plain segment after a packed-only HEAD.segment is uncommitted.
+    if packed && !plain {
+        let orphan = plain_path(main, head.segment + 1);
+        match std::fs::metadata(&orphan) {
+            Ok(md) => {
+                std::fs::remove_file(&orphan).map_err(|e| Error::io(&orphan, e))?;
+                fsync_dir(main)?;
+                torn_tail = Some(TornTail {
+                    segment: head.segment + 1,
+                    offset: 0,
+                    bytes: md.len(),
+                });
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(Error::io(&orphan, e)),
+        }
+    }
+    Ok(torn_tail)
+}
+
 fn host_name(opts: &LockOptions) -> String {
     opts.host.clone().unwrap_or_else(|| {
         rustix::system::uname()
@@ -297,8 +365,9 @@ impl Record {
     ///
     /// # Errors
     /// `E2201` when `opts.wait` passes with the heartbeat still changing;
-    /// `E2103` when the open segment is shorter than `HEAD.offset`;
-    /// `E2008` on a read-only record; `Error::Io`.
+    /// `E2103` when the open segment (in whichever form exists) is shorter
+    /// than `HEAD.offset`, or a packed one is longer; `E2008` on a read-only
+    /// record; `Error::Io`.
     pub fn lock(
         &self,
         opts: &LockOptions,
@@ -414,36 +483,7 @@ impl Record {
         // Lock-time HEAD write (11.21): the incremented epoch, the rest unchanged.
         let head = Head { epoch, ..found };
         head.write_checked(&main, Some(epoch)).map_err(cleanup)?;
-        // Torn tail beyond HEAD.offset (3.1).
-        let len = plain_len(&main, head.segment).map_err(cleanup)?;
-        let torn_tail = match len.cmp(&head.offset) {
-            std::cmp::Ordering::Greater => {
-                let seg = plain_path(&main, head.segment);
-                let f = OpenOptions::new()
-                    .write(true)
-                    .open(&seg)
-                    .map_err(|e| cleanup(Error::io(&seg, e)))?;
-                f.set_len(head.offset)
-                    .map_err(|e| cleanup(Error::io(&seg, e)))?;
-                f.sync_all().map_err(|e| cleanup(Error::io(&seg, e)))?;
-                fsync_dir(&main).map_err(cleanup)?;
-                Some(TornTail {
-                    segment: head.segment,
-                    offset: head.offset,
-                    bytes: len - head.offset,
-                })
-            }
-            std::cmp::Ordering::Less => {
-                return Err(cleanup(Error::code(
-                    Code::E2103,
-                    format!(
-                        "HEAD.offset {} is beyond the end of segment {} ({len} bytes): head_offset_mismatch",
-                        head.offset, head.segment
-                    ),
-                )));
-            }
-            std::cmp::Ordering::Equal => None,
-        };
+        let torn_tail = truncate_torn_tail(&main, &head).map_err(cleanup)?;
         let file = Arc::new(file);
         let stop = Arc::new(AtomicBool::new(false));
         let thread = {

@@ -399,6 +399,36 @@ fn conformance(root: &Path) {
     );
     chain_case(
         root,
+        "crash_after_seal",
+        "a sealing completed but the writer died before its batch's HEAD rename; the next lock removed the uncommitted segment and recorded it",
+        |d| {
+            let r = new_record(d, Some(SMALL_LIMIT));
+            append(&r, &[project_created(), file_registered(1)]);
+            let mut before = Head::read(&r.main_dir()).unwrap();
+            let mut i = 1;
+            loop {
+                let h = append(&r, &[settings_changed(i), file_registered(i + 1)]);
+                if h.segment > before.segment {
+                    break;
+                }
+                before = h;
+                i += 1;
+            }
+            // The crash: HEAD as it was before the batch that rolled, under
+            // the epoch the writer held.
+            let now = Head::read(&r.main_dir()).unwrap();
+            Head {
+                epoch: now.epoch,
+                ..before
+            }
+            .write(&r.main_dir())
+            .unwrap();
+            append(&r, &[settings_changed(9)]);
+            r
+        },
+    );
+    chain_case(
+        root,
         "takeover",
         "a stale lock was taken over; the new holder's batch records it",
         |d| {
