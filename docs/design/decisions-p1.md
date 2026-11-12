@@ -154,6 +154,8 @@ Answer compactly, for example `1a 2a 3a 4a 5a 6a 7b 8a 9b 10a 11a 12a`, with a n
 
 **Note, 2026-11-11 (review B2).** `ino` is a decimal string, not an integer. 11.1 caps JSON integers at 2^53-1, and inode numbers are unsigned 64-bit: Lustre, GPFS, and XFS with `inode64` issue numbers above 2^53, which the integer form would refuse at the first `file.register` on such a filesystem. The other snapshot integers stay integers (`size` is bounded by the file, the `_ns` fields by 10^9). 11.16's `snapshot` row carries the form.
 
+**Note, 2026-11-12 (P2 ruling).** The manifest `fingerprint` digests the list `[{"path","fingerprint"}]`, one object per entry in 11.10 path order, not `entries`. Entries keep `snapshot` as a stat fact. Digesting the snapshots would give a directory whose files were only touched or copied a new fingerprint and a `content_changed` version, which contradicts 5.6's `metadata only` and `carried forward` labels and D22's "identical content stops the spread", and would make `tm audit` report `E3401` for every touched directory. 11.16 and item 28 carry the rule; item 31 carries the case.
+
 ## 11. List-valued settings
 
 **Question.** `settings.changed` carries `value` and `previous` as "typed values or null", and 11.6 has no list type, but `manifest.ignore` and `harness.env_vars` are lists of strings.

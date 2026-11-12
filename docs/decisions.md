@@ -544,3 +544,17 @@ describes the newer-format behaviour ("refuses writes and says which
 binary version is needed") without a code. Adding codes is a catalog
 change the design decides, so both are reported for a ruling rather than
 invented here.
+
+## 2026-11-12 P2: the manifest fingerprint digests paths and fingerprints only (ruling on decision 10)
+
+**What.** The owner ruled on the collision logged on 2026-11-11: the
+manifest `fingerprint` is `sha256:` of the canonical JSON of
+`[{"path","fingerprint"}]` in 11.10 path order, and `entries` keep
+`snapshot` as a stat fact outside the digest. 11.16, items 28 and 31, and
+decision 10 of decisions-p1.md (dated note) now say so; `tm-fsfacts`
+builds it, with the item 31 case that two manifests whose files differ
+only in mtime and inode share a fingerprint.
+
+**Why.** Digesting snapshots would label a touched or copied directory
+`content_changed`, against 5.6's `metadata only` and `carried forward`
+labels and D22.
