@@ -31,7 +31,8 @@ pub enum FindingKind {
     TornTailBeyondHead,
     /// A `prev`, `seq`, `batch`, or `epoch` that does not follow its predecessor.
     ForkPrevMismatch,
-    /// `HEAD.offset` beyond the segment's end or inside a batch.
+    /// `HEAD.offset` beyond the segment's end or inside a batch, or a packed
+    /// open segment longer than `HEAD.offset` (3.1).
     HeadOffsetMismatch,
     /// A packed segment that does not decode.
     PackedSegmentCorrupt,
@@ -346,12 +347,26 @@ impl Record {
             ));
         }
         if n == head.segment && len > head.offset {
-            findings.push(at(
-                FindingKind::TornTailBeyondHead,
-                n,
-                head.offset,
-                format!("{} bytes beyond HEAD.offset", len - head.offset),
-            ));
+            if loaded.form == segment::Form::Packed {
+                // 3.1: the writer never seals past HEAD.offset, and nothing
+                // truncates a packed segment; the lock refuses it the same way.
+                findings.push(at(
+                    FindingKind::HeadOffsetMismatch,
+                    n,
+                    head.offset,
+                    format!(
+                        "packed segment holds {len} bytes but HEAD.offset is {}",
+                        head.offset
+                    ),
+                ));
+            } else {
+                findings.push(at(
+                    FindingKind::TornTailBeyondHead,
+                    n,
+                    head.offset,
+                    format!("{} bytes beyond HEAD.offset", len - head.offset),
+                ));
+            }
         }
         Ok(())
     }
@@ -501,4 +516,115 @@ fn check_links(
         link.seq = e.seq;
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::append::Batch;
+    use crate::lock::LockOptions;
+    use crate::{Code, Record};
+    use serde_json::json;
+    use std::time::Duration;
+    use tm_formats::envelope::{Actor, ActorKind, Source, SourceKind};
+    use tm_formats::events::{EventType, KnownEvent};
+
+    const AT: &str = "2026-11-11T12:00:00Z";
+
+    fn actor() -> Actor {
+        Actor {
+            kind: ActorKind::Owner,
+            id: "tim".into(),
+        }
+    }
+
+    fn src() -> Source {
+        Source {
+            source: SourceKind::Cli,
+            tty: true,
+            harness_env: false,
+            confirmed_by: None,
+        }
+    }
+
+    fn event(i: u64) -> KnownEvent {
+        KnownEvent::new(
+            EventType::SettingsChanged,
+            &json!({"key": "view.rows_per_page", "value": {"t": "int", "v": i.to_string()}, "previous": null}),
+        )
+        .unwrap()
+    }
+
+    fn opts() -> LockOptions {
+        LockOptions {
+            heartbeat: Duration::from_millis(200),
+            takeover: Duration::from_secs(5),
+            wait: Some(Duration::from_secs(5)),
+            poll: Duration::from_millis(20),
+            host: Some("test".into()),
+        }
+    }
+
+    /// 3.1: a packed open segment longer than `HEAD.offset` is tamper-only
+    /// and is `head_offset_mismatch` for audit and for the lock alike.
+    #[test]
+    fn packed_open_segment_longer_than_head_offset_is_head_offset_mismatch() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = Record::create(dir.path(), "p", "o", AT)
+            .unwrap()
+            .with_segment_limit(2000);
+        let lock = r.lock(&opts(), |_, _| {}).unwrap();
+        let mut head = lock.head_at_lock().clone();
+        let mut after_first: Option<Head> = None;
+        loop {
+            let b = Batch::build(
+                &head,
+                lock.epoch(),
+                AT,
+                &actor(),
+                Some(&src()),
+                &[event(head.seq + 1)],
+            )
+            .unwrap();
+            let h = r.append(&lock, &b).unwrap();
+            if after_first.is_none() {
+                after_first = Some(h.clone());
+            }
+            if h.segment == 2 {
+                break;
+            }
+            head = h;
+        }
+        lock.release().unwrap();
+        let main = r.main_dir();
+        assert_eq!(segment::forms(&main, 1), (false, true));
+        let first = after_first.unwrap();
+        let packed_len = segment::open_len(&main, 1).unwrap();
+        assert!(
+            packed_len > first.offset,
+            "segment 1 holds more than one batch"
+        );
+        // Tamper: HEAD back to the end of batch 1 inside the packed segment,
+        // the plain segment 2 removed.
+        std::fs::remove_file(segment::plain_path(&main, 2)).unwrap();
+        let now = Head::read(&main).unwrap();
+        Head {
+            epoch: now.epoch,
+            ..first
+        }
+        .write(&main)
+        .unwrap();
+        let findings = r.verify().unwrap();
+        assert_eq!(
+            findings.iter().map(|f| f.kind).collect::<Vec<_>>(),
+            vec![FindingKind::HeadOffsetMismatch],
+            "{findings:?}"
+        );
+        assert_eq!(findings[0].segment, Some(1));
+        let Err(err) = r.lock(&opts(), |_, _| {}) else {
+            panic!("the lock must refuse a packed segment longer than HEAD.offset");
+        };
+        assert_eq!(err.catalog_code(), Some(Code::E2103));
+        assert!(err.to_string().contains("head_offset_mismatch"), "{err}");
+    }
 }
