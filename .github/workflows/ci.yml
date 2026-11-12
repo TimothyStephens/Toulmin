@@ -100,7 +100,7 @@ jobs:
           if [ ! -f crates/tm-record/examples/gen-chain.rs ]; then echo "::notice::no-op until P2: gen-chain absent"; exit 0; fi
           regen="$RUNNER_TEMP/record-cases"
           rm -rf "$regen"
-          cargo run -q -p tm-record --example gen-chain --locked -- --conformance "$regen"
+          cargo run -q -p tm-record --features gen-chain --example gen-chain --locked -- --conformance "$regen"
           find "$regen" -type d -empty -delete
           diff -r "$regen" conformance/record
           echo "conformance/record regenerates byte-identically"

@@ -1555,6 +1555,7 @@ dependencies = [
  "tm-formats",
  "tm-fsfacts",
  "tm-owner-cap",
+ "tm-record",
  "zstd 0.13.4",
 ]
 

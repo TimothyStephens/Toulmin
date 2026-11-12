@@ -15,8 +15,19 @@ tm-fsfacts.workspace = true
 tm-owner-cap.workspace = true
 zstd.workspace = true
 
+[features]
+# Item 40's generator (`gen_chain`, `examples/gen-chain.rs`): the crate's
+# own tests and example enable it through the dev-dependency below; a
+# consumer of the library (tm-core) never sees the module.
+gen-chain = []
+
+[[example]]
+name = "gen-chain"
+required-features = ["gen-chain"]
+
 [dev-dependencies]
 tempfile.workspace = true
+tm-record = { path = ".", version = "=0.1.0", features = ["gen-chain"] }
 
 [lints]
 workspace = true

@@ -744,6 +744,8 @@ a second way to make the one value the design wants constructible in one
 place; moving the tests inside the crate changes nothing the CI check
 guards.
 
+**Note, 2026-11-12.** `gen_chain` sits behind tm-record's `gen-chain` cargo feature, enabled by its own tests and example through a dev-dependency on itself, so the generator is not part of the API tm-core sees.
+
 ## 2026-11-12 P3: an input path's form (item 44)
 
 **What.** Files accepts an input path that is repository-relative,

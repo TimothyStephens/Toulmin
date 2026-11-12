@@ -9,6 +9,9 @@
 #![allow(clippy::result_large_err, reason = "errors are the cold path")]
 
 pub mod append;
+/// Item 40's generator, behind the `gen-chain` feature the crate's own
+/// tests and example enable; not part of the library's API.
+#[cfg(feature = "gen-chain")]
 pub mod gen_chain;
 pub mod head;
 pub mod layout;
