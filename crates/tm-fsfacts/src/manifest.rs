@@ -1,5 +1,6 @@
 //! Directory manifests (item 28; 11.16's `manifest` object): entries sorted
-//! in 11.10 order, each with its snapshot and fingerprint; exclude
+//! in 11.10 order, each with its snapshot and fingerprint (a symbolic link
+//! to a regular file is an entry with its target's facts); exclude
 //! patterns with the `manifest.ignore` default; and the diff between two
 //! manifests.
 //!
@@ -217,14 +218,25 @@ fn walk(
             }
             None => name.clone(),
         };
-        // Links, sockets, pipes, and devices are not entries; a link to a
-        // directory is not walked, so a cycle cannot occur.
+        // A link to a regular file is an entry under the link's path with
+        // the target's facts; a link to a directory is not walked, so a
+        // cycle cannot occur; a dangling link, sockets, pipes, and devices
+        // are not entries (item 28).
         let ft = entry.file_type().map_err(|e| Error::io(&full, e))?;
-        if ft.is_dir() {
+        let (is_dir, is_file) = if ft.is_symlink() {
+            match std::fs::metadata(&full) {
+                Ok(md) => (false, md.is_file()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => (false, false),
+                Err(e) => return Err(Error::io(&full, e)),
+            }
+        } else {
+            (ft.is_dir(), ft.is_file())
+        };
+        if is_dir {
             if !excludes.excluded_dir(&rel) {
                 walk(root, &full, excludes, out)?;
             }
-        } else if ft.is_file() && !excludes.excluded_file(&rel) {
+        } else if is_file && !excludes.excluded_file(&rel) {
             out.push((rel, full));
         }
     }

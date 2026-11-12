@@ -152,10 +152,10 @@ fn excluded_entries_and_manifest_diff() {
     let paths: Vec<&str> = m1.entries.iter().map(|e| e.path.as_str()).collect();
     assert_eq!(
         paths,
-        ["a.csv", "b.csv", "sub/deeper/c.txt"],
-        "sorted, excluded, no links"
+        ["a.csv", "b.csv", "link.csv", "sub/deeper/c.txt"],
+        "sorted, excluded, the link to a file is an entry"
     );
-    assert_eq!(m1.size(), 4 + 4 + 1);
+    assert_eq!(m1.size(), 4 + 4 + 4 + 1);
     assert_eq!(m1.ignore, ignore);
     assert_eq!(
         m1.entries[0].fingerprint,
@@ -164,8 +164,8 @@ fn excluded_entries_and_manifest_diff() {
             .fingerprint
     );
     let json = m1.entries_json();
-    assert_eq!(json[2]["path"], "sub/deeper/c.txt");
-    assert_eq!(json[2]["snapshot"]["size"], 1);
+    assert_eq!(json[3]["path"], "sub/deeper/c.txt");
+    assert_eq!(json[3]["snapshot"]["size"], 1);
 
     settle();
     write(&root.join("b.csv"), b"1,2,3\n");
@@ -174,7 +174,11 @@ fn excluded_entries_and_manifest_diff() {
     let m2 = Manifest::build(root, &ignore, &settings).unwrap();
     let d = m2.diff(&m1);
     assert_eq!(d.added, ["sub/d.txt"]);
-    assert_eq!(d.removed, ["a.csv"]);
+    assert_eq!(
+        d.removed,
+        ["a.csv", "link.csv"],
+        "a dangling link is no entry"
+    );
     assert_eq!(d.modified, ["b.csv"]);
     assert!(m1.diff(&m1).is_empty());
 }
@@ -226,6 +230,41 @@ fn manifests_differing_only_in_mtime_and_ino_share_a_fingerprint() {
     fs::rename(a.join("x.csv"), a.join("z.csv")).unwrap();
     let ma2 = Manifest::build(&a, &ignore, &settings).unwrap();
     assert_ne!(ma.fingerprint().unwrap(), ma2.fingerprint().unwrap());
+}
+
+#[test]
+fn links_to_files_are_entries_links_to_directories_and_dangling_links_are_not() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    fs::create_dir_all(root.join("real")).unwrap();
+    write(&root.join("real/data.csv"), b"k,v\n1,2\n");
+    write(&root.join("top.txt"), b"top");
+    // A link to a regular file, by a relative target.
+    std::os::unix::fs::symlink("real/data.csv", root.join("published.csv")).unwrap();
+    // A link to a directory, which would be a cycle if walked.
+    std::os::unix::fs::symlink(root, root.join("loop")).unwrap();
+    std::os::unix::fs::symlink("real", root.join("real_again")).unwrap();
+    // A dangling link.
+    std::os::unix::fs::symlink("nowhere.txt", root.join("dangling")).unwrap();
+    let m = Manifest::build(root, &[], &HashSettings::default()).unwrap();
+    let paths: Vec<&str> = m.entries.iter().map(|e| e.path.as_str()).collect();
+    assert_eq!(paths, ["published.csv", "real/data.csv", "top.txt"]);
+    let target = &m.entries[1];
+    let link = &m.entries[0];
+    assert_eq!(
+        link.fingerprint, target.fingerprint,
+        "the target's fingerprint"
+    );
+    assert_eq!(link.snapshot, target.snapshot, "the target's snapshot");
+    assert_eq!(m.size(), 8 + 8 + 3);
+    // A directory of links only has the entries of its targets, not [].
+    let pub_dir = root.join("results");
+    fs::create_dir_all(&pub_dir).unwrap();
+    std::os::unix::fs::symlink(root.join("real/data.csv"), pub_dir.join("out.csv")).unwrap();
+    let p = Manifest::build(&pub_dir, &[], &HashSettings::default()).unwrap();
+    assert_eq!(p.entries.len(), 1);
+    assert_eq!(p.entries[0].path, "out.csv");
+    assert_eq!(p.entries[0].fingerprint, target.fingerprint);
 }
 
 #[test]
