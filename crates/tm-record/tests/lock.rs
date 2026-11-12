@@ -316,6 +316,71 @@ fn crash_after_seal(dir: &Path) {
     assert_eq!(truncations, 1);
 }
 
+/// 3.1 Takeover with two waiters: the handle that renamed the stale lock
+/// aside loses the `O_EXCL` create to another handle, which never renamed
+/// anything. The displaced holder is still recorded, once, read from
+/// `lock.stale` by the handle that won the create.
+fn two_waiters_split_rename_and_create(dir: &Path) {
+    let record = new_record(dir);
+    let main = record.main_dir();
+    let mut paused = record
+        .lock(&opts(300, Some(1000)), |_, _| {})
+        .expect("first lock");
+    assert_eq!(paused.epoch(), 1);
+    paused.suspend_heartbeat();
+    // Waiter W2 saw the heartbeat go stale and won the rename, then stalled
+    // before its create: exactly what Record::lock does, driven by hand.
+    std::fs::rename(main.join("lock"), main.join("lock.stale")).expect("rename aside");
+    // Waiter W3 reaches the create first, with nothing at main/lock.
+    let w3 = Record::open(dir).expect("open");
+    let taker = w3
+        .lock(&opts(300, Some(1000)), |_, _| {})
+        .expect("W3 takes the lock");
+    assert_eq!(
+        taker.taken_over().map(|h| h.epoch),
+        Some(1),
+        "the displaced holder is read from lock.stale"
+    );
+    assert_eq!(taker.epoch(), 2);
+    assert!(!main.join("lock.stale").exists());
+    w3.append(&taker, &batch(&taker, 1))
+        .expect("append with the takeover event");
+    // W2 resumes: a live lock exists, so its pending takeover is cancelled
+    // and it waits like any other waiter.
+    let w2 = Record::open(dir).expect("open");
+    let err = w2
+        .lock(&opts(5000, Some(300)), |_, _| {})
+        .expect_err("W3 holds the lock");
+    assert_eq!(err.catalog_code(), Some(Code::E2201));
+    taker.release().expect("release");
+    let later = w2
+        .lock(&opts(300, Some(1000)), |_, _| {})
+        .expect("W2 locks after W3");
+    assert!(later.taken_over().is_none(), "no second takeover record");
+    assert_eq!(later.epoch(), 3);
+    w2.append(&later, &batch(&later, 2)).expect("append");
+    later.release().expect("release");
+    paused.release().expect("release paused");
+    assert!(record.lock_status().expect("status").is_none());
+    let takeovers: Vec<_> = record
+        .events()
+        .expect("scan")
+        .map(|e| e.expect("event"))
+        .filter(|e| e.type_name() == "lock.taken_over")
+        .collect();
+    assert_eq!(takeovers.len(), 1, "exactly one lock.taken_over");
+    let body = &takeovers[0].line.envelope["body"];
+    assert_eq!(body["previous"]["epoch"], 1, "{body}");
+    assert_eq!(body["epoch"], 2, "{body}");
+    assert_eq!(record.verify().expect("verify"), vec![]);
+}
+
+#[test]
+fn two_waiters_split_rename_and_create_local() {
+    let dir = tempfile::tempdir().expect("tmp");
+    two_waiters_split_rename_and_create(dir.path());
+}
+
 #[test]
 fn crash_after_seal_local() {
     let dir = tempfile::tempdir().expect("tmp");

@@ -475,7 +475,7 @@ impl Record {
         file: File,
         path: PathBuf,
         opts: &LockOptions,
-        taken_over: Option<LockHolder>,
+        mut taken_over: Option<LockHolder>,
     ) -> Result<Lock> {
         let main = self.main_dir();
         let file = Arc::new(file);
@@ -495,11 +495,23 @@ impl Record {
         };
         write_in_place(&file, &holder).map_err(|e| cleanup(Error::io(&path, e)))?;
         fsync_dir(&main).map_err(cleanup)?;
-        // The stale file a takeover renamed aside, if any, is done with.
-        match std::fs::remove_file(main.join(STALE_LOCK)) {
-            Ok(()) => fsync_dir(&main).map_err(cleanup)?,
+        // The stale file a takeover renamed aside, if any, holds the
+        // displaced holder, whichever waiter won the rename (3.1): read it
+        // before it goes.
+        let stale = main.join(STALE_LOCK);
+        match std::fs::read(&stale) {
+            Ok(raw) => {
+                if taken_over.is_none() {
+                    let displaced = parse_holder(&raw);
+                    if displaced.epoch != 0 {
+                        taken_over = Some(displaced);
+                    }
+                }
+                std::fs::remove_file(&stale).map_err(|e| cleanup(Error::io(&stale, e)))?;
+                fsync_dir(&main).map_err(cleanup)?;
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => return Err(cleanup(Error::io(main.join(STALE_LOCK), e))),
+            Err(e) => return Err(cleanup(Error::io(&stale, e))),
         }
         // Lock-time HEAD write (11.21): the incremented epoch, the rest unchanged.
         let head = Head { epoch, ..found };
