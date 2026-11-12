@@ -1,8 +1,9 @@
 //! The main-chain lock (item 35; 3.1; 11.21; D15): `O_EXCL` creation,
 //! in-place heartbeat rewrites through the descriptor created with
 //! `O_EXCL`, the epoch written to `HEAD` before anything else, takeover
-//! after a stale heartbeat measured on the monotonic clock, and the torn
-//! tail found and truncated at acquisition.
+//! after a stale heartbeat measured on the monotonic clock (the stale file
+//! renamed aside, so one waiter breaks it), and the torn tail found and
+//! truncated at acquisition.
 
 use std::fs::{File, OpenOptions};
 use std::os::unix::fs::{FileExt, MetadataExt};
@@ -253,15 +254,24 @@ impl Lock {
     }
 
     fn remove_if_ours(&self) -> std::io::Result<()> {
-        let ours = self.file.metadata()?.ino();
-        match std::fs::metadata(&self.path) {
-            Ok(md) if md.ino() == ours => std::fs::remove_file(&self.path),
-            Ok(_) => Ok(()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(e),
-        }
+        remove_if_same_inode(&self.path, &self.file)
     }
 }
+
+/// Remove `path` only while it is still the inode `file` was created as:
+/// another holder's file at the same path is left alone.
+fn remove_if_same_inode(path: &Path, file: &File) -> std::io::Result<()> {
+    let ours = file.metadata()?.ino();
+    match std::fs::metadata(path) {
+        Ok(md) if md.ino() == ours => std::fs::remove_file(path),
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+/// The side name a stale lock is renamed to while it is broken (3.1).
+pub(crate) const STALE_LOCK: &str = "lock.stale";
 
 impl Drop for Lock {
     fn drop(&mut self) {
@@ -388,6 +398,10 @@ impl Record {
             let Some(raw) = read_lock_raw(&main)? else {
                 continue;
             };
+            // A lock exists: if this waiter broke a stale one a moment ago,
+            // another waiter created this file first, so that break is not
+            // this acquisition's takeover.
+            taken_over = None;
             let holder = parse_holder(&raw);
             let since = match &observed {
                 Some((prev, since)) if *prev == raw => *since,
@@ -399,14 +413,14 @@ impl Record {
             };
             let unchanged_for = since.elapsed();
             if unchanged_for >= opts.takeover {
-                // Stale. Break it only if it is still exactly what we observed.
+                // Stale. Break it only if it is still exactly what we observed,
+                // by renaming it aside: exactly one waiter wins the rename.
                 if read_lock_raw(&main)?.as_deref() == Some(raw.as_slice()) {
-                    match std::fs::remove_file(&path) {
-                        Ok(()) => {}
+                    match std::fs::rename(&path, main.join(STALE_LOCK)) {
+                        Ok(()) => taken_over = Some(holder),
                         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
                         Err(e) => return Err(Error::io(&path, e)),
                     }
-                    taken_over = Some(holder);
                     observed = None;
                     continue;
                 }
@@ -464,8 +478,9 @@ impl Record {
         taken_over: Option<LockHolder>,
     ) -> Result<Lock> {
         let main = self.main_dir();
+        let file = Arc::new(file);
         let cleanup = |e: Error| {
-            let _ = std::fs::remove_file(&path);
+            let _ = remove_if_same_inode(&path, &file);
             e
         };
         let found = Head::read(&main).map_err(cleanup)?;
@@ -480,11 +495,16 @@ impl Record {
         };
         write_in_place(&file, &holder).map_err(|e| cleanup(Error::io(&path, e)))?;
         fsync_dir(&main).map_err(cleanup)?;
+        // The stale file a takeover renamed aside, if any, is done with.
+        match std::fs::remove_file(main.join(STALE_LOCK)) {
+            Ok(()) => fsync_dir(&main).map_err(cleanup)?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(cleanup(Error::io(main.join(STALE_LOCK), e))),
+        }
         // Lock-time HEAD write (11.21): the incremented epoch, the rest unchanged.
         let head = Head { epoch, ..found };
         head.write_checked(&main, Some(epoch)).map_err(cleanup)?;
         let torn_tail = truncate_torn_tail(&main, &head).map_err(cleanup)?;
-        let file = Arc::new(file);
         let stop = Arc::new(AtomicBool::new(false));
         let thread = {
             let file = Arc::clone(&file);

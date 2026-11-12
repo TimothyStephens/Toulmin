@@ -172,6 +172,10 @@ fn paused_holder_is_fenced_out(dir: &Path) {
         .expect("takeover");
     assert!(saw_holder, "the stale holder was reported while waiting");
     assert_eq!(taker.taken_over().map(|h| h.epoch), Some(1));
+    assert!(
+        !dir.join("main").join("lock.stale").exists(),
+        "the stale file renamed aside is removed once the taker's lock exists"
+    );
     assert_eq!(taker.epoch(), 2);
     other
         .append(&taker, &batch(&taker, 1))
