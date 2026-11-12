@@ -611,3 +611,19 @@ with `E2103` and `tm audit` called the orphan a fork, against decision 1's
 own reason for the torn-tail rule. The owner ruled for the minimal fix,
 not a reorder of step 0.
 
+## 2026-11-12 P2 review M1: a symbolic link to a regular file is a manifest entry
+
+**What.** Item 28 and 11.16: a symbolic link whose target is a regular
+file is an entry under the link's relative path with the target's
+fingerprint and snapshot; a link to a directory is not walked; a dangling
+link is not an entry. The entry shape is unchanged. Item 31 gains the case;
+`tm-fsfacts::manifest` follows.
+
+**Why.** The P2 review (M1): the P2 rule skipped every link, so a
+directory of links had an empty entry list and the fingerprint of `[]`.
+Nextflow's `publishDir` publishes outputs as symbolic links by default and
+the design names Nextflow as an expected tool, so at gate C a published
+results directory would version as empty and nothing downstream would
+have lineage. `entries` are frozen in `file.version_added` bodies from P3
+on, so the rule had to be settled now; the owner chose option (a).
+
