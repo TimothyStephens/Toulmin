@@ -558,3 +558,19 @@ only in mtime and inode share a fingerprint.
 **Why.** Digesting snapshots would label a touched or copied directory
 `content_changed`, against 5.6's `metadata only` and `carried forward`
 labels and D22.
+
+## 2026-11-12 P2: `E2007` and `E2008` replace the `E2004` reuse and the codeless `NewerFormat` variant
+
+**What.** Two record codes, gate A: `E2007` no `record.json` at the
+record path, `E2008` record format newer than this binary (the record
+opens read-only and every write is refused, naming the format needed).
+Section 9 (`project.init` and `read_in` rows), 11.12, item 73, and NFR
+Rollout carry them; `tm-formats`' catalog declares them; `Record::open`
+and every write in `tm-record` report them in place of `E2004` and
+`Error::NewerFormat`.
+
+**Why.** The owner ruled on the two codeless conditions logged on
+2026-11-11. The ruling asked for `E2006` and `E2007`, but `E2006` is
+already "binding conflicts or config directory unwritable" (section 9,
+catalog, errors.md), so the next free codes were taken with the owner's
+agreement rather than renumbering a settled P1 code.
