@@ -627,3 +627,75 @@ results directory would version as empty and nothing downstream would
 have lineage. `entries` are frozen in `file.version_added` bodies from P3
 on, so the rule had to be settled now; the owner chose option (a).
 
+## 2026-11-12 P2 review N1: a stale lock is broken by renaming it aside
+
+**What.** 3.1: the taker renames the stale `main/lock` to `main/lock.stale`
+before its `O_EXCL` create and removes the side file once its own lock
+exists; `finish_lock`'s cleanup removes the lock path only when it is
+still the taker's inode, as `release` already did.
+
+**Why.** The P2 review (N1): read, compare, `remove_file` let two waiters
+both pass the compare, and the loser's cleanup could remove the winner's
+file. A rename is won by exactly one waiter.
+
+## 2026-11-12 P2 review N2: 5.3 says "prevent, or record as a truncation"
+
+**What.** The two writer rows of 5.3 read "Prevent, or record as a
+truncation (the one-syscall-pair window named in 3.1)", and 3.1 names the
+window between the step-3 lock re-read and the `HEAD` rename with its
+three outcomes: committed under the taker's `HEAD`, truncated and
+recorded, or a stale `HEAD` that `tm audit` reports.
+
+**Why.** The P2 review (N2): "Prevent" overstated the mechanism by that
+window. The third outcome is the builder's addition to the review's two:
+a paused writer whose rename lands after the taker has written leaves
+`HEAD` pointing into the taker's bytes, which audit reports as
+`head_offset_mismatch` or `head_field_mismatch` and the next lock may
+refuse with `E2103`. It is detectable, never silent, and needs a writer
+paused for the takeover timeout inside one syscall pair. Closing it
+(per-writer `HEAD.tmp` names, removed by the taker so the stale rename
+fails) is a mechanism change the review did not ask for and is left for
+the owner.
+
+## 2026-11-12 P2 review N3: what `hashing.trust_ctime: false` gives up
+
+**What.** Item 30, 11.19, and a 5.5 row say it: a same-size,
+`mtime`-preserving rewrite on the same inode is `Unchanged` in `Scan` and
+`Run`, so `tm status` and the wrapper reuse the recorded hash until the
+next audit.
+
+**Why.** The P2 review (N3): the cost of the opt-in was unstated and 5.5's
+table of weaker options did not list it.
+
+## 2026-11-12 P2 review N4: a directory exclude pattern is one component followed by `/`
+
+**What.** Item 28 says so, that `Excludes` refuses anything else, and that
+`settings.set` reports the refusal as `E7002`. The parser already behaved
+this way.
+
+**Why.** The P2 review (N4): the grammar did not define `a/b/`, which the
+parser refused without the design saying so.
+
+## 2026-11-12 P2 review N5: `HEAD.format` follows `record.json`'s `format`
+
+**What.** 11.3: a record format change that alters `HEAD` bumps both, so
+`HEAD.format` never exceeds `record.json`'s; a read-only open accepts a
+higher `HEAD.format` whose seven known fields parse, ignoring other
+members; a writable record with another `HEAD.format`, or a `HEAD.format`
+above `record.json`'s, is `E2103`. `Head::read_with` and the Record's
+read paths follow.
+
+**Why.** The P2 review (N5): `Head::read` mapped any `format != 1` to
+`E2103`, so a future record format that moved `HEAD.format` could not be
+read at all, against 11.3 and NFR Rollout's "opens for reading".
+
+## 2026-11-12 P2 review N6: CI regenerates the record cases and diffs them
+
+**What.** Item 40 and the conformance job: `gen-chain --conformance` into
+a temporary directory, empty directories dropped, `diff -r` against
+`conformance/record/`, any difference fails.
+
+**Why.** The P2 review (N6): the cases are only as frozen as the
+generator; the diff makes every writer change that alters bytes a visible
+review item, which is what the formats cases give P1.
+
