@@ -180,6 +180,55 @@ fn excluded_entries_and_manifest_diff() {
 }
 
 #[test]
+fn manifests_differing_only_in_mtime_and_ino_share_a_fingerprint() {
+    let dir = tempfile::tempdir().unwrap();
+    let a = dir.path().join("a");
+    let b = dir.path().join("b");
+    fs::create_dir_all(a.join("sub")).unwrap();
+    fs::create_dir_all(b.join("sub")).unwrap();
+    for root in [&a, &b] {
+        write(&root.join("x.csv"), b"1,2\n");
+        write(&root.join("sub/y.txt"), b"why");
+    }
+    // Different files: different inodes already; push b's mtimes apart too.
+    let older = SystemTime::now() - Duration::from_secs(3600);
+    for rel in ["x.csv", "sub/y.txt"] {
+        fs::File::options()
+            .write(true)
+            .open(b.join(rel))
+            .unwrap()
+            .set_modified(older)
+            .unwrap();
+    }
+    let ignore: Vec<String> = Vec::new();
+    let settings = HashSettings::default();
+    let ma = Manifest::build(&a, &ignore, &settings).unwrap();
+    let mb = Manifest::build(&b, &ignore, &settings).unwrap();
+    assert_eq!(ma.entries.len(), 2);
+    for (ea, eb) in ma.entries.iter().zip(&mb.entries) {
+        assert_eq!(ea.path, eb.path);
+        assert_eq!(ea.fingerprint, eb.fingerprint);
+        assert_ne!(ea.snapshot.ino, eb.snapshot.ino);
+        assert_ne!(ea.snapshot.mtime, eb.snapshot.mtime);
+    }
+    assert_ne!(ma.entries_json(), mb.entries_json(), "snapshots differ");
+    assert_eq!(ma.fingerprint().unwrap(), mb.fingerprint().unwrap());
+    let json = ma.to_json().unwrap();
+    assert_eq!(json["fingerprint"], ma.fingerprint().unwrap().as_str());
+    assert_eq!(json["entries"], ma.entries_json());
+    assert_eq!(json["ignore"], serde_json::json!([]));
+
+    // One changed byte changes it.
+    write(&b.join("sub/y.txt"), b"whz");
+    let mb2 = Manifest::build(&b, &ignore, &settings).unwrap();
+    assert_ne!(ma.fingerprint().unwrap(), mb2.fingerprint().unwrap());
+    // And a renamed entry changes it with the same bytes.
+    fs::rename(a.join("x.csv"), a.join("z.csv")).unwrap();
+    let ma2 = Manifest::build(&a, &ignore, &settings).unwrap();
+    assert_ne!(ma.fingerprint().unwrap(), ma2.fingerprint().unwrap());
+}
+
+#[test]
 fn non_utf8_entry_is_e3003() {
     use std::os::unix::ffi::OsStrExt;
     let dir = tempfile::tempdir().unwrap();

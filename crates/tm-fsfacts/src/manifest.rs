@@ -3,11 +3,10 @@
 //! patterns with the `manifest.ignore` default; and the diff between two
 //! manifests.
 //!
-//! The manifest fingerprint is not computed here: decision 10's rule
-//! (`sha256:` of the canonical JSON of `entries`, snapshots included)
-//! collides with 5.6's content labels and D22, and the P2 report raises it
-//! as a collision for the owner to rule on. `entries_json` is what either
-//! rule would digest.
+//! The manifest fingerprint digests `[{"path","fingerprint"}]` in entry
+//! order (11.16; decision 10's 2026-11-12 note): snapshots are stat facts
+//! carried in the entries and never enter it, so a touched or copied
+//! directory keeps its fingerprint.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -17,7 +16,7 @@ use tm_formats::sort_order::{cmp_text, nfc};
 use tm_formats::{Code, Error as FormatError};
 
 use crate::Error;
-use crate::hash::{Fingerprint, HashSettings, hash_files};
+use crate::hash::{Fingerprint, HashSettings, fingerprint_of, hash_files};
 use crate::snapshot::Snapshot;
 
 /// The `manifest.ignore` default (11.19).
@@ -117,6 +116,36 @@ impl Manifest {
     #[must_use]
     pub fn entries_json(&self) -> Value {
         Value::Array(self.entries.iter().map(Entry::to_json).collect())
+    }
+
+    /// The manifest fingerprint: `sha256:` of the canonical JSON of
+    /// `[{"path","fingerprint"}]`, one object per entry in 11.10 order.
+    /// Snapshots do not enter it (11.16).
+    ///
+    /// # Errors
+    /// A formats error only if an entry path cannot be canonical JSON,
+    /// which `build` rules out.
+    pub fn fingerprint(&self) -> Result<Fingerprint, Error> {
+        let list = Value::Array(
+            self.entries
+                .iter()
+                .map(|e| json!({"path": e.path, "fingerprint": e.fingerprint.as_str()}))
+                .collect(),
+        );
+        let bytes = tm_formats::canonical::canonical_bytes(&list)?;
+        Ok(fingerprint_of(&bytes))
+    }
+
+    /// The 11.16 `manifest` object: `{"fingerprint","ignore","entries"}`.
+    ///
+    /// # Errors
+    /// As `fingerprint`.
+    pub fn to_json(&self) -> Result<Value, Error> {
+        Ok(json!({
+            "fingerprint": self.fingerprint()?.as_str(),
+            "ignore": self.ignore,
+            "entries": self.entries_json(),
+        }))
     }
 
     /// A directory version's `size`: the sum of its entries' sizes (item 28).
