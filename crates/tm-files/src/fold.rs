@@ -48,7 +48,8 @@ pub fn fold(tx: &mut IndexTx<'_>, line: &Line) -> Result<()> {
     {
         return Ok(());
     }
-    let body = KnownEvent::new(ty, line.envelope.get("body").unwrap_or(&Value::Null))?;
+    let tv = line.envelope.get("tv").and_then(Value::as_u64).unwrap_or(1);
+    let body = KnownEvent::new_at(ty, tv, line.envelope.get("body").unwrap_or(&Value::Null))?;
     match ty {
         EventType::FileRegistered => registered(tx, id, &body),
         EventType::FileVersionAdded => version_added(tx, id, &body),
@@ -109,8 +110,8 @@ fn version_added(tx: &mut IndexTx<'_>, id: &str, body: &KnownEvent) -> Result<()
     let origin = body.get("origin").cloned().unwrap_or(Value::Null);
     update(
         tx,
-        "INSERT OR IGNORE INTO file_versions (version, file, n, fingerprint, origin_kind, origin_run, content_label, size, kept_object, fingerprint_only, event_id) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, ?)",
+        "INSERT OR IGNORE INTO file_versions (version, file, n, fingerprint, origin_kind, origin_run, content_label, size, kept_object, fingerprint_only, decompressed_fingerprint, event_id) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, ?, ?)",
         &[
             Param::from(version),
             Param::from(text(body, "file")),
@@ -125,6 +126,7 @@ fn version_added(tx: &mut IndexTx<'_>, id: &str, body: &KnownEvent) -> Result<()
             Param::from(origin.get("run").and_then(Value::as_str).map(str::to_owned)),
             Param::from(opt_text(body, "content_label")),
             Param::from(body.get("size").and_then(Value::as_u64).unwrap_or(0)),
+            Param::from(opt_text(body, "decompressed_fingerprint")),
             Param::from(id),
         ],
     )

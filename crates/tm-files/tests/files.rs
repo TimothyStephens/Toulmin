@@ -320,6 +320,20 @@ fn fixture_tables_parse_with_item_47_types_and_unique_keys() {
     let table = complete_spec(&root.join("de.tsv"), &draft, &st).unwrap();
     assert_eq!(table.spec.fingerprint(), spec("de").fingerprint());
     assert_eq!(table.batch.num_rows(), 12);
+    // A draft that reserves a wider scale keeps it; a narrower one is widened.
+    draft["columns"][1]["scale"] = json!(4);
+    draft["columns"][2]["scale"] = json!(1);
+    let reserved = complete_spec(&root.join("de.tsv"), &draft, &st).unwrap();
+    assert_eq!(
+        reserved.spec.column("log2FoldChange").unwrap().scale,
+        Some(4)
+    );
+    assert_eq!(
+        reserved.spec.column("padj").unwrap().scale,
+        Some(4),
+        "the data's 4 beats the draft's 1"
+    );
+    assert_ne!(reserved.spec.fingerprint(), spec("de").fingerprint());
 }
 
 #[test]
@@ -476,11 +490,19 @@ fn each_equivalence_rule() {
     let de_path = root.join("de.tsv");
     let de_spec = spec("de");
     let first = Candidate::of_file(&de_path, &hs).unwrap();
-    let (v1, ev) = Version::next(FileHandle(1), None, &first, Origin::Registered, false)
-        .unwrap()
-        .unwrap();
+    let (v1, ev) = Version::next(
+        FileHandle(1),
+        None,
+        &first,
+        Origin::Registered,
+        Equivalence::Different,
+    )
+    .unwrap()
+    .unwrap();
     assert_eq!(ev.get("content_label"), Some(&Value::Null));
     assert_eq!(ev.get("manifest"), Some(&Value::Null));
+    assert_eq!(ev.get("decompressed_fingerprint"), Some(&Value::Null));
+    assert_eq!(ev.tv(), 2, "Files writes tv 2");
     assert_eq!(v1.handle, VersionHandle::parse("F1@v1").unwrap());
     let table1 = parse(&de_path, &de_spec, &st).unwrap();
 
@@ -495,10 +517,11 @@ fn each_equivalence_rule() {
             Some(&v1),
             &c,
             Origin::ChangedOutsideRun,
-            true
+            Equivalence::SameBytes
         )
         .unwrap()
-        .is_none()
+        .is_none(),
+        "the copy adds no version"
     );
 
     // Same table by key: rows shuffled, one value respelled (1.9 for 1.90).
@@ -519,6 +542,18 @@ fn each_equivalence_rule() {
         equivalence(&v1, &c, Some((&table1, &table2, &de_spec))).unwrap(),
         Equivalence::SameTableByKey
     );
+    let (v_sorted, ev) = Version::next(
+        FileHandle(1),
+        Some(&v1),
+        &c,
+        Origin::ChangedOutsideRun,
+        Equivalence::SameTableByKey,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(v_sorted.handle.version, 2, "the re-sort is a version");
+    assert_eq!(v_sorted.content_label, Some(ContentLabel::MetadataOnly));
+    assert_eq!(ev.get("content_label"), Some(&json!("metadata_only")));
 
     // Different: one value changed; a new version, labeled content_changed.
     let edited = tmp.path().join("edited.tsv");
@@ -535,7 +570,7 @@ fn each_equivalence_rule() {
         Some(&v1),
         &c,
         Origin::ChangedOutsideRun,
-        false,
+        Equivalence::Different,
     )
     .unwrap()
     .unwrap();
@@ -571,9 +606,15 @@ fn each_equivalence_rule() {
     );
     assert_eq!(one_member.decompressed, two_members.decompressed);
     assert_ne!(one_member.fingerprint, two_members.fingerprint);
-    let (v_gz, _) = Version::next(FileHandle(7), None, &one_member, Origin::Registered, false)
-        .unwrap()
-        .unwrap();
+    let (v_gz, _) = Version::next(
+        FileHandle(7),
+        None,
+        &one_member,
+        Origin::Registered,
+        Equivalence::Different,
+    )
+    .unwrap()
+    .unwrap();
     assert_eq!(
         equivalence(&v_gz, &two_members, None).unwrap(),
         Equivalence::SameDecompressed
@@ -581,6 +622,32 @@ fn each_equivalence_rule() {
     assert_eq!(
         decompressed_fingerprint(&bgz, &hs).unwrap(),
         first.fingerprint
+    );
+    let (v_re, ev) = Version::next(
+        FileHandle(7),
+        Some(&v_gz),
+        &two_members,
+        Origin::ChangedOutsideRun,
+        Equivalence::SameDecompressed,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(v_re.handle.version, 2, "the recompression is a version");
+    assert_eq!(v_re.content_label, Some(ContentLabel::MetadataOnly));
+    assert_eq!(
+        ev.get("decompressed_fingerprint"),
+        Some(&json!(first.fingerprint.as_str())),
+        "tv 2 carries the digest"
+    );
+    let back = Version::from_added(&Value::Object(ev.body().clone())).unwrap();
+    assert_eq!(back.decompressed.as_ref(), Some(&first.fingerprint));
+    let mut tv1 = Value::Object(ev.body().clone());
+    tv1.as_object_mut()
+        .unwrap()
+        .remove("decompressed_fingerprint");
+    assert!(
+        Version::from_added(&tv1).unwrap().decompressed.is_none(),
+        "a tv 1 body reads"
     );
     assert!(
         matches!(
@@ -638,9 +705,15 @@ fn a_directory_version_from_fsfacts_validates() {
     fs::write(dir.join("a.fastq"), b"@r1\nACGT\n+\nIIII\n").unwrap();
     fs::write(dir.join("b.fastq"), b"@r2\nTTTT\n+\nIIII\n").unwrap();
     let c = Candidate::of_directory(&dir, &[], &HashSettings::default()).unwrap();
-    let (v, ev) = Version::next(FileHandle(9), None, &c, Origin::Registered, false)
-        .unwrap()
-        .unwrap();
+    let (v, ev) = Version::next(
+        FileHandle(9),
+        None,
+        &c,
+        Origin::Registered,
+        Equivalence::Different,
+    )
+    .unwrap()
+    .unwrap();
     assert_eq!(
         ev.get("manifest").unwrap()["fingerprint"],
         c.fingerprint.as_str()
@@ -821,7 +894,7 @@ CREATE TABLE files (file TEXT PRIMARY KEY, kind TEXT NOT NULL, path TEXT NOT NUL
 CREATE INDEX files_path ON files(path);
 CREATE TABLE file_versions (version TEXT PRIMARY KEY, file TEXT NOT NULL, n INTEGER NOT NULL, fingerprint TEXT NOT NULL,
   origin_kind TEXT NOT NULL, origin_run TEXT, content_label TEXT, size INTEGER, kept_object TEXT,
-  fingerprint_only INTEGER NOT NULL DEFAULT 0, event_id TEXT NOT NULL);
+  fingerprint_only INTEGER NOT NULL DEFAULT 0, decompressed_fingerprint TEXT, event_id TEXT NOT NULL);
 CREATE INDEX file_versions_file ON file_versions(file, n);
 CREATE TABLE parse_specs (file TEXT PRIMARY KEY, spec TEXT NOT NULL, spec_fingerprint TEXT NOT NULL, event_id TEXT NOT NULL);
 CREATE TABLE panels (version TEXT NOT NULL, name TEXT NOT NULL, PRIMARY KEY (version, name));
@@ -857,9 +930,15 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
     // The events of a small history over the fixture files.
     let (de, reg) = Identity::register(FileHandle(1), "de.tsv", &registration("DE table")).unwrap();
     let cand = Candidate::of_file(&root.join("de.tsv"), &hs).unwrap();
-    let (v1, added) = Version::next(FileHandle(1), None, &cand, Origin::Registered, false)
-        .unwrap()
-        .unwrap();
+    let (v1, added) = Version::next(
+        FileHandle(1),
+        None,
+        &cand,
+        Origin::Registered,
+        Equivalence::Different,
+    )
+    .unwrap()
+    .unwrap();
     let de_spec = spec("de");
     let spec_set = KnownEvent::new(
         EventType::FileParseSpecSet,
@@ -887,9 +966,15 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
     let (_, png) =
         Identity::register(FileHandle(5), "figure.png", &registration("Figure")).unwrap();
     let pcand = Candidate::of_file(&root.join("figure.png"), &hs).unwrap();
-    let (_, padded) = Version::next(FileHandle(5), None, &pcand, Origin::Registered, false)
-        .unwrap()
-        .unwrap();
+    let (_, padded) = Version::next(
+        FileHandle(5),
+        None,
+        &pcand,
+        Origin::Registered,
+        Equivalence::Different,
+    )
+    .unwrap()
+    .unwrap();
     let panels = tm_files::image::set_panels(
         state,
         &VersionHandle::parse("F5@v1").unwrap(),
@@ -904,8 +989,30 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
         &["B".into(), "C".into()],
     )
     .unwrap();
+    // A .gz input: its tv 2 body carries the decompressed fingerprint.
+    let tmp = tempfile::tempdir().unwrap();
+    let gz_path = tmp.path().join("de.tsv.gz");
+    {
+        let mut enc = GzEncoder::new(Vec::new(), Compression::default());
+        enc.write_all(&fs::read(root.join("de.tsv")).unwrap())
+            .unwrap();
+        fs::write(&gz_path, enc.finish().unwrap()).unwrap();
+    }
+    let (_, gz_reg) =
+        Identity::register(FileHandle(7), "de.tsv.gz", &registration("DE, gzipped")).unwrap();
+    let gz_cand = Candidate::of_file(&gz_path, &hs).unwrap();
+    let (_, gz_added) = Version::next(
+        FileHandle(7),
+        None,
+        &gz_cand,
+        Origin::Registered,
+        Equivalence::Different,
+    )
+    .unwrap()
+    .unwrap();
     let events = [
         reg, added, spec_set, kept, renamed, removable, restored, png, padded, panels, panels2,
+        gz_reg, gz_added,
     ];
     let mut prev = genesis("main", "p-fixture");
     let mut lines = Vec::new();
@@ -936,7 +1043,7 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
             &[],
         )
         .unwrap();
-    assert_eq!(files.len(), 2);
+    assert_eq!(files.len(), 3);
     assert_eq!(files[0].text(0), Some("F1"));
     assert_eq!(files[0].text(1), Some("tables/de.tsv"), "renamed");
     assert_eq!(files[0].text(2), Some("DE table"));
@@ -944,9 +1051,19 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
     assert_eq!(files[0].int(4), Some(1), "removable");
     assert_eq!(files[0].int(5), Some(0), "restored");
     let versions = tx
-        .query_rows("SELECT version, n, fingerprint, origin_kind, content_label, kept_object, fingerprint_only, size FROM file_versions ORDER BY version", &[])
+        .query_rows("SELECT version, n, fingerprint, origin_kind, content_label, kept_object, fingerprint_only, size, decompressed_fingerprint FROM file_versions ORDER BY version", &[])
         .unwrap();
-    assert_eq!(versions.len(), 2);
+    assert_eq!(versions.len(), 3);
+    assert!(
+        versions[0].get(8).is_null(),
+        "a plain file has no decompressed fingerprint"
+    );
+    assert_eq!(versions[2].text(0), Some("F7@v1"));
+    assert_eq!(
+        versions[2].text(8),
+        Some(cand.fingerprint.as_str()),
+        "the .gz version's digest is de.tsv's fingerprint"
+    );
     assert_eq!(versions[0].text(0), Some("F1@v1"));
     assert_eq!(versions[0].int(1), Some(1));
     assert_eq!(versions[0].text(2), Some(v1.fingerprint.as_str()));
@@ -978,6 +1095,6 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
     let again = tx
         .query_rows("SELECT COUNT(*) FROM file_versions", &[])
         .unwrap();
-    assert_eq!(again[0].int(0), Some(2));
+    assert_eq!(again[0].int(0), Some(3));
     tx.commit().unwrap();
 }

@@ -285,8 +285,8 @@ pub fn check_envelope(envelope: &Value) -> Result<Event, Error> {
             envelope: envelope.clone(),
         }));
     }
-    match version::read_policy(&[known.tv()], tv) {
-        version::Read::Known => Ok(Event::Known(KnownEvent::new(known, &m["body"])?)),
+    match version::read_policy(&known.known_tvs(), tv) {
+        version::Read::Known => Ok(Event::Known(KnownEvent::new_at(known, tv, &m["body"])?)),
         version::Read::Opaque => Ok(Event::Opaque(OpaqueEvent {
             ty: ty.to_owned(),
             tv,
@@ -365,7 +365,7 @@ fn read_source(v: &Value, actor: ActorKind) -> Result<Option<Source>, Error> {
 }
 
 /// Build the line for a known event. The writer policy (11.11) holds by
-/// construction: a [`KnownEvent`] is always at its type's known `tv`, and
+/// construction: a [`KnownEvent`] is always at a `tv` the type knows, and
 /// an opaque event cannot be passed here.
 ///
 /// # Errors
@@ -374,7 +374,7 @@ pub fn write_line(head: &Head, event: &KnownEvent) -> Result<(String, EventId), 
     let mut m = Map::new();
     m.insert("env".into(), version::ENVELOPE.into());
     m.insert("type".into(), event.ty().name().into());
-    m.insert("tv".into(), event.ty().tv().into());
+    m.insert("tv".into(), event.tv().into());
     m.insert("chain".into(), head.chain.clone().into());
     m.insert("seq".into(), head.seq.into());
     m.insert("prev".into(), head.prev.as_str().into());

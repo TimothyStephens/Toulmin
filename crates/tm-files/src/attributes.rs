@@ -43,6 +43,11 @@ pub struct State {
 pub enum Action {
     /// `tm file register` on a tracked or new identity.
     Register,
+    /// `tm file hash`, with `--again` or not (section 9's `file.hash` row).
+    Hash {
+        /// Hash again although a version exists.
+        again: bool,
+    },
     /// `tm file keep`, with `--fingerprint-only` or not.
     Keep {
         /// Keep only the fingerprint.
@@ -67,6 +72,7 @@ impl Action {
     fn name(self) -> &'static str {
         match self {
             Action::Register => "register",
+            Action::Hash { .. } => "hash",
             Action::Keep { .. } => "keep",
             Action::MarkRemovable => "removable",
             Action::Restore => "restore",
@@ -82,7 +88,8 @@ impl State {
     ///
     /// # Errors
     /// `E3201` naming the state and the action when 6.3 does not allow it;
-    /// `E3301` for `panels` on a version that is not an image.
+    /// `E3005` for `hash` without `--again` on an identity that has a
+    /// version; `E3301` for `panels` on a version that is not an image.
     pub fn apply(self, action: Action) -> Result<State> {
         let refuse = |why: &str| {
             Err(Error::code(
@@ -102,6 +109,18 @@ impl State {
                     level: Level::Registered,
                     ..self
                 })
+            }
+            Action::Hash { again } => {
+                if self.level != Level::Registered {
+                    return refuse("hashing follows registration (`tm file register`)");
+                }
+                if self.latest.is_some() && !again {
+                    return Err(Error::code(
+                        Code::E3005,
+                        "already hashed: this file has a version; use `--again` to hash it again",
+                    ));
+                }
+                Ok(self)
             }
             Action::Keep { fingerprint_only } => {
                 if self.level != Level::Registered {
@@ -280,5 +299,33 @@ mod tests {
         let r = registered(None).apply(Action::Retire).unwrap();
         assert!(r.retired);
         assert_eq!(code(r.apply(Action::Retire)), Some(Code::E3201));
+    }
+
+    #[test]
+    fn hash_transition() {
+        let code = |r: Result<State>| r.unwrap_err().catalog_code();
+        let tracked = State {
+            level: Level::Tracked,
+            ..registered(None)
+        };
+        // Hash: registered with no version, or again; E3005 otherwise.
+        assert!(
+            registered(None)
+                .apply(Action::Hash { again: false })
+                .is_ok()
+        );
+        assert_eq!(
+            code(registered(Some(Kept::No)).apply(Action::Hash { again: false })),
+            Some(Code::E3005)
+        );
+        assert!(
+            registered(Some(Kept::No))
+                .apply(Action::Hash { again: true })
+                .is_ok()
+        );
+        assert_eq!(
+            code(tracked.apply(Action::Hash { again: true })),
+            Some(Code::E3201)
+        );
     }
 }

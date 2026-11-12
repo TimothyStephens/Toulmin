@@ -1,9 +1,11 @@
 //! File versions (item 45; 6.2; D5, D22): a version is one fingerprint
 //! with its kept state, origin, and content label. A candidate (what
-//! `tm-fsfacts` found at a path now) becomes a new input version only when
-//! it differs from the latest version under all three equivalences: same
-//! bytes, same table by key, same decompressed content (`.gz` and `.bgz`,
-//! the latter concatenated gzip members, read with a multi-member decoder).
+//! `tm-fsfacts` found at a path now) with the latest version's fingerprint
+//! adds no version; one with another fingerprint is the next version,
+//! labeled `content_changed` when it differs under all three equivalences
+//! and `metadata_only` when it is the same table by key or the same
+//! decompressed content (`.gz` and `.bgz`, the latter concatenated gzip
+//! members, read with a multi-member decoder).
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -155,7 +157,7 @@ pub struct Version {
     /// The directory manifest, for a directory version.
     pub manifest: Option<Value>,
     /// `sha256:` of the decompressed bytes, for a `.gz` or `.bgz` version
-    /// (not in the event body; the Core keeps it in the stat cache, 11.17).
+    /// (`decompressed_fingerprint` of the `tv` 2 body, 11.16).
     pub decompressed: Option<EventId>,
     /// Kept state.
     pub kept: Kept,
@@ -283,26 +285,35 @@ pub enum KeepReason {
 }
 
 impl Version {
-    /// The next version of `file` for `candidate`, or `None` when the
-    /// candidate is equivalent to `previous` (item 45): a first version has
-    /// no content label; a later one is `content_changed`.
+    /// The next version of `file` for `candidate` (item 45), or `None` when
+    /// the candidate has `previous`'s fingerprint. `equivalence` is how
+    /// the candidate relates to `previous` (see [`equivalence`]): a first
+    /// version has no content label; a later one is `metadata_only` for
+    /// the same table by key or the same decompressed content, else
+    /// `content_changed`. The event is `file.version_added` at `tv` 2.
     ///
     /// # Errors
-    /// `E1002` when the body does not validate (a directory manifest whose
-    /// fingerprint `tm-formats` computes otherwise, see the P3 report).
+    /// `E1002` when the body does not validate.
     pub fn next(
         file: FileHandle,
         previous: Option<&Version>,
         candidate: &Candidate,
         origin: Origin,
-        equivalent: bool,
+        equivalence: Equivalence,
     ) -> Result<Option<(Version, KnownEvent)>> {
-        if previous.is_some() && equivalent {
+        if let Some(p) = previous
+            && (equivalence == Equivalence::SameBytes || p.fingerprint == candidate.fingerprint)
+        {
             return Ok(None);
         }
         let n = previous.map_or(1, |p| p.handle.version + 1);
         let handle = VersionHandle { file, version: n };
-        let content_label = previous.map(|_| ContentLabel::ContentChanged);
+        let content_label = previous.map(|_| match equivalence {
+            Equivalence::SameTableByKey | Equivalence::SameDecompressed => {
+                ContentLabel::MetadataOnly
+            }
+            Equivalence::SameBytes | Equivalence::Different => ContentLabel::ContentChanged,
+        });
         let ev = event(
             EventType::FileVersionAdded,
             &json!({
@@ -314,6 +325,7 @@ impl Version {
                 "snapshot": candidate.snapshot.to_json(),
                 "content_label": content_label.map(ContentLabel::as_str),
                 "manifest": candidate.manifest,
+                "decompressed_fingerprint": candidate.decompressed.as_ref().map(EventId::as_str),
             }),
         )?;
         Ok(Some((
@@ -363,13 +375,17 @@ impl Version {
         Ok((v, ev))
     }
 
-    /// Rebuild a version from a `file.version_added` body (what the fold
-    /// and callers reading the chain do).
+    /// Rebuild a version from a `file.version_added` body at `tv` 2 or 1
+    /// (what callers reading the chain do); a `tv` 1 body has no
+    /// decompressed fingerprint.
     ///
     /// # Errors
-    /// `E1002` when `body` is not such a body.
+    /// `E1002` when `body` is neither.
     pub fn from_added(body: &Value) -> Result<Version> {
-        let ev = event(EventType::FileVersionAdded, body)?;
+        let ev = match KnownEvent::new(EventType::FileVersionAdded, body) {
+            Ok(ev) => ev,
+            Err(e2) => KnownEvent::new_at(EventType::FileVersionAdded, 1, body).map_err(|_| e2)?,
+        };
         let s = |k: &str| {
             ev.get(k)
                 .and_then(Value::as_str)
@@ -413,7 +429,10 @@ impl Version {
             origin,
             content_label,
             manifest: ev.get("manifest").filter(|m| !m.is_null()).cloned(),
-            decompressed: None,
+            decompressed: ev
+                .get("decompressed_fingerprint")
+                .and_then(Value::as_str)
+                .and_then(EventId::parse),
             kept: Kept::No,
         })
     }

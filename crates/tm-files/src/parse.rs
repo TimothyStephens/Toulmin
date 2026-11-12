@@ -493,9 +493,10 @@ pub fn parse(path: &Path, spec: &ParseSpec, settings: &EngineSettings) -> Result
 }
 
 /// Complete an owner's draft spec for `path` (`tm table spec`, item 47):
-/// every `dec` column gets `scale`, the largest fraction length seen over
-/// the column, whatever the draft said; the result is validated and the
-/// file is parsed once to check the header, the types, and the key.
+/// every `dec` column gets `scale`, the larger of the draft's (when it
+/// gives one) and the largest fraction length seen over the column; the
+/// result is validated and the file is parsed once to check the header,
+/// the types, and the key.
 ///
 /// # Errors
 /// `E3105` and the other 11.7 codes for the draft; [`parse`]'s codes for
@@ -526,7 +527,11 @@ pub fn complete_spec(path: &Path, draft: &Value, settings: &EngineSettings) -> R
     let mut completed = draft.clone();
     for &i in &dec_columns {
         let column = &spec0.columns[i];
-        let mut scale = 0usize;
+        let reserved = draft["columns"][i]["scale"]
+            .as_u64()
+            .and_then(|s| usize::try_from(s).ok())
+            .unwrap_or(0);
+        let mut scale = reserved;
         for (r, row) in raw.iter().enumerate() {
             let text = match &row[i] {
                 Cell::Text(s) => {
