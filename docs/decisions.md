@@ -588,3 +588,26 @@ unaffected.
 page cache for three hours and read 540 GB before it was stopped (P2,
 2026-11-12). Nothing in the workspace debugs DuckDB's internals.
 
+## 2026-11-12 P2 review B1: a crash between the seal and the `HEAD` rename is a torn tail
+
+**What.** 3.1 and 11.21 step 0 now say: the open segment's length is that
+of whichever form exists (a packed segment's uncompressed length
+included); a plain segment numbered `HEAD.segment + 1` is uncommitted and
+is removed at lock time as a torn tail, recorded as
+`chain.torn_tail_truncated` with that segment number, offset 0, and its
+length; a writer that finds `HEAD.segment` packed-only rolls to the next
+segment without sealing again; `tm audit` reports the state as
+`torn_tail_beyond_head`. A plain `HEAD.segment + 1` beside a plain
+`HEAD.segment` stays `head_field_mismatch`, as the code already reported
+it. `finish_lock`, the append fence, step 0, and `verify` follow;
+`conformance/record/chains/crash_after_seal` and a `tests/lock.rs` case
+cover it. The eight item 41 cases and the existing chain fixtures are
+unchanged.
+
+**Why.** The P2 review (B1): `seal` removes the plain file before the
+batch's `HEAD` rename, so a crash in that window left `HEAD` pointing at
+a packed segment whose plain length read as 0. Every later lock failed
+with `E2103` and `tm audit` called the orphan a fork, against decision 1's
+own reason for the torn-tail rule. The owner ruled for the minimal fix,
+not a reorder of step 0.
+
