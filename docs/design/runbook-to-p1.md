@@ -138,6 +138,7 @@ Recorded so they are not lost, with where each surfaces. Do not fix them now.
 | Fuzz job is wired to `pull_request`; the Verification Plan says scheduled | P4, when `tm-checker` gives it targets | Move it to a schedule, or it adds ten minutes to every PR from P4 on |
 | `conformance/checker/assertions/eval/<name>/observed.p1.json` holds outcomes the Rust side chose in P1 | P4, before the third session starts | That session writes `expected.json` from `checker.md` and `case.json` only and must not open `observed.p1.json`; put that line in its prompt |
 | 11.10's `COLLATE BINARY` spelling was rejected by DuckDB's parser in a P2 test | P4, writing the translator | State the spelling DuckDB accepts, or state that no `COLLATE` clause is the binary default and 11.10 means that |
+| tm-core's unit tests need an `OwnerCap` and the crate-private route of P3 decision 1 does not reach a crate that only calls the Core | P7, first test in tm-core | Decide whether tm-core tests get a test-only constructor behind a `cfg(test)` feature the CI grep ignores, or go through a tm-cli integration test |
 
 ---
 

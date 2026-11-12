@@ -802,3 +802,49 @@ argument per line, unquoted.
 unstated; the readiness report (impl-M7) had asked for the `args.txt`
 format.
 
+## 2026-11-12 P3: `flate2` and `md-5` join item 1's dependency list
+
+**What.** Item 1 names `flate2` (default backend) for inflating `.gz` and
+`.bgz` files and `md-5` for comparing provider-supplied checksum lists;
+every Toulmin fingerprint stays sha256. Both were already in `Cargo.lock`
+(as libduckdb-sys's build dependency and lopdf's dependency).
+
+**Why.** The owner ruled on the two P3 collisions: D22's
+decompressed-content equivalence and item 50's MD5 lists cannot be built
+without them.
+
+## 2026-11-12 P3: `E3006` checksum list unreadable, `E3302` not a PDF page tree
+
+**What.** Section 9 (`file.register`, `claim.add`), 11.12, the catalog,
+and docs/errors.md name the two conditions P3 had reported as codeless;
+`tm-files` reports them under these codes.
+
+**Why.** The owner ruled; each code is the next free one in the block its
+operation already uses (`E30xx` for `file.register`, `E33xx` for the
+citation-type checks of item 49).
+
+## 2026-11-12 P3: a candidate's decompressed fingerprint, and where it lives
+
+**What.** Item 45: a `.gz` or `.bgz` candidate carries the `sha256:` of
+its decompressed bytes; Files compares it with the latest version's; the
+event body does not carry it, so the Core keeps the latest version's in
+the 11.17 stat cache row, which gains `decompressed_fingerprint`.
+
+**Why.** The equivalence compares two files of which the earlier one may
+no longer be on disk, so its decompressed digest must be kept somewhere;
+the stat cache is node-local, which is the degradation D22 accepts for a
+staleness cutoff (on another node the candidate is simply a new version).
+
+## 2026-11-12 P3: the P1 manifest cases change (the 2026-11-11 ruling on decision 10)
+
+**What.** `tm-formats`' envelope check computes the manifest fingerprint
+as 11.16 says since the 2026-11-11 ruling: `sha256:` of
+`[{"path","fingerprint"}]` in 11.10 order. The two P1 cases
+`file.version_added.manifest.valid.json` and
+`file.version_added.manifest_unsorted.invalid.json` are regenerated with
+that fingerprint, which changes a frozen P1 line and its ID.
+
+**Why.** The owner ruled on the P3 collision: the P1 case froze the rule
+decision 10 had before the owner's 2026-11-11 ruling amended it, and a
+directory version from `tm-fsfacts` could not validate while both stood.
+
