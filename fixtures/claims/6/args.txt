@@ -1,0 +1,14 @@
+--report
+report.md
+--ref
+C6
+--sentence
+Three genes pass padj below 0.01
+--cited
+F1@v1
+--steps
+steps.json
+--assert
+assert.json
+--kind
+quantitative

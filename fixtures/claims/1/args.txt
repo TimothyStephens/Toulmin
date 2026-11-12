@@ -1,0 +1,14 @@
+--report
+report.md
+--ref
+C1
+--sentence
+G05 has the fifth highest fold change among significant genes
+--cited
+F1@v1
+--steps
+steps.json
+--assert
+assert.json
+--kind
+quantitative

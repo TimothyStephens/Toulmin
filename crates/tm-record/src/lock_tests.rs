@@ -1,6 +1,8 @@
 //! Item 42: two processes contend; a paused holder is fenced out after a
 //! simulated takeover; the same two cases on an NFS mount when
-//! `TM_NFS_DIR` names one (`cargo test -p tm-record --test lock -- --ignored nfs`).
+//! `TM_NFS_DIR` names one (`cargo test -p tm-record --lib -- --ignored nfs`).
+//! A module of the crate, so the appends go through the crate-private path
+//! and no test holds an `OwnerCap` (rule 4).
 
 #![allow(
     clippy::unwrap_used,
@@ -12,12 +14,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use crate::head::Head;
+use crate::segment;
+use crate::{Batch, Code, LockOptions, Record, TornTail};
 use serde_json::json;
 use tm_formats::envelope::{Actor, ActorKind, Source, SourceKind};
 use tm_formats::events::{EventType, KnownEvent};
-use tm_record::head::Head;
-use tm_record::segment;
-use tm_record::{Batch, Code, LockOptions, Record, TornTail};
 
 const AT: &str = "2026-11-11T12:00:00Z";
 
@@ -39,7 +41,7 @@ fn event(i: u64) -> KnownEvent {
     .expect("event")
 }
 
-fn batch(lock: &tm_record::Lock, i: u64) -> Batch {
+fn batch(lock: &crate::Lock, i: u64) -> Batch {
     let actor = Actor {
         kind: ActorKind::Owner,
         id: "tim".into(),
@@ -92,7 +94,7 @@ fn child_holder() {
     std::fs::write(dir.join("held"), b"1").expect("held marker");
     std::thread::sleep(Duration::from_millis(hold));
     let head = record
-        .append(&lock, &batch(&lock, 1))
+        .append_locked(&lock, &batch(&lock, 1))
         .expect("child append");
     std::fs::write(dir.join("appended"), head.seq.to_string()).expect("appended marker");
     lock.release().expect("release");
@@ -100,7 +102,12 @@ fn child_holder() {
 
 fn spawn_child(dir: &Path, hold_ms: u64) -> std::process::Child {
     Command::new(std::env::current_exe().expect("exe"))
-        .args(["--exact", "child_holder", "--nocapture", "--test-threads=1"])
+        .args([
+            "--exact",
+            "lock_tests::child_holder",
+            "--nocapture",
+            "--test-threads=1",
+        ])
         .env("TM_LOCK_CHILD_DIR", dir)
         .env("TM_LOCK_HOLD_MS", hold_ms.to_string())
         .stdout(Stdio::null())
@@ -147,7 +154,9 @@ fn two_processes_contend(dir: &Path) {
         "the child's batch is on the chain"
     );
     assert_eq!(lock.epoch(), 2);
-    record.append(&lock, &batch(&lock, 2)).expect("append");
+    record
+        .append_locked(&lock, &batch(&lock, 2))
+        .expect("append");
     lock.release().expect("release");
     assert!(record.lock_status().expect("status").is_none());
     assert_eq!(record.events().expect("scan").count(), 2);
@@ -178,17 +187,19 @@ fn paused_holder_is_fenced_out(dir: &Path) {
     );
     assert_eq!(taker.epoch(), 2);
     other
-        .append(&taker, &batch(&taker, 1))
+        .append_locked(&taker, &batch(&taker, 1))
         .expect("append after takeover");
     // The paused writer wakes and tries to append with its epoch-1 lock and
     // a batch built on the HEAD it saw: the fencing re-read refuses it.
-    let stale_head = tm_record::Head {
+    let stale_head = crate::Head {
         epoch: 1,
-        ..tm_record::Head::initial(record.genesis())
+        ..crate::Head::initial(record.genesis())
     };
     let old_batch =
         Batch::build(&stale_head, 1, AT, &actor(), Some(&src()), &[event(9)]).expect("batch");
-    let err = record.append(&paused, &old_batch).expect_err("fenced out");
+    let err = record
+        .append_locked(&paused, &old_batch)
+        .expect_err("fenced out");
     assert_eq!(err.catalog_code(), Some(Code::E2102), "{err}");
     // Releasing the paused lock must not remove the new holder's file.
     paused.release().expect("release paused");
@@ -229,7 +240,9 @@ fn append_one(record: &Record, i: u64) -> Head {
     let lock = record
         .lock(&opts(300, Some(1000)), |_, _| {})
         .expect("lock");
-    let head = record.append(&lock, &batch(&lock, i)).expect("append");
+    let head = record
+        .append_locked(&lock, &batch(&lock, i))
+        .expect("append");
     lock.release().expect("release");
     head
 }
@@ -297,7 +310,7 @@ fn crash_after_seal(dir: &Path) {
         "the orphan is gone"
     );
     let b = batch(&lock, 99);
-    let head = record.append(&lock, &b).expect("append rolls");
+    let head = record.append_locked(&lock, &b).expect("append rolls");
     assert_eq!(head.segment, sealed + 1);
     assert_eq!(head.offset, b.framed_len());
     assert_eq!(
@@ -343,7 +356,7 @@ fn two_waiters_split_rename_and_create(dir: &Path) {
     );
     assert_eq!(taker.epoch(), 2);
     assert!(!main.join("lock.stale").exists());
-    w3.append(&taker, &batch(&taker, 1))
+    w3.append_locked(&taker, &batch(&taker, 1))
         .expect("append with the takeover event");
     // W2 resumes: a live lock exists, so its pending takeover is cancelled
     // and it waits like any other waiter.
@@ -358,7 +371,7 @@ fn two_waiters_split_rename_and_create(dir: &Path) {
         .expect("W2 locks after W3");
     assert!(later.taken_over().is_none(), "no second takeover record");
     assert_eq!(later.epoch(), 3);
-    w2.append(&later, &batch(&later, 2)).expect("append");
+    w2.append_locked(&later, &batch(&later, 2)).expect("append");
     later.release().expect("release");
     paused.release().expect("release paused");
     assert!(record.lock_status().expect("status").is_none());

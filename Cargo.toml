@@ -17,6 +17,8 @@ members = [
     "crates/tm-duckdb",
     "crates/tm-index",
     "crates/tm-record",
+    "crates/tm-owner-cap",
+    "crates/tm-files",
 ]
 
 [workspace.package]
@@ -47,6 +49,11 @@ rustix = { version = "=1.1.6", features = ["fs"] }
 
 # Files, claims, static view, CLI.
 lopdf = { version = "=0.47.0", default-features = false }
+# Inflates .gz and .bgz for D22's decompressed-content equivalence (default
+# backend); compares provider-supplied MD5 lists only, every fingerprint is
+# sha256 (item 1).
+flate2 = "=1.1.11"
+md-5 = "=0.11.0"
 pulldown-cmark = { version = "=0.13.6", default-features = false }
 ammonia = "=4.2.4"
 askama = "=0.16.1"
@@ -60,6 +67,9 @@ mimalloc = { version = "=0.1.52", default-features = false }
 # pinned like every other (item 4's wildcard check).
 tm-formats = { path = "crates/tm-formats", version = "=0.1.0" }
 tm-fsfacts = { path = "crates/tm-fsfacts", version = "=0.1.0" }
+tm-duckdb = { path = "crates/tm-duckdb", version = "=0.1.0" }
+tm-index = { path = "crates/tm-index", version = "=0.1.0" }
+tm-owner-cap = { path = "crates/tm-owner-cap", version = "=0.1.0" }
 
 # Test and fuzz.
 proptest = "=1.12.0"

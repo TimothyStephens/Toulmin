@@ -1,0 +1,32 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "up",
+      "expr": "log2FoldChange > 0"
+    },
+    {
+      "op": "rank",
+      "v": 1,
+      "by": "baseMean",
+      "dir": "desc",
+      "ties": "min",
+      "missing": "last",
+      "scope": "group",
+      "group_by": [
+        "up"
+      ]
+    },
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "rank = 1"
+    }
+  ]
+}

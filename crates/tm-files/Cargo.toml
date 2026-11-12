@@ -1,0 +1,27 @@
+[package]
+name = "tm-files"
+version = "0.1.0"
+description = "Toulmin Files library: file identity, versions, attributes, parse specs and keys, the parse cache, PDF page counts, image panels, provider checksums, and the index fold"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+arrow.workspace = true
+bigdecimal.workspace = true
+flate2.workspace = true
+lopdf.workspace = true
+md-5.workspace = true
+parquet.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tm-duckdb.workspace = true
+tm-formats.workspace = true
+tm-fsfacts.workspace = true
+tm-index.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

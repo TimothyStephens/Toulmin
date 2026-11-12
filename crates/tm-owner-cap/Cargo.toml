@@ -1,0 +1,17 @@
+[package]
+name = "tm-owner-cap"
+version = "0.1.0"
+description = "Toulmin owner capability: the OwnerCap type every owner operation and the main-chain append take; constructible only with the construct feature, which tm-cli alone enables"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# The one constructor. tm-cli enables this; no other crate does (4.2 rule
+# 4, checked by scripts/ci/check-owner-cap.sh).
+construct = []
+
+[dependencies]
+
+[lints]
+workspace = true

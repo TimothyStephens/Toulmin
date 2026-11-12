@@ -221,3 +221,50 @@ fn tamper_cases_are_reported_by_name() {
     want.sort_unstable();
     assert_eq!(seen, want, "exactly item 41's eight cases");
 }
+
+/// Item 40: the committed cases are what the generator writes today, byte
+/// for byte (the CI step runs the same comparison through the example).
+#[test]
+fn cases_regenerate_byte_identically() {
+    let tmp = tempfile::tempdir().expect("tmp");
+    tm_record::gen_chain::conformance(tmp.path());
+    let committed = root();
+    let mut compared = 0usize;
+    let mut missing = Vec::new();
+    let mut differing = Vec::new();
+    let walk = |dir: &Path, rel: &Path| {
+        let mut stack = vec![(dir.to_path_buf(), rel.to_path_buf())];
+        let mut files = Vec::new();
+        while let Some((d, r)) = stack.pop() {
+            for entry in std::fs::read_dir(&d).expect("read_dir") {
+                let entry = entry.expect("entry");
+                let path = entry.path();
+                let rel = r.join(entry.file_name());
+                if path.is_dir() {
+                    stack.push((path, rel));
+                } else {
+                    files.push(rel);
+                }
+            }
+        }
+        files.sort();
+        files
+    };
+    let generated = walk(tmp.path(), Path::new(""));
+    let present = walk(&committed, Path::new(""));
+    assert_eq!(generated, present, "the same set of files");
+    for rel in generated {
+        let a = std::fs::read(tmp.path().join(&rel)).expect("generated");
+        match std::fs::read(committed.join(&rel)) {
+            Ok(b) if a == b => compared += 1,
+            Ok(_) => differing.push(rel),
+            Err(_) => missing.push(rel),
+        }
+    }
+    assert!(missing.is_empty(), "not committed: {missing:?}");
+    assert!(
+        differing.is_empty(),
+        "committed bytes differ: {differing:?}"
+    );
+    assert!(compared >= 40, "{compared} files compared");
+}

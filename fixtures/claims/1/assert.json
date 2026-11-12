@@ -1,0 +1,14 @@
+{
+  "assert": 1,
+  "kind": "rank",
+  "row": [
+    {
+      "t": "str",
+      "v": "G05"
+    }
+  ],
+  "expected": {
+    "t": "int",
+    "v": "5"
+  }
+}

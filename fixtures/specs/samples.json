@@ -1,0 +1,30 @@
+{
+  "spec": 1,
+  "format": "tsv",
+  "delimiter": "\t",
+  "header": true,
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8",
+  "columns": [
+    {
+      "name": "sample_id",
+      "type": "str",
+      "missing": []
+    },
+    {
+      "name": "condition",
+      "type": "str",
+      "missing": []
+    },
+    {
+      "name": "batch",
+      "type": "int",
+      "missing": []
+    }
+  ],
+  "key": [
+    "condition",
+    "batch"
+  ]
+}

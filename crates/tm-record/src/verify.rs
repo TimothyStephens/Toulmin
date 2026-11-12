@@ -586,7 +586,7 @@ mod tests {
                 &[event(head.seq + 1)],
             )
             .unwrap();
-            let h = r.append(&lock, &b).unwrap();
+            let h = r.append_locked(&lock, &b).unwrap();
             if after_first.is_none() {
                 after_first = Some(h.clone());
             }

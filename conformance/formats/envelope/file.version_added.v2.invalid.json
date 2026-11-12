@@ -1,0 +1,8 @@
+{
+  "description": "invalid file.version_added at tv 2: decompressed_fingerprint is an ID or null",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"content_label\":\"content_changed\",\"decompressed_fingerprint\":\"md5:not-an-id\",\"file\":\"F7\",\"fingerprint\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"manifest\":null,\"origin\":{\"kind\":\"registered\",\"run\":null},\"size\":1048576,\"snapshot\":{\"ctime\":\"2026-11-09T14:02:11Z\",\"ctime_ns\":123456789,\"ino\":\"4211\",\"mtime\":\"2026-11-09T14:02:11Z\",\"mtime_ns\":123456789,\"size\":1048576},\"version\":\"F7@v2\"},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":2,\"type\":\"file.version_added\",\"id\":\"sha256:44574ebda92563102cbcaac21f303bbd8ba6fbf05844d3857205541af77c77fd\"}",
+  "expect": {
+    "code": "E1002",
+    "field": "/body/decompressed_fingerprint"
+  }
+}

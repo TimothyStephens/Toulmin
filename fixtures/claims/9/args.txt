@@ -1,0 +1,10 @@
+--report
+report.md
+--ref
+C9
+--sentence
+Panel B shows the treated samples
+--cited
+F5@v1#panel=B
+--kind
+qualitative

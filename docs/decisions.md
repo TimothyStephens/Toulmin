@@ -513,6 +513,11 @@ cross the phase line, and a placeholder type in `tm-record` would be a
 second definition of the one type the design wants constructible only in
 `tm-cli`. Nothing in gate A calls `append` before P7.
 
+**Retired, 2026-11-12 (P3).** `tm-owner-cap` exists and
+`Record::append(&OwnerCap, &Lock, &Batch)` takes the capability as item 39
+and rule 4 say. The crate's tests and generator use the crate-private path
+behind it (items 40 and 42, the P3 entry below).
+
 ## 2026-11-11 P2: the manifest fingerprint is not built (collision on decision 10)
 
 **What.** `tm-fsfacts::manifest` builds entries, excludes, sizes, and
@@ -723,4 +728,179 @@ covers it.
 The writer never produces it (a seal happens only when the plain length
 equals `HEAD.offset`), so it is reachable by tampering only, and nothing
 truncates a packed segment.
+
+## 2026-11-12 P3: tests and the generator append through the crate-private path
+
+**What.** Items 40 and 42: `tm-record`'s lock cases live in
+`src/lock_tests.rs` and the generator's logic in `src/gen_chain.rs`, both
+appending through the crate-private function behind the public
+`Record::append(&OwnerCap, &Lock, &Batch)`. The example and the CI NFS job
+call them; the NFS job runs `cargo test -p tm-record --lib -- --ignored nfs`.
+
+**Why.** Rule 4 and item 8: no crate other than `tm-cli` names
+`OwnerCap::new_for_cli`, and `tm-cli` does not exist before P8, so no test
+outside the crate can hold a capability. A test-only constructor would be
+a second way to make the one value the design wants constructible in one
+place; moving the tests inside the crate changes nothing the CI check
+guards.
+
+**Note, 2026-11-12.** `gen_chain` sits behind tm-record's `gen-chain` cargo feature, enabled by its own tests and example through a dev-dependency on itself, so the generator is not part of the API tm-core sees.
+
+## 2026-11-12 P3: an input path's form (item 44)
+
+**What.** Files accepts an input path that is repository-relative,
+`/`-separated, NFC, non-empty, with no empty, `.`, or `..` component, and
+refuses any other form as `E3001`; the Core checks that the path exists
+inside the project.
+
+**Why.** 6.1 makes the path the identity, so one spelling per file is
+needed before anything is keyed on it, and section 9 lists `E3001` as the
+code for a path outside the project.
+
+## 2026-11-12 P3: when an input gets a new version (item 45)
+
+**What.** A candidate equivalent to the latest version under any of the
+three equivalences adds no version; one that differs under all three is
+the next version with `content_label` `content_changed`. `carried_forward`
+and `metadata_only` are run-output labels for gate C.
+
+**Why.** Item 45's "new version if different content" said nothing about
+the equal case; decision 9's review note (a touch is no version) and 5.6's
+placement of the two other labels on output versions fix it.
+
+## 2026-11-12 P3: the transition table (item 46), reading rules (item 47), cache path (item 48), image signature (item 49), fold updates (item 51)
+
+**What.** Each item now states what its code does: the allowed and refused
+transitions behind `E3201`; RFC 4180 reading, the empty-field token, row
+numbering in `E3102`, the scale rule, and Parquet's Arrow path; the cache
+file layout; the image signatures behind `E3301`; which rows each Files
+event writes.
+
+**Why.** None was stated, and each is a fact a second implementation or a
+reviewer needs; none touches a frozen format.
+
+## 2026-11-12 P3: `samples.tsv` is keyed by `(condition, batch)`; `expected.json` is a stub (item 82a)
+
+**What.** Claim 10's composite-key `cells` citation names `samples.tsv`,
+whose key is `(condition, batch)`; no fourth table. `expected.json` holds
+`{"claims":{"<n>":{"verdict","flags"}}}` with `null` for every claim until
+P8; `fixtures/README.md` carries each claim's intended answer in prose.
+
+**Why.** The readiness report (impl-M7) found claim 10 impossible on
+single-key tables; six samples in two conditions and three batches give a
+natural composite key without a new table. Verdicts are P8 scenario
+outcomes, and freezing them before the Checker exists would freeze a
+guess.
+
+## 2026-11-12 P3: NaN and infinity tokens (item 47), checksum file rules (item 50), `args.txt` form (item 82a)
+
+**What.** Item 47 names the tokens a `float64` column reads as NaN and
+infinity and says they are `E3102` elsewhere unless listed as missing.
+Item 50 states which lines a checksum file may hold, that it mixes no
+algorithms, and what a mismatch is. Item 82a says `args.txt` holds one
+argument per line, unquoted.
+
+**Why.** Each was needed to write the code or the fixture and was
+unstated; the readiness report (impl-M7) had asked for the `args.txt`
+format.
+
+## 2026-11-12 P3: `flate2` and `md-5` join item 1's dependency list
+
+**What.** Item 1 names `flate2` (default backend) for inflating `.gz` and
+`.bgz` files and `md-5` for comparing provider-supplied checksum lists;
+every Toulmin fingerprint stays sha256. Both were already in `Cargo.lock`
+(as libduckdb-sys's build dependency and lopdf's dependency).
+
+**Why.** The owner ruled on the two P3 collisions: D22's
+decompressed-content equivalence and item 50's MD5 lists cannot be built
+without them.
+
+## 2026-11-12 P3: `E3006` checksum list unreadable, `E3302` not a PDF page tree
+
+**What.** Section 9 (`file.register`, `claim.add`), 11.12, the catalog,
+and docs/errors.md name the two conditions P3 had reported as codeless;
+`tm-files` reports them under these codes.
+
+**Why.** The owner ruled; each code is the next free one in the block its
+operation already uses (`E30xx` for `file.register`, `E33xx` for the
+citation-type checks of item 49).
+
+## 2026-11-12 P3: a candidate's decompressed fingerprint, and where it lives
+
+**What.** Item 45: a `.gz` or `.bgz` candidate carries the `sha256:` of
+its decompressed bytes; Files compares it with the latest version's; the
+event body does not carry it, so the Core keeps the latest version's in
+the 11.17 stat cache row, which gains `decompressed_fingerprint`.
+
+**Why.** The equivalence compares two files of which the earlier one may
+no longer be on disk, so its decompressed digest must be kept somewhere;
+the stat cache is node-local, which is the degradation D22 accepts for a
+staleness cutoff (on another node the candidate is simply a new version).
+
+## 2026-11-12 P3: the P1 manifest cases change (the 2026-11-11 ruling on decision 10)
+
+**What.** `tm-formats`' envelope check computes the manifest fingerprint
+as 11.16 says since the 2026-11-11 ruling: `sha256:` of
+`[{"path","fingerprint"}]` in 11.10 order. The two P1 cases
+`file.version_added.manifest.valid.json` and
+`file.version_added.manifest_unsorted.invalid.json` are regenerated with
+that fingerprint, which changes a frozen P1 line and its ID.
+
+**Why.** The owner ruled on the P3 collision: the P1 case froze the rule
+decision 10 had before the owner's 2026-11-11 ruling amended it, and a
+directory version from `tm-fsfacts` could not validate while both stood.
+
+## 2026-11-12 P3 review B1: every byte-different candidate is a new version; the label carries the equivalence
+
+**What.** Item 45: a candidate with the latest version's fingerprint adds
+no version; one with another fingerprint is version `n + 1`,
+`content_changed` when it differs under all three equivalences, else
+`metadata_only`. 5.6's `metadata only` row is on any version with the
+reason "snapshot or bytes changed, content did not"; section 8 rule 2
+counts a `metadata_only` or `carried_forward` version as the version it
+equals. `Version::next` takes the `Equivalence` and sets the label; the
+equivalent short-circuit stays only for same bytes. This replaces the
+P3 entry "when an input gets a new version".
+
+**Why.** The P3 review (B1): under the earlier rule a re-sorted table or
+a recompressed `.gz` left the latest version's fingerprint one the disk
+no longer matched, so 7.3 flagged every citing claim `evidence moved`,
+`tm audit` reported `E3401` on an unchanged project, and a later keep
+failed `E3203`. Run outputs already work the other way (a carried-forward
+rerun is a version with a label), and the label, not the absence of a
+version, is what stops the spread (D22).
+
+## 2026-11-12 P3 review M1: `file.version_added` `tv` 2 carries the decompressed fingerprint
+
+**What.** 11.16 gains the `tv` 2 row: `tv` 1's keys plus
+`decompressed_fingerprint`, an ID for a `.gz` or `.bgz` version and
+`null` otherwise. 11.17's `file_versions` gains the column and
+`stat_cache` loses it; 11.5's receipt gains `decompressed` beside
+`hashes`, computed by the wrapper (gate C). `tm-formats` validates both
+versions; Files writes `tv` 2; the fold fills the column; two envelope
+cases for `tv` 2 are added (no P1 case changes). This replaces the P3
+entry that placed the digest in the stat cache.
+
+**Why.** The P3 review (M1): a node-local cache cannot label a version
+on a second login node, so the third equivalence would have held on one
+node and not another, against D22 and G7. The body is on every node; the
+`tv` machinery of 11.11 and 11.16 exists for exactly this change.
+
+## 2026-11-12 P3 review nits N1 to N7
+
+**What.** Item 46: `hash` is a transition (registered, no version, or
+`--again`; `E3005` otherwise) and the two refusals the code makes are
+stated. Item 82a: P8 fills `expected.json` from the README's answers
+before the scenario tests run. Item 47 and 11.6, 11.7: `table.spec`
+records the larger of the draft's scale and the largest seen; Parquet
+decimals are read at their declared scale as written; a key cell that is
+`missing`, `nan`, or `inf` is `E3102`. The hashing budget row notes the
+two passes a compressed entry costs.
+
+**Why.** Each was a gap the review named. On the scale rule the builder
+chose the larger of draft and observed: an owner can then reserve room
+for a later version without changing the spec fingerprint every claim's
+`versions.parse_specs` records, and `E3102` still guards beyond the
+reserved scale; the cost is that a reserved scale wider than the data
+widens the DuckDB `DECIMAL(38, s)` column, which changes no value.
 

@@ -1,6 +1,7 @@
-//! The main-chain append (item 39; 11.21 Batch write; rule 4). The
-//! `&OwnerCap` argument arrives with `tm-owner-cap` at P3 (item 43); until
-//! then the entry point takes the held [`Lock`] and a framed [`Batch`].
+//! The main-chain append (item 39; 11.21 Batch write; rule 4): the entry
+//! point takes the `&OwnerCap` only `tm-cli` can construct, the held
+//! [`Lock`], and a framed [`Batch`]. The crate's own tests and its
+//! generator (items 40 and 42) use the crate-private path behind it.
 
 use std::fs::OpenOptions;
 use std::io::Write as _;
@@ -9,6 +10,7 @@ use serde_json::Value;
 use tm_formats::envelope::{self, Actor, Source};
 use tm_formats::events::KnownEvent;
 use tm_formats::id::EventId;
+use tm_owner_cap::OwnerCap;
 
 use crate::head::Head;
 use crate::lock::Lock;
@@ -234,14 +236,22 @@ fn check_continues(head: &Head, lock: &Lock, batch: &Batch) -> Result<()> {
 
 impl Record {
     /// Append one batch under the lock (11.21 Batch write), with the
-    /// pre-append fencing re-read of 3.1. Returns the new `HEAD`.
+    /// pre-append fencing re-read of 3.1. Returns the new `HEAD`. The
+    /// capability is the Core's proof that the owner's `tm` process is the
+    /// caller (rule 4); the Record checks nothing about it.
     ///
     /// # Errors
     /// `E2102` when `HEAD` has another epoch, the open segment's length (in
     /// whichever form exists) is not `HEAD.offset`, or the batch does not
     /// continue the chain; `E2103` when the segment the writer would roll to
     /// already exists; `E2008` on a read-only record; `Error::Io`.
-    pub fn append(&self, lock: &Lock, batch: &Batch) -> Result<Head> {
+    pub fn append(&self, _cap: &OwnerCap, lock: &Lock, batch: &Batch) -> Result<Head> {
+        self.append_locked(lock, batch)
+    }
+
+    /// [`Record::append`] without the capability: the crate's own tests and
+    /// `gen_chain` (items 40 and 42), which cannot hold one.
+    pub(crate) fn append_locked(&self, lock: &Lock, batch: &Batch) -> Result<Head> {
         self.writable()?;
         let main = self.main_dir();
         // Fencing: a fresh HEAD read, the epoch, the open segment's length.
@@ -404,15 +414,15 @@ mod tests {
         .unwrap();
         assert_eq!(b1.number(), 1);
         assert_eq!(b1.header().n, 2);
-        let h1 = r.append(&lock, &b1).unwrap();
+        let h1 = r.append_locked(&lock, &b1).unwrap();
         assert_eq!((h1.seq, h1.batch, h1.segment), (2, 1, 1));
         assert_eq!(h1.offset, b1.framed_len());
         // A batch that does not continue HEAD is refused.
-        let stale = r.append(&lock, &b1).unwrap_err();
+        let stale = r.append_locked(&lock, &b1).unwrap_err();
         assert_eq!(stale.catalog_code(), Some(Code::E2102));
         // The second batch would pass the limit: the first segment is sealed.
         let b2 = Batch::build(&h1, 1, AT, &actor(), Some(&src()), &[event(3), event(4)]).unwrap();
-        let h2 = r.append(&lock, &b2).unwrap();
+        let h2 = r.append_locked(&lock, &b2).unwrap();
         assert_eq!((h2.seq, h2.batch, h2.segment), (4, 2, 2));
         assert_eq!(segment::forms(&r.main_dir(), 1), (false, true));
         // Batch::new validates links within a batch.
@@ -451,7 +461,7 @@ mod tests {
             &[event(5)],
         )
         .unwrap();
-        let err = r.append(&lock2, &b3).unwrap_err();
+        let err = r.append_locked(&lock2, &b3).unwrap_err();
         assert_eq!(err.catalog_code(), Some(Code::E2102), "{err}");
         forged.epoch = 2;
         forged.write(&r.main_dir()).unwrap();
@@ -460,7 +470,7 @@ mod tests {
         let mut f = OpenOptions::new().append(true).open(&seg).unwrap();
         f.write_all(b"junk\n").unwrap();
         drop(f);
-        let err = r.append(&lock2, &b3).unwrap_err();
+        let err = r.append_locked(&lock2, &b3).unwrap_err();
         assert_eq!(err.catalog_code(), Some(Code::E2102), "{err}");
         drop(lock2);
         // The next lock truncates it as a torn tail.

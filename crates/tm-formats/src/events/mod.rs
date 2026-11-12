@@ -121,15 +121,30 @@ fn defs() -> impl Iterator<Item = &'static TypeDef> {
     NAMESPACES.iter().flat_map(|n| n.iter())
 }
 
+/// The definition a writer uses: the type's highest `tv`.
 fn def_of(ty: EventType) -> &'static TypeDef {
-    defs().find(|d| d.ty == ty).unwrap_or(&project::TYPES[0])
+    defs()
+        .filter(|d| d.ty == ty)
+        .max_by_key(|d| d.tv)
+        .unwrap_or(&project::TYPES[0])
+}
+
+/// The definition of one `(type, tv)`, if the reader knows it.
+fn def_at(ty: EventType, tv: u64) -> Option<&'static TypeDef> {
+    defs().find(|d| d.ty == ty && d.tv == tv)
 }
 
 impl EventType {
-    /// Every gate A type, in 11.16 order.
+    /// Every gate A type, in 11.16 order, once each.
     #[must_use]
     pub fn all() -> Vec<EventType> {
-        defs().map(|d| d.ty).collect()
+        let mut out: Vec<EventType> = Vec::new();
+        for d in defs() {
+            if !out.contains(&d.ty) {
+                out.push(d.ty);
+            }
+        }
+        out
     }
 
     /// The type by its namespaced name, if it is a gate A type.
@@ -144,27 +159,53 @@ impl EventType {
         def_of(self).name
     }
 
-    /// The type's version (`tv`) in gate A.
+    /// The type's current version (`tv`): the one a writer writes.
     #[must_use]
     pub fn tv(self) -> u64 {
         def_of(self).tv
     }
+
+    /// Every version of the type a reader knows, ascending (11.11).
+    #[must_use]
+    pub fn known_tvs(self) -> Vec<u64> {
+        let mut tvs: Vec<u64> = defs().filter(|d| d.ty == self).map(|d| d.tv).collect();
+        tvs.sort_unstable();
+        tvs
+    }
 }
 
-/// A validated event of a gate A type at its known `tv`.
+/// A validated event of a gate A type at a known `tv`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct KnownEvent {
     ty: EventType,
+    tv: u64,
     body: Map<String, Value>,
 }
 
 impl KnownEvent {
-    /// Validate a body for a type; errors point under `/body`.
+    /// Validate a body for a type at its current `tv` (what a writer
+    /// builds); errors point under `/body`.
     ///
     /// # Errors
     /// `E1002` with `field` at the offending member.
     pub fn new(ty: EventType, body: &Value) -> Result<KnownEvent, Error> {
-        let def = def_of(ty);
+        Self::new_at(ty, ty.tv(), body)
+    }
+
+    /// Validate a body for a type at a given `tv` (what a reader does with
+    /// a stored line of an older version).
+    ///
+    /// # Errors
+    /// `E1002` at `/tv` for a version the reader does not know, else with
+    /// `field` at the offending member.
+    pub fn new_at(ty: EventType, tv: u64, body: &Value) -> Result<KnownEvent, Error> {
+        let Some(def) = def_at(ty, tv) else {
+            return Err(Error::at(
+                Code::E1002,
+                "/tv",
+                format!("unknown version {tv} of {}", ty.name()),
+            ));
+        };
         let Some(m) = body.as_object() else {
             return Err(Error::at(Code::E1002, "/body", "a body is an object"));
         };
@@ -182,6 +223,7 @@ impl KnownEvent {
         }
         Ok(KnownEvent {
             ty,
+            tv,
             body: m.clone(),
         })
     }
@@ -190,6 +232,12 @@ impl KnownEvent {
     #[must_use]
     pub fn ty(&self) -> EventType {
         self.ty
+    }
+
+    /// The version this body was validated at.
+    #[must_use]
+    pub fn tv(&self) -> u64 {
+        self.tv
     }
 
     /// The body.
@@ -485,11 +533,17 @@ fn check_manifest(v: &Value, at: &str) -> Result<(), Error> {
             ));
         }
     }
-    let fp = id_of(&m["entries"]).map_err(|x| x.in_envelope(at))?;
+    // 11.16 (decision 10 as amended 2026-11-11): the fingerprint digests
+    // `[{"path","fingerprint"}]` in entry order; snapshots stay outside it.
+    let pairs: Vec<Value> = entries
+        .iter()
+        .map(|e| serde_json::json!({"path": e["path"], "fingerprint": e["fingerprint"]}))
+        .collect();
+    let fp = id_of(&Value::Array(pairs)).map_err(|x| x.in_envelope(at))?;
     if m["fingerprint"].as_str() != Some(fp.as_str()) {
         return Err(e(
             &ptr(at, "fingerprint"),
-            "the fingerprint is the ID of the canonical entries",
+            "the fingerprint is the ID of the entries' [{path, fingerprint}] list",
         ));
     }
     Ok(())

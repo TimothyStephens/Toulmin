@@ -1,0 +1,20 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "G10"
+    }
+  ],
+  "column": "log2FoldChange",
+  "op": "eq",
+  "expected": {
+    "t": "dec",
+    "v": "-2.50"
+  },
+  "tol": {
+    "abs": "0.01",
+    "rel": "0"
+  }
+}

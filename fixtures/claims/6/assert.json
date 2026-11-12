@@ -1,0 +1,9 @@
+{
+  "assert": 1,
+  "kind": "count",
+  "op": "eq",
+  "expected": {
+    "t": "int",
+    "v": "3"
+  }
+}
