@@ -382,14 +382,14 @@ jobs:
       - name: drop stale DuckDB sources (see the lint job)
         run: rm -rf target/duckdb-sources target/*/duckdb-sources
       - run: |
-          if [ ! -f crates/tm-record/tests/lock.rs ]; then echo "::notice::no-op until P2: crates/tm-record/tests/lock.rs absent"; exit 0; fi
+          if [ ! -f crates/tm-record/src/lock_tests.rs ]; then echo "::notice::no-op until P2: crates/tm-record/src/lock_tests.rs absent"; exit 0; fi
           sudo apt-get update && sudo apt-get install -y nfs-kernel-server
           sudo mkdir -p /srv/tm-export /mnt/tm-nfs
           sudo chown "$USER" /srv/tm-export
           echo "/srv/tm-export 127.0.0.1(rw,sync,no_subtree_check,no_root_squash)" | sudo tee /etc/exports
           sudo exportfs -ra && sudo systemctl restart nfs-kernel-server
           sudo mount -t nfs -o vers=4 127.0.0.1:/srv/tm-export /mnt/tm-nfs
-          TM_NFS_DIR=/mnt/tm-nfs cargo test -p tm-record --test lock --locked -- --ignored nfs
+          TM_NFS_DIR=/mnt/tm-nfs cargo test -p tm-record --lib --locked -- --ignored nfs
 
   spec-drift:
     name: spec files match the design

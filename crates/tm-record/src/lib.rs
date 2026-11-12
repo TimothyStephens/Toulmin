@@ -9,6 +9,7 @@
 #![allow(clippy::result_large_err, reason = "errors are the cold path")]
 
 pub mod append;
+pub mod gen_chain;
 pub mod head;
 pub mod layout;
 pub mod lock;
@@ -16,6 +17,9 @@ pub mod objects;
 pub mod scan;
 pub mod segment;
 pub mod verify;
+
+#[cfg(test)]
+mod lock_tests;
 
 use std::fmt;
 use std::path::{Path, PathBuf};

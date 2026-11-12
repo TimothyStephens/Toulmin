@@ -12,6 +12,7 @@ serde_json.workspace = true
 sha2.workspace = true
 tm-formats.workspace = true
 tm-fsfacts.workspace = true
+tm-owner-cap.workspace = true
 zstd.workspace = true
 
 [dev-dependencies]

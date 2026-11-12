@@ -513,6 +513,11 @@ cross the phase line, and a placeholder type in `tm-record` would be a
 second definition of the one type the design wants constructible only in
 `tm-cli`. Nothing in gate A calls `append` before P7.
 
+**Retired, 2026-11-12 (P3).** `tm-owner-cap` exists and
+`Record::append(&OwnerCap, &Lock, &Batch)` takes the capability as item 39
+and rule 4 say. The crate's tests and generator use the crate-private path
+behind it (items 40 and 42, the P3 entry below).
+
 ## 2026-11-11 P2: the manifest fingerprint is not built (collision on decision 10)
 
 **What.** `tm-fsfacts::manifest` builds entries, excludes, sizes, and

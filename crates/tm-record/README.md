@@ -17,8 +17,11 @@ and never reads the index.
 | `verify` | 38 | `verify() -> Vec<Finding>`: one `FindingKind` per item 41 case plus `head_field_mismatch`; empty is clean |
 | `append` | 39 | `Batch::new` over lines, `Batch::build` over known events, `Record::append(&Lock, &Batch)` with the 3.1 fencing re-read |
 
-`append` takes the held `Lock` in P2; the `&OwnerCap` argument of rule 4
-arrives with `tm-owner-cap` at P3 (`docs/decisions.md`, 2026-11-11).
+`Record::append(&OwnerCap, &Lock, &Batch)` is the main-chain write of rule
+4; the capability comes from `tm-owner-cap` and only `tm-cli` constructs
+it. The crate's own tests (`src/lock_tests.rs`, the unit tests) and the
+generator (`src/gen_chain.rs`) append through the crate-private path
+behind it, so no test names the constructor.
 
 ## Conformance cases (`conformance/record/`)
 
@@ -39,11 +42,12 @@ The eight tamper cases are item 41's: `kept_byte_changed`,
 
 ## Tests
 
-- `cargo test -p tm-record`: unit tests, `tests/record_conformance.rs`,
-  and `tests/lock.rs` (two processes contend; a paused holder is fenced
-  out after a takeover).
-- `cargo test -p tm-record --test lock -- --ignored nfs` with `TM_NFS_DIR`
-  set to a directory on the CI NFS loopback mount runs the same two cases
-  there.
+- `cargo test -p tm-record`: unit tests (including `src/lock_tests.rs`:
+  two processes contend; a paused holder is fenced out after a takeover;
+  two waiters split the rename and the create; a crash after a seal) and
+  `tests/record_conformance.rs`.
+- `cargo test -p tm-record --lib -- --ignored nfs` with `TM_NFS_DIR` set
+  to a directory on the CI NFS loopback mount runs the two contention
+  cases there.
 - `cargo run -p tm-record --example gen-chain -- --events 1000000 --out DIR`
   writes the chain `bench-index.sh` rebuilds from (P7).
