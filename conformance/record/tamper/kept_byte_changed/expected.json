@@ -1,0 +1,6 @@
+{
+  "description": "a kept object's file replaced by the compression of other bytes",
+  "findings": [
+    "kept_byte_changed"
+  ]
+}

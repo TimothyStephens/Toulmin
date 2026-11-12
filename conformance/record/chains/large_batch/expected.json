@@ -1,0 +1,81 @@
+{
+  "description": "a batch larger than the limit is a segment of its own",
+  "events": 8,
+  "batches": 3,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "packed",
+      "batches": 1
+    },
+    {
+      "segment": 2,
+      "form": "packed",
+      "batches": 1
+    },
+    {
+      "segment": 3,
+      "form": "plain",
+      "batches": 1
+    }
+  ],
+  "head": {
+    "seq": 8,
+    "segment": 3,
+    "offset": 609,
+    "last_id": "sha256:7aa780d22f906215330ee598ab839225693ebe8da0223b8107689cd783c4039f",
+    "batch": 3,
+    "epoch": 3,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      112,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      2,
+      113,
+      "sha256:3520865ba2c92a8860f507649fb14c8a2d9f615a1c1bcdec98ff78b3323c92c6"
+    ],
+    [
+      2,
+      559,
+      "sha256:a5250490255cecacf71676f660bddd4ed39acbcd1598b79d6051f114b866310b"
+    ],
+    [
+      2,
+      1005,
+      "sha256:7319dda297a35dcee17ad0b0bdaddc467a8af6f4880b4fd771ce7667a97d71cc"
+    ],
+    [
+      2,
+      1451,
+      "sha256:847283b075125d50e7b34619c96e0387245e3da5d5ff03657d79de75c1f7d61c"
+    ],
+    [
+      2,
+      1897,
+      "sha256:33f47abd2fb5a8416cbf466d98ce109ba8d0ab49ea3446ec927707569ef5bcc2"
+    ],
+    [
+      2,
+      2343,
+      "sha256:bf90557418ae37c3d45a262830debe6187a63e3a97a5a98e70e460479d06339c"
+    ],
+    [
+      3,
+      112,
+      "sha256:7aa780d22f906215330ee598ab839225693ebe8da0223b8107689cd783c4039f"
+    ]
+  ],
+  "types": {
+    "file.registered": 1,
+    "project.created": 1,
+    "settings.changed": 6
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

@@ -1,0 +1,6 @@
+{
+  "description": "the last hex digit of batch 2's `h` changed, payload intact",
+  "findings": [
+    "batch_hash_mismatch"
+  ]
+}

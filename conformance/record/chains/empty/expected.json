@@ -1,0 +1,26 @@
+{
+  "description": "a record just created: the initial HEAD and no events",
+  "events": 0,
+  "batches": 0,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "absent",
+      "batches": 0
+    }
+  ],
+  "head": {
+    "seq": 0,
+    "segment": 1,
+    "offset": 0,
+    "last_id": "sha256:6dda25baab7c3e1d8155ca758681355e0725a4a24eba1f7264a6b9c7b2353549",
+    "batch": 0,
+    "epoch": 0,
+    "format": 1
+  },
+  "positions": [],
+  "types": {},
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

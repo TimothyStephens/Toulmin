@@ -1,0 +1,6 @@
+{
+  "description": "a byte flipped in the middle of a packed segment",
+  "findings": [
+    "packed_segment_corrupt"
+  ]
+}

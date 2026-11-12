@@ -1,0 +1,66 @@
+{
+  "description": "three batches in one plain segment, with the lock taken three times",
+  "events": 7,
+  "batches": 3,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "plain",
+      "batches": 3
+    }
+  ],
+  "head": {
+    "seq": 7,
+    "segment": 1,
+    "offset": 3651,
+    "last_id": "sha256:42f9622b9d2ff7f96338665343f3e5846b79987667ba59dd7c0fc53bf3dfafa4",
+    "batch": 3,
+    "epoch": 3,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      113,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      648,
+      "sha256:cfefa758d62a91aaa925401ee8949678a3fd2e2539c7172f59e2c305d846f863"
+    ],
+    [
+      1,
+      1094,
+      "sha256:41b4f0ffcf1d1642288106490e3676a4c9ab89b664415edf518cf23f47fe3284"
+    ],
+    [
+      1,
+      1704,
+      "sha256:f6b1e0dcce9dc268a4d1473d7783cd8609f25b62fa49bab67970e114484398f7"
+    ],
+    [
+      1,
+      2150,
+      "sha256:ade096a9e44c5e32657ce91fb47e90989baffd5fc55c7a01bc49d343f6444268"
+    ],
+    [
+      1,
+      2647,
+      "sha256:01360600f93dd04b616abb38c91b226487a0864b659baa6cd4f0948e893f6d72"
+    ],
+    [
+      1,
+      3205,
+      "sha256:42f9622b9d2ff7f96338665343f3e5846b79987667ba59dd7c0fc53bf3dfafa4"
+    ]
+  ],
+  "types": {
+    "file.registered": 2,
+    "project.created": 1,
+    "settings.changed": 4
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

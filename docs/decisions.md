@@ -500,3 +500,47 @@ default stays 64 MiB; nothing a reader does depends on the limit.
 **Why.** A packed segment cannot otherwise exist in a fixture smaller
 than 64 MiB, and a committed generator keeps the cases reproducible, which
 P1's uncommitted generator did not.
+
+## 2026-11-11 P2: `Record::append` takes the `Lock`, not yet an `OwnerCap`
+
+**What.** Item 39 and rule 4 give the main-chain append an `&OwnerCap`
+argument. `tm-owner-cap` is item 43, built in P3, so P2's
+`Record::append(&Lock, &Batch)` takes the held lock and the framed batch
+only. P3 adds the capability parameter when the crate exists.
+
+**Why.** P2 builds exactly items 26 to 42; building item 43 early would
+cross the phase line, and a placeholder type in `tm-record` would be a
+second definition of the one type the design wants constructible only in
+`tm-cli`. Nothing in gate A calls `append` before P7.
+
+## 2026-11-11 P2: the manifest fingerprint is not built (collision on decision 10)
+
+**What.** `tm-fsfacts::manifest` builds entries, excludes, sizes, and
+diffs, but has no `fingerprint()` and emits no 11.16 `manifest` object.
+`Manifest::entries_json` is the input either rule would digest.
+
+**Why.** Decision 10 (decisions-p1.md) and 11.16 define the manifest
+fingerprint as `sha256:` of the canonical JSON of `entries`, and each
+entry carries its `snapshot`. A directory whose files were only touched,
+or copied with `cp -r`, would then get a new fingerprint and a new
+version labeled `content_changed`, which contradicts 5.6's `metadata
+only` ("snapshot changed, content did not") and `carried forward`, D22's
+"identical content stops the spread", and would make `tm audit` report
+`E3401` for every touched directory. Under the P2 rule for collisions
+with settled decisions the code picks no side; the P2 report carries the
+collision and the two candidate rules (digest `entries` as written, or
+digest `[{path, fingerprint}]` and keep snapshots as stat facts).
+
+## 2026-11-11 P2: two Record conditions without a catalog code
+
+**What.** Opening a directory with no `record.json` reports `E2004`
+("binding missing", the nearest record-resolution code, item 73). A
+`record.json` whose `format` is above `RECORD_FORMAT` opens read-only and
+every write returns `Error::NewerFormat`, a variant without a catalog
+code.
+
+**Why.** Section 9 and 11.12 give no code for either; NFR Rollout
+describes the newer-format behaviour ("refuses writes and says which
+binary version is needed") without a code. Adding codes is a catalog
+change the design decides, so both are reported for a ruling rather than
+invented here.

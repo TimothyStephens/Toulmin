@@ -11,7 +11,13 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/tm-formats"]
+members = [
+    "crates/tm-formats",
+    "crates/tm-fsfacts",
+    "crates/tm-duckdb",
+    "crates/tm-index",
+    "crates/tm-record",
+]
 
 [workspace.package]
 edition = "2024"
