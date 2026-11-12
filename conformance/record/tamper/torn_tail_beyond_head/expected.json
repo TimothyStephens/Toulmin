@@ -1,0 +1,6 @@
+{
+  "description": "a header claiming 500 payload bytes and 20 bytes of payload after HEAD.offset",
+  "findings": [
+    "torn_tail_beyond_head"
+  ]
+}

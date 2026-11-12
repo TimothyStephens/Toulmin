@@ -1,0 +1,46 @@
+{
+  "description": "a stale lock was taken over; the new holder's batch records it",
+  "events": 3,
+  "batches": 2,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "plain",
+      "batches": 2
+    }
+  ],
+  "head": {
+    "seq": 3,
+    "segment": 1,
+    "offset": 1671,
+    "last_id": "sha256:335a7bfb980578f75e8bfcf32db0f8164515f682d80284764d81a13992c39780",
+    "batch": 2,
+    "epoch": 2,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      112,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      759,
+      "sha256:d8452480bfa5913c615a8fca625c6d9d560c421387efbcef7dc7b00f9a79231b"
+    ],
+    [
+      1,
+      1225,
+      "sha256:335a7bfb980578f75e8bfcf32db0f8164515f682d80284764d81a13992c39780"
+    ]
+  ],
+  "types": {
+    "lock.taken_over": 1,
+    "project.created": 1,
+    "settings.changed": 1
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

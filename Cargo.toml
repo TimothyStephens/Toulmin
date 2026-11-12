@@ -11,7 +11,13 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/tm-formats"]
+members = [
+    "crates/tm-formats",
+    "crates/tm-fsfacts",
+    "crates/tm-duckdb",
+    "crates/tm-index",
+    "crates/tm-record",
+]
 
 [workspace.package]
 edition = "2024"
@@ -50,6 +56,11 @@ clap = { version = "=4.6.7", features = ["derive"] }
 # (docs/decisions/musl-spike.md).
 mimalloc = { version = "=0.1.52", default-features = false }
 
+# Workspace crates, by path with their version, so the requirement is
+# pinned like every other (item 4's wildcard check).
+tm-formats = { path = "crates/tm-formats", version = "=0.1.0" }
+tm-fsfacts = { path = "crates/tm-fsfacts", version = "=0.1.0" }
+
 # Test and fuzz.
 proptest = "=1.12.0"
 insta = { version = "=1.49.0", features = ["json"] }
@@ -72,3 +83,12 @@ expect_used = "deny"
 lto = "fat"
 codegen-units = 1
 panic = "abort"
+
+# The bundled DuckDB (libduckdb-sys) is compiled from C++ by its build
+# script with the profile's debug setting. With debuginfo on, the dev
+# archive is 2.9 GiB and a test binary linking it 1 GiB, and the link
+# thrashes under a 4 GiB memory limit (P2, 2026-11-12, docs/decisions.md).
+# Nothing in this workspace debugs DuckDB's internals, so dev builds leave
+# its debuginfo out; the release profile is unaffected.
+[profile.dev.package.libduckdb-sys]
+debug = false

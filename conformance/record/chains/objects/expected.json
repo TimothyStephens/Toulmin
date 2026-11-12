@@ -1,0 +1,48 @@
+{
+  "description": "two kept objects beside a one-batch chain",
+  "events": 3,
+  "batches": 1,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "plain",
+      "batches": 1
+    }
+  ],
+  "head": {
+    "seq": 3,
+    "segment": 1,
+    "offset": 1642,
+    "last_id": "sha256:9766a04bd5edbaf3e05d821da19bfdab0fa4f5654630b690085da5dabb9ef2e2",
+    "batch": 1,
+    "epoch": 1,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      113,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      648,
+      "sha256:4bf7f8b79085c2492af9df2055a07a2d7515c1479e94d3e1f79c23e69b151726"
+    ],
+    [
+      1,
+      1145,
+      "sha256:9766a04bd5edbaf3e05d821da19bfdab0fa4f5654630b690085da5dabb9ef2e2"
+    ]
+  ],
+  "types": {
+    "file.registered": 2,
+    "project.created": 1
+  },
+  "objects": [
+    "sha256:09a0eff8b13a55262d9a11d1d224a94cfdecaec58b2a72b947fd6b1cb123c46d",
+    "sha256:d8b2af1c85cdb4588e978aed5875e12cbfd20f68009823cf914b40cf41d8e4ce"
+  ],
+  "lock": null,
+  "findings": []
+}

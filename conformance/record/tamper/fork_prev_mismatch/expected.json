@@ -1,0 +1,6 @@
+{
+  "description": "batch 3 rewritten consistently but its first event's prev is the genesis string",
+  "findings": [
+    "fork_prev_mismatch"
+  ]
+}

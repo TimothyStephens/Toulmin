@@ -1,0 +1,6 @@
+{
+  "description": "the second event line of batch 2 removed, the header's len adjusted",
+  "findings": [
+    "segment_line_removed"
+  ]
+}

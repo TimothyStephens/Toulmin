@@ -1,0 +1,21 @@
+[package]
+name = "tm-record"
+version = "0.1.0"
+description = "Toulmin Record library: main-chain segments, HEAD, the lock and epochs, the object store, event scans, and integrity checks"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+rustix = { workspace = true, features = ["system"] }
+serde_json.workspace = true
+sha2.workspace = true
+tm-formats.workspace = true
+tm-fsfacts.workspace = true
+zstd.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

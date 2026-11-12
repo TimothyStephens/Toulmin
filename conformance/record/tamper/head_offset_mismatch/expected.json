@@ -1,0 +1,6 @@
+{
+  "description": "HEAD.offset five bytes beyond the end of the open segment",
+  "findings": [
+    "head_offset_mismatch"
+  ]
+}

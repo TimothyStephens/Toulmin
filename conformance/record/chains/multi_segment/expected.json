@@ -1,0 +1,91 @@
+{
+  "description": "a small segment limit: sealed segments are packed, the open one is plain",
+  "events": 10,
+  "batches": 5,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "packed",
+      "batches": 2
+    },
+    {
+      "segment": 2,
+      "form": "packed",
+      "batches": 2
+    },
+    {
+      "segment": 3,
+      "form": "plain",
+      "batches": 1
+    }
+  ],
+  "head": {
+    "seq": 10,
+    "segment": 3,
+    "offset": 1056,
+    "last_id": "sha256:8fdfea448135ed340ec2f0e9b8c54d492618db06715200234041fe8f61915eaa",
+    "batch": 5,
+    "epoch": 5,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      113,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      648,
+      "sha256:4bf7f8b79085c2492af9df2055a07a2d7515c1479e94d3e1f79c23e69b151726"
+    ],
+    [
+      1,
+      1257,
+      "sha256:d0c115625a818acaccd3e14540e86c119d3dd4a2928114f27d618f71b5597270"
+    ],
+    [
+      1,
+      1703,
+      "sha256:a4453628ce4b8821e7fb63e55fc1273eb28c6de05d48d0f577a492b18aa02def"
+    ],
+    [
+      2,
+      112,
+      "sha256:1daa9958c813905a3a57a9adaeba8baf951a1012988a44afc2840e930559ec6b"
+    ],
+    [
+      2,
+      558,
+      "sha256:70285e56bc604cef3ceb8337097eaf69079cf8b4f9b8cea12e13e9af4875e8bd"
+    ],
+    [
+      2,
+      1167,
+      "sha256:d631fcf96e06cbe1f87fbe7f2777a07999a89ddbed20cedca0607c56d7ea9e3d"
+    ],
+    [
+      2,
+      1613,
+      "sha256:6fef512964247f0238b4db7f72fda52983ccd8faafe90f1b235fbed2b7dd96ec"
+    ],
+    [
+      3,
+      112,
+      "sha256:0a87254f87bd38d0136b0b39887743927ec3a9b7ea2ddf1158891920f4332fd8"
+    ],
+    [
+      3,
+      558,
+      "sha256:8fdfea448135ed340ec2f0e9b8c54d492618db06715200234041fe8f61915eaa"
+    ]
+  ],
+  "types": {
+    "file.registered": 5,
+    "project.created": 1,
+    "settings.changed": 4
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

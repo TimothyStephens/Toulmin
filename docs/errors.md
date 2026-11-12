@@ -16,6 +16,8 @@ Codes are stable; messages may change. `Gate` is the earliest gate at which the 
 | `E2004` | record | A | binding missing |
 | `E2005` | record | A | repository root not bound |
 | `E2006` | record | A | binding conflicts or config directory unwritable |
+| `E2007` | record | A | no record.json at the record path |
+| `E2008` | record | A | record format newer than this binary |
 | `E2101` | record | A | torn tail |
 | `E2102` | record | A | fork |
 | `E2103` | record | A | corruption |

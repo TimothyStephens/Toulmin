@@ -29,6 +29,8 @@ pub const CATALOG: &[(&str, char, &str)] = &[
         'A',
         "binding conflicts or config directory unwritable",
     ),
+    ("E2007", 'A', "no record.json at the record path"),
+    ("E2008", 'A', "record format newer than this binary"),
     ("E2101", 'A', "torn tail"),
     ("E2102", 'A', "fork"),
     ("E2103", 'A', "corruption"),

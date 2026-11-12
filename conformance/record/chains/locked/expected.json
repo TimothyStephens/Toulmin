@@ -1,0 +1,40 @@
+{
+  "description": "a record whose lock is held (the lock file's form)",
+  "events": 1,
+  "batches": 1,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "plain",
+      "batches": 1
+    }
+  ],
+  "head": {
+    "seq": 1,
+    "segment": 1,
+    "offset": 647,
+    "last_id": "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6",
+    "batch": 1,
+    "epoch": 1,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      112,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ]
+  ],
+  "types": {
+    "project.created": 1
+  },
+  "objects": [],
+  "lock": {
+    "host": "login1",
+    "pid": 31337,
+    "started": "2026-11-11T12:00:00Z",
+    "heartbeat": "2026-11-11T12:00:05Z",
+    "epoch": 2
+  },
+  "findings": []
+}

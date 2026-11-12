@@ -1,0 +1,46 @@
+{
+  "description": "one batch of three events in one plain segment",
+  "events": 3,
+  "batches": 1,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "plain",
+      "batches": 1
+    }
+  ],
+  "head": {
+    "seq": 3,
+    "segment": 1,
+    "offset": 1591,
+    "last_id": "sha256:41b4f0ffcf1d1642288106490e3676a4c9ab89b664415edf518cf23f47fe3284",
+    "batch": 1,
+    "epoch": 1,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      113,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      648,
+      "sha256:cfefa758d62a91aaa925401ee8949678a3fd2e2539c7172f59e2c305d846f863"
+    ],
+    [
+      1,
+      1094,
+      "sha256:41b4f0ffcf1d1642288106490e3676a4c9ab89b664415edf518cf23f47fe3284"
+    ]
+  ],
+  "types": {
+    "file.registered": 1,
+    "project.created": 1,
+    "settings.changed": 1
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

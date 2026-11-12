@@ -1,0 +1,6 @@
+{
+  "description": "one byte of an event line in batch 2 changed (the year in `at`)",
+  "findings": [
+    "segment_byte_changed"
+  ]
+}

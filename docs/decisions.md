@@ -359,3 +359,368 @@ does not require, and `field` already locates each fault; N6 needs no
 change (noted: `E6006` is taken); N11, because changing ID derivation is
 a `record.json` `hash_alg` change, not an envelope version change, and a
 line's ID must be checkable to chain `prev`.
+
+## 2026-11-11 P2: everything beyond `HEAD.offset` is a torn tail
+
+**What.** 3.1 said a torn tail is a batch beyond `HEAD.offset` whose
+declared length is not satisfied or whose hash does not match, which left
+a complete, valid batch beyond `HEAD.offset` undefined. 3.1 now says
+`HEAD` is the commit point (11.21 step 3) and every byte beyond
+`HEAD.offset` is uncommitted and is truncated as a torn tail at lock
+time; `HEAD.offset` beyond the segment's end or inside a batch is
+corruption (`head_offset_mismatch`), never truncated.
+
+**Why.** A crash between 11.21's step 2 (segment synced) and step 3
+(`HEAD` renamed) leaves exactly that state, and the command that wrote
+it never finished, so its batch was never acknowledged. Treating it as a
+fork would wedge the record after an ordinary crash; truncating it is
+the rollback the write sequence implies.
+
+## 2026-11-11 P2: fencing compares `HEAD.epoch` for equality, and re-reads the lock before the `HEAD` rename
+
+**What.** 3.1's pre-append check refuses when `HEAD.epoch` differs from
+the writer's own epoch, not only when it is higher. 11.21 step 3 gains a
+re-read of `main/lock` immediately before the rename: a lock file that
+is absent or carries another epoch stops the writer with `E2102`.
+
+**Why.** A writer wrote its own epoch to `HEAD` when it took the lock, so
+any other value there is another writer's. The lock re-read closes the
+window in which a holder paused after step 2 wakes after a takeover and
+renames a stale `HEAD` over the new holder's: the new holder has by then
+truncated the paused writer's batch as a torn tail, and the stale `HEAD`
+would point into it.
+
+## 2026-11-11 P2: segment numbering, canonical small files, the initial `HEAD`, and event positions
+
+**What.** 11.3 now states what the record conformance chains freeze:
+segments are numbered from `000001`; batch headers are canonical JSON
+with `b` from 1 and the writer's epoch; `HEAD`, `lock`, and
+`record.json` are canonical JSON plus one newline; `project.init` writes
+`HEAD` as seq 0, segment 1, offset 0, `last_id` the main chain's genesis
+string, batch 0, epoch 0; the lock file's field forms; a record whose
+`format` is above the binary's opens read-only. An event's position is
+`(segment, offset)` with `offset` the byte offset of its line in the
+segment's uncompressed bytes; 11.17 says `events.segment` and
+`events.offset` hold it, and 11.21 that packed offsets are uncompressed
+offsets.
+
+**Why.** Each of these is a byte in a frozen fixture or a column the Core
+will fill, and none had one stated encoding. The genesis string as the
+initial `last_id` removes a special case from the first append.
+
+## 2026-11-11 P2: the Record never reads the index (plan-M5; runbook section 6)
+
+**What.** Item 37 no longer has `scan.rs` resolve an event ID "via the
+index's `events` table". The Record reads by position and scans linearly
+by ID; the Core resolves an ID to a position through `events` and asks
+the Record for that position. 11.17 states the same from the index side.
+
+**Why.** The readiness report's plan-M5 and the runbook's first section 6
+row: a Record that reads the Core's index inverts the crate graph (rule
+6, rule 1). The fix is the one the runbook names.
+
+## 2026-11-11 P2: `verdict_data_changed` leaves `conformance/record/tamper/` (plan-M1; runbook section 6)
+
+**What.** Item 41 lists eight tampering cases; `verdict_data_changed` is
+item 82's `audit_tampering.rs` case only, where item 82 already lists it.
+
+**Why.** `tm-record` cannot detect a changed verdict's data: the chain
+and the objects verify clean, and only the Checker's re-run sees the
+difference. A Record conformance case for it could never pass.
+
+## 2026-11-11 P2: verification reports a list of findings, with `head_field_mismatch` and a fixed check order
+
+**What.** Item 38's `VerifyReport` enum is a list of `Finding`s, one
+variant per item 41 case plus `head_field_mismatch` for a `HEAD` whose
+`seq`, `last_id`, `batch`, or `segment` disagrees with the committed
+events; an empty list is clean. Within a batch the checks run line count,
+line IDs, payload hash, then links, and the first failure names the
+finding.
+
+**Why.** One record can carry several faults and `tm audit` should list
+them all; a fixed order is what makes each tampering case report one
+name rather than whichever check happened to run first. `HEAD`'s other
+fields had no finding to land in.
+
+## 2026-11-11 P2: manifest walk rules, exclude pattern grammar, and a directory version's `size`
+
+**What.** Item 28 states what a manifest walk includes (regular files;
+subdirectories walked; symbolic links, sockets, pipes, and devices are
+not entries), the entry path form (relative, `/`-separated, NFC, UTF-8
+or `E3003`), the exclude pattern grammar (trailing `/` names a directory
+anywhere; no `/` matches the final component; `/` elsewhere matches the
+whole relative path; `*`, `?`, `[...]`, and `\` as in a shell glob), and
+that a directory version's `size` is the sum of its entries' sizes.
+
+**Why.** The `manifest.ignore` default (`.snakemake/`, `*.swp`) implies
+these rules without stating them, and two implementers would otherwise
+produce two entry sets for one directory. Links are left out so a cycle
+cannot occur and a manifest describes what the directory holds. The
+manifest fingerprint itself is not decided here: see the P2 report's
+collision on decision 10.
+
+## 2026-11-11 P2: `hashing.trust_ctime` has git's meaning; the re-hash decision is stated
+
+**What.** Item 30 defines a stat change as a difference in `size`,
+`mtime`, `mtime_ns`, or `ino`, plus `ctime` and `ctime_ns` when
+`hashing.trust_ctime` is true, and states the decision table: `Audit` is
+always `HashNow`; a new entry, a stat change, or a racy mtime is
+`HashNow`, except in a `Scan` for a file above
+`hashing.inline_threshold`, which is `Unconfirmed`; else `Unchanged`.
+Item 29 drops its clause about `trust_ctime` and points at item 30.
+
+**Why.** Item 29's "when `hashing.trust_ctime` is false, every
+stat-changed file is re-hashed" did not say what `true` skips. The
+setting is named after git's `core.trustctime`, and the design cites
+git's racy-clean rule as prior art, so it takes git's meaning: `false`
+ignores ctime differences, for filesystems whose backup or migration
+tools rewrite ctime. Item 31's "mtime-unchanged content change caught by
+ctime" case holds under the default.
+
+## 2026-11-11 P2: the racy marker's placement
+
+**What.** Item 29 says the marker is an empty `.toulmin-marker-<random>`
+file created and removed in a directory the caller names on the same
+filesystem (the repository root for a disk scan, the output's directory
+for the wrapper), compared with the file's mtime at the precision the
+filesystem reports.
+
+**Why.** "The marker file the snapshot writes to the same filesystem"
+named no directory, and the library cannot know which filesystem a
+caller's files are on without being told.
+
+## 2026-11-11 P2: `gen-chain` regenerates the record cases with a small segment limit
+
+**What.** Item 40's example takes `--events N --out DIR` (the flags
+`bench-index.sh` already passes) and `--conformance DIR`, which rewrites
+`conformance/record/` with a segment limit of a few kilobytes so sealed
+and packed segments appear in fixtures of a few kilobytes. The writer's
+default stays 64 MiB; nothing a reader does depends on the limit.
+
+**Why.** A packed segment cannot otherwise exist in a fixture smaller
+than 64 MiB, and a committed generator keeps the cases reproducible, which
+P1's uncommitted generator did not.
+
+## 2026-11-11 P2: `Record::append` takes the `Lock`, not yet an `OwnerCap`
+
+**What.** Item 39 and rule 4 give the main-chain append an `&OwnerCap`
+argument. `tm-owner-cap` is item 43, built in P3, so P2's
+`Record::append(&Lock, &Batch)` takes the held lock and the framed batch
+only. P3 adds the capability parameter when the crate exists.
+
+**Why.** P2 builds exactly items 26 to 42; building item 43 early would
+cross the phase line, and a placeholder type in `tm-record` would be a
+second definition of the one type the design wants constructible only in
+`tm-cli`. Nothing in gate A calls `append` before P7.
+
+## 2026-11-11 P2: the manifest fingerprint is not built (collision on decision 10)
+
+**What.** `tm-fsfacts::manifest` builds entries, excludes, sizes, and
+diffs, but has no `fingerprint()` and emits no 11.16 `manifest` object.
+`Manifest::entries_json` is the input either rule would digest.
+
+**Why.** Decision 10 (decisions-p1.md) and 11.16 define the manifest
+fingerprint as `sha256:` of the canonical JSON of `entries`, and each
+entry carries its `snapshot`. A directory whose files were only touched,
+or copied with `cp -r`, would then get a new fingerprint and a new
+version labeled `content_changed`, which contradicts 5.6's `metadata
+only` ("snapshot changed, content did not") and `carried forward`, D22's
+"identical content stops the spread", and would make `tm audit` report
+`E3401` for every touched directory. Under the P2 rule for collisions
+with settled decisions the code picks no side; the P2 report carries the
+collision and the two candidate rules (digest `entries` as written, or
+digest `[{path, fingerprint}]` and keep snapshots as stat facts).
+
+## 2026-11-11 P2: two Record conditions without a catalog code
+
+**What.** Opening a directory with no `record.json` reports `E2004`
+("binding missing", the nearest record-resolution code, item 73). A
+`record.json` whose `format` is above `RECORD_FORMAT` opens read-only and
+every write returns `Error::NewerFormat`, a variant without a catalog
+code.
+
+**Why.** Section 9 and 11.12 give no code for either; NFR Rollout
+describes the newer-format behaviour ("refuses writes and says which
+binary version is needed") without a code. Adding codes is a catalog
+change the design decides, so both are reported for a ruling rather than
+invented here.
+
+## 2026-11-12 P2: the manifest fingerprint digests paths and fingerprints only (ruling on decision 10)
+
+**What.** The owner ruled on the collision logged on 2026-11-11: the
+manifest `fingerprint` is `sha256:` of the canonical JSON of
+`[{"path","fingerprint"}]` in 11.10 path order, and `entries` keep
+`snapshot` as a stat fact outside the digest. 11.16, items 28 and 31, and
+decision 10 of decisions-p1.md (dated note) now say so; `tm-fsfacts`
+builds it, with the item 31 case that two manifests whose files differ
+only in mtime and inode share a fingerprint.
+
+**Why.** Digesting snapshots would label a touched or copied directory
+`content_changed`, against 5.6's `metadata only` and `carried forward`
+labels and D22.
+
+## 2026-11-12 P2: `E2007` and `E2008` replace the `E2004` reuse and the codeless `NewerFormat` variant
+
+**What.** Two record codes, gate A: `E2007` no `record.json` at the
+record path, `E2008` record format newer than this binary (the record
+opens read-only and every write is refused, naming the format needed).
+Section 9 (`project.init` and `read_in` rows), 11.12, item 73, and NFR
+Rollout carry them; `tm-formats`' catalog declares them; `Record::open`
+and every write in `tm-record` report them in place of `E2004` and
+`Error::NewerFormat`.
+
+**Why.** The owner ruled on the two codeless conditions logged on
+2026-11-11. The ruling asked for `E2006` and `E2007`, but `E2006` is
+already "binding conflicts or config directory unwritable" (section 9,
+catalog, errors.md), so the next free codes were taken with the owner's
+agreement rather than renumbering a settled P1 code.
+
+## 2026-11-12 P2: dev builds compile the bundled DuckDB without debuginfo
+
+**What.** `Cargo.toml` sets `[profile.dev.package.libduckdb-sys] debug =
+false`. The design (item 5, D24) fixes the release profile and the lint
+levels; it says nothing about the dev profile, so this is a build-setting
+addition, not a change to anything settled. The release build is
+unaffected.
+
+**Why.** With debuginfo on, the dev `libduckdb.a` is 2.9 GiB and the
+`tm-duckdb` test binary 1 GiB. In the 4 GiB sandbox the link thrashed the
+page cache for three hours and read 540 GB before it was stopped (P2,
+2026-11-12). Nothing in the workspace debugs DuckDB's internals.
+
+## 2026-11-12 P2 review B1: a crash between the seal and the `HEAD` rename is a torn tail
+
+**What.** 3.1 and 11.21 step 0 now say: the open segment's length is that
+of whichever form exists (a packed segment's uncompressed length
+included); a plain segment numbered `HEAD.segment + 1` is uncommitted and
+is removed at lock time as a torn tail, recorded as
+`chain.torn_tail_truncated` with that segment number, offset 0, and its
+length; a writer that finds `HEAD.segment` packed-only rolls to the next
+segment without sealing again; `tm audit` reports the state as
+`torn_tail_beyond_head`. A plain `HEAD.segment + 1` beside a plain
+`HEAD.segment` stays `head_field_mismatch`, as the code already reported
+it. `finish_lock`, the append fence, step 0, and `verify` follow;
+`conformance/record/chains/crash_after_seal` and a `tests/lock.rs` case
+cover it. The eight item 41 cases and the existing chain fixtures are
+unchanged.
+
+**Why.** The P2 review (B1): `seal` removes the plain file before the
+batch's `HEAD` rename, so a crash in that window left `HEAD` pointing at
+a packed segment whose plain length read as 0. Every later lock failed
+with `E2103` and `tm audit` called the orphan a fork, against decision 1's
+own reason for the torn-tail rule. The owner ruled for the minimal fix,
+not a reorder of step 0.
+
+## 2026-11-12 P2 review M1: a symbolic link to a regular file is a manifest entry
+
+**What.** Item 28 and 11.16: a symbolic link whose target is a regular
+file is an entry under the link's relative path with the target's
+fingerprint and snapshot; a link to a directory is not walked; a dangling
+link is not an entry. The entry shape is unchanged. Item 31 gains the case;
+`tm-fsfacts::manifest` follows.
+
+**Why.** The P2 review (M1): the P2 rule skipped every link, so a
+directory of links had an empty entry list and the fingerprint of `[]`.
+Nextflow's `publishDir` publishes outputs as symbolic links by default and
+the design names Nextflow as an expected tool, so at gate C a published
+results directory would version as empty and nothing downstream would
+have lineage. `entries` are frozen in `file.version_added` bodies from P3
+on, so the rule had to be settled now; the owner chose option (a).
+
+## 2026-11-12 P2 review N1: a stale lock is broken by renaming it aside
+
+**What.** 3.1: the taker renames the stale `main/lock` to `main/lock.stale`
+before its `O_EXCL` create and removes the side file once its own lock
+exists; `finish_lock`'s cleanup removes the lock path only when it is
+still the taker's inode, as `release` already did.
+
+**Why.** The P2 review (N1): read, compare, `remove_file` let two waiters
+both pass the compare, and the loser's cleanup could remove the winner's
+file. A rename is won by exactly one waiter.
+
+## 2026-11-12 P2 review N2: 5.3 says "prevent, or record as a truncation"
+
+**What.** The two writer rows of 5.3 read "Prevent, or record as a
+truncation (the one-syscall-pair window named in 3.1)", and 3.1 names the
+window between the step-3 lock re-read and the `HEAD` rename with its
+three outcomes: committed under the taker's `HEAD`, truncated and
+recorded, or a stale `HEAD` that `tm audit` reports.
+
+**Why.** The P2 review (N2): "Prevent" overstated the mechanism by that
+window. The third outcome is the builder's addition to the review's two:
+a paused writer whose rename lands after the taker has written leaves
+`HEAD` pointing into the taker's bytes, which audit reports as
+`head_offset_mismatch` or `head_field_mismatch` and the next lock may
+refuse with `E2103`. It is detectable, never silent, and needs a writer
+paused for the takeover timeout inside one syscall pair. Closing it
+(per-writer `HEAD.tmp` names, removed by the taker so the stale rename
+fails) is a mechanism change the review did not ask for and is left for
+the owner.
+
+## 2026-11-12 P2 review N3: what `hashing.trust_ctime: false` gives up
+
+**What.** Item 30, 11.19, and a 5.5 row say it: a same-size,
+`mtime`-preserving rewrite on the same inode is `Unchanged` in `Scan` and
+`Run`, so `tm status` and the wrapper reuse the recorded hash until the
+next audit.
+
+**Why.** The P2 review (N3): the cost of the opt-in was unstated and 5.5's
+table of weaker options did not list it.
+
+## 2026-11-12 P2 review N4: a directory exclude pattern is one component followed by `/`
+
+**What.** Item 28 says so, that `Excludes` refuses anything else, and that
+`settings.set` reports the refusal as `E7002`. The parser already behaved
+this way.
+
+**Why.** The P2 review (N4): the grammar did not define `a/b/`, which the
+parser refused without the design saying so.
+
+## 2026-11-12 P2 review N5: `HEAD.format` follows `record.json`'s `format`
+
+**What.** 11.3: a record format change that alters `HEAD` bumps both, so
+`HEAD.format` never exceeds `record.json`'s; a read-only open accepts a
+higher `HEAD.format` whose seven known fields parse, ignoring other
+members; a writable record with another `HEAD.format`, or a `HEAD.format`
+above `record.json`'s, is `E2103`. `Head::read_with` and the Record's
+read paths follow.
+
+**Why.** The P2 review (N5): `Head::read` mapped any `format != 1` to
+`E2103`, so a future record format that moved `HEAD.format` could not be
+read at all, against 11.3 and NFR Rollout's "opens for reading".
+
+## 2026-11-12 P2 review N6: CI regenerates the record cases and diffs them
+
+**What.** Item 40 and the conformance job: `gen-chain --conformance` into
+a temporary directory, empty directories dropped, `diff -r` against
+`conformance/record/`, any difference fails.
+
+**Why.** The P2 review (N6): the cases are only as frozen as the
+generator; the diff makes every writer change that alters bytes a visible
+review item, which is what the formats cases give P1.
+
+## 2026-11-12 P2 re-audit N1b: the displaced holder is read from `lock.stale`
+
+**What.** 3.1: the taker reads `main/lock.stale` before removing it; when
+it parses as a holder, that holder is the one displaced, whichever waiter
+won the rename. `finish_lock` does so and uses it when the acquiring
+waiter did not rename anything itself.
+
+**Why.** The re-audit (N1b): with two waiters, the one that renamed the
+stale lock aside can lose the `O_EXCL` create to the other, which clears
+nothing and queued nothing, so the epoch moved but no `lock.taken_over`
+was recorded. The side file is exactly the broken lock's content, so
+reading it completes the audit trail whichever waiter wins.
+
+## 2026-11-12 P2 re-audit: a packed open segment longer than `HEAD.offset` is `head_offset_mismatch`
+
+**What.** 3.1 says it in one clause; `verify` reports it so, as the lock's
+`truncate_torn_tail` already refused it (`E2103 head_offset_mismatch`). No
+new tamper case: item 41's set is fixed; a unit test in `verify.rs`
+covers it.
+
+**Why.** The re-audit: the two paths named the same state differently.
+The writer never produces it (a seal happens only when the plain length
+equals `HEAD.offset`), so it is reachable by tampering only, and nothing
+truncates a packed segment.
+

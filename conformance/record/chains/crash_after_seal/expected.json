@@ -1,0 +1,67 @@
+{
+  "description": "a sealing completed but the writer died before its batch's HEAD rename; the next lock removed the uncommitted segment and recorded it",
+  "events": 6,
+  "batches": 3,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "packed",
+      "batches": 2
+    },
+    {
+      "segment": 2,
+      "form": "plain",
+      "batches": 1
+    }
+  ],
+  "head": {
+    "seq": 6,
+    "segment": 2,
+    "offset": 976,
+    "last_id": "sha256:fb3a833387db5e5f9a34c9db9b0573d794610334912928979087bc4efea21261",
+    "batch": 3,
+    "epoch": 4,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      113,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      648,
+      "sha256:4bf7f8b79085c2492af9df2055a07a2d7515c1479e94d3e1f79c23e69b151726"
+    ],
+    [
+      1,
+      1257,
+      "sha256:d0c115625a818acaccd3e14540e86c119d3dd4a2928114f27d618f71b5597270"
+    ],
+    [
+      1,
+      1703,
+      "sha256:a4453628ce4b8821e7fb63e55fc1273eb28c6de05d48d0f577a492b18aa02def"
+    ],
+    [
+      2,
+      112,
+      "sha256:df7a4a2f2e369f2473d4d8efd9adc4e27c876f707188c5c7541ecf5669213a74"
+    ],
+    [
+      2,
+      530,
+      "sha256:fb3a833387db5e5f9a34c9db9b0573d794610334912928979087bc4efea21261"
+    ]
+  ],
+  "types": {
+    "chain.torn_tail_truncated": 1,
+    "file.registered": 2,
+    "project.created": 1,
+    "settings.changed": 2
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}

@@ -1,0 +1,52 @@
+{
+  "description": "a torn tail beyond HEAD.offset was truncated at lock time and recorded",
+  "events": 4,
+  "batches": 2,
+  "segments": [
+    {
+      "segment": 1,
+      "form": "plain",
+      "batches": 2
+    }
+  ],
+  "head": {
+    "seq": 4,
+    "segment": 1,
+    "offset": 2123,
+    "last_id": "sha256:8ec77cad30ff770e02a714ac83a0999aa0572fa5bfeb298aea6e1d85f346cac6",
+    "batch": 2,
+    "epoch": 2,
+    "format": 1
+  },
+  "positions": [
+    [
+      1,
+      113,
+      "sha256:c000d4e7525906ee5a8f0cd1ae317163bfc24620ff3f0905578c44e9e2b22ce6"
+    ],
+    [
+      1,
+      648,
+      "sha256:4bf7f8b79085c2492af9df2055a07a2d7515c1479e94d3e1f79c23e69b151726"
+    ],
+    [
+      1,
+      1257,
+      "sha256:ab5584351cc582af7e374de0469c0f75b66975d6b77c6257d4238faedeed841a"
+    ],
+    [
+      1,
+      1677,
+      "sha256:8ec77cad30ff770e02a714ac83a0999aa0572fa5bfeb298aea6e1d85f346cac6"
+    ]
+  ],
+  "types": {
+    "chain.torn_tail_truncated": 1,
+    "file.registered": 1,
+    "project.created": 1,
+    "settings.changed": 1
+  },
+  "objects": [],
+  "lock": null,
+  "findings": []
+}
