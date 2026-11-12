@@ -790,3 +790,15 @@ natural composite key without a new table. Verdicts are P8 scenario
 outcomes, and freezing them before the Checker exists would freeze a
 guess.
 
+## 2026-11-12 P3: NaN and infinity tokens (item 47), checksum file rules (item 50), `args.txt` form (item 82a)
+
+**What.** Item 47 names the tokens a `float64` column reads as NaN and
+infinity and says they are `E3102` elsewhere unless listed as missing.
+Item 50 states which lines a checksum file may hold, that it mixes no
+algorithms, and what a mismatch is. Item 82a says `args.txt` holds one
+argument per line, unquoted.
+
+**Why.** Each was needed to write the code or the fixture and was
+unstated; the readiness report (impl-M7) had asked for the `args.txt`
+format.
+
