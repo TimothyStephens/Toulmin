@@ -15,13 +15,16 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use arrow::datatypes::{DataType, TimeUnit};
+use flate2::Compression;
+use flate2::write::GzEncoder;
 use serde_json::{Value, json};
 use tm_duckdb::EngineSettings;
 use tm_files::attributes::{Action, Kept, State};
-use tm_files::checksum::{Algorithm, compare, parse_checksums};
+use tm_files::checksum::{Algorithm, Entry, compare, md5_hex, parse_checksums};
 use tm_files::identity::{Identity, Level, Registration, check_input_path};
 use tm_files::parse::{complete_spec, key_tuples, parse, typed_rows};
 use tm_files::parse_cache::ParseCache;
@@ -485,10 +488,7 @@ fn each_equivalence_rule() {
     let copy = tmp.path().join("copy.tsv");
     fs::copy(&de_path, &copy).unwrap();
     let c = Candidate::of_file(&copy, &hs).unwrap();
-    assert_eq!(
-        equivalence(&v1, &c, None, &copy).unwrap(),
-        Equivalence::SameBytes
-    );
+    assert_eq!(equivalence(&v1, &c, None).unwrap(), Equivalence::SameBytes);
     assert!(
         Version::next(
             FileHandle(1),
@@ -516,7 +516,7 @@ fn each_equivalence_rule() {
     let table2 = parse(&shuffled, &de_spec, &st).unwrap();
     assert!(same_table_by_key(&table1, &table2, &de_spec).unwrap());
     assert_eq!(
-        equivalence(&v1, &c, Some((&table1, &table2, &de_spec)), &shuffled).unwrap(),
+        equivalence(&v1, &c, Some((&table1, &table2, &de_spec))).unwrap(),
         Equivalence::SameTableByKey
     );
 
@@ -527,7 +527,7 @@ fn each_equivalence_rule() {
     let table3 = parse(&edited, &de_spec, &st).unwrap();
     assert!(!same_table_by_key(&table1, &table3, &de_spec).unwrap());
     assert_eq!(
-        equivalence(&v1, &c, Some((&table1, &table3, &de_spec)), &edited).unwrap(),
+        equivalence(&v1, &c, Some((&table1, &table3, &de_spec))).unwrap(),
         Equivalence::Different
     );
     let (v2, ev) = Version::next(
@@ -545,18 +545,50 @@ fn each_equivalence_rule() {
     let back = Version::from_added(&Value::Object(ev.body().clone())).unwrap();
     assert_eq!(back.fingerprint, v2.fingerprint);
 
-    // Decompressed content: not built (rule 4 collision, see the P3 report).
+    // Same decompressed content: a .gz and a two-member .bgz of the same
+    // bytes share a decompressed fingerprint, which is the plain file's.
+    let members = |parts: &[&[u8]]| -> Vec<u8> {
+        let mut out = Vec::new();
+        for p in parts {
+            let mut enc = GzEncoder::new(Vec::new(), Compression::default());
+            enc.write_all(p).unwrap();
+            out.extend(enc.finish().unwrap());
+        }
+        out
+    };
+    let bytes = text.as_bytes();
     let gz = tmp.path().join("de.tsv.gz");
-    fs::write(&gz, b"\x1f\x8b\x08\0\0\0\0\0\0\x03").unwrap();
-    assert!(matches!(
-        decompressed_fingerprint(&gz),
-        Err(Error::Unbuilt { .. })
-    ));
-    let c = Candidate::of_file(&gz, &hs).unwrap();
-    assert!(matches!(
-        equivalence(&v1, &c, None, &gz),
-        Err(Error::Unbuilt { .. })
-    ));
+    fs::write(&gz, members(&[bytes])).unwrap();
+    let bgz = tmp.path().join("de.tsv.bgz");
+    fs::write(&bgz, members(&[&bytes[..200], &bytes[200..]])).unwrap();
+    assert_ne!(fs::read(&gz).unwrap(), fs::read(&bgz).unwrap());
+    let one_member = Candidate::of_file(&gz, &hs).unwrap();
+    let two_members = Candidate::of_file(&bgz, &hs).unwrap();
+    assert_eq!(
+        one_member.decompressed.as_ref(),
+        Some(&first.fingerprint),
+        "the plain file's fingerprint"
+    );
+    assert_eq!(one_member.decompressed, two_members.decompressed);
+    assert_ne!(one_member.fingerprint, two_members.fingerprint);
+    let (v_gz, _) = Version::next(FileHandle(7), None, &one_member, Origin::Registered, false)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        equivalence(&v_gz, &two_members, None).unwrap(),
+        Equivalence::SameDecompressed
+    );
+    assert_eq!(
+        decompressed_fingerprint(&bgz, &hs).unwrap(),
+        first.fingerprint
+    );
+    assert!(
+        matches!(
+            decompressed_fingerprint(&de_path, &hs),
+            Err(Error::Io { .. })
+        ),
+        "not gzip"
+    );
 
     // Keeping goes through 6.3.
     let state = State {
@@ -595,30 +627,34 @@ fn each_equivalence_rule() {
     let _ = tracked.apply(Action::Register).unwrap();
 }
 
-/// A directory version's `file.version_added` body carries the manifest
-/// whose fingerprint `tm-fsfacts` computes under the P2 ruling
-/// (`[{path, fingerprint}]`), while `tm-formats` still checks the P1 rule
-/// (the ID of `entries`). The two cannot both hold; the P3 report carries
-/// this as a rule 4 collision, and this test pins the state until it is
-/// ruled.
+/// A directory version from `tm-fsfacts` validates: the manifest
+/// fingerprint `tm-formats` checks is 11.16's as amended (decision 10's
+/// 2026-11-11 note).
 #[test]
-fn directory_version_event_collides_with_the_p1_manifest_check() {
+fn a_directory_version_from_fsfacts_validates() {
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("raw");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("a.fastq"), b"@r1\nACGT\n+\nIIII\n").unwrap();
+    fs::write(dir.join("b.fastq"), b"@r2\nTTTT\n+\nIIII\n").unwrap();
     let c = Candidate::of_directory(&dir, &[], &HashSettings::default()).unwrap();
-    assert!(c.manifest.is_some());
-    let err = Version::next(FileHandle(9), None, &c, Origin::Registered, false).unwrap_err();
-    let Error::Format(e) = err else {
-        panic!("expected the body validation to refuse: {err}");
-    };
-    assert_eq!(e.code, Code::E1002);
+    let (v, ev) = Version::next(FileHandle(9), None, &c, Origin::Registered, false)
+        .unwrap()
+        .unwrap();
     assert_eq!(
-        e.field.as_deref(),
-        Some("/body/manifest/fingerprint"),
-        "{e}"
+        ev.get("manifest").unwrap()["fingerprint"],
+        c.fingerprint.as_str()
     );
+    assert_eq!(
+        ev.get("manifest").unwrap()["entries"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(v.size, 32);
+    let back = Version::from_added(&Value::Object(ev.body().clone())).unwrap();
+    assert_eq!(back.manifest, c.manifest);
 }
 
 #[test]
@@ -672,10 +708,12 @@ fn pdf_pages_image_panels_and_the_e3301_refusal() {
         tm_files::pdf::page_count(&root.join("figure.pdf")).unwrap(),
         2
     );
-    assert!(matches!(
-        tm_files::pdf::page_count(&root.join("de.tsv")),
-        Err(Error::Pdf { .. })
-    ));
+    assert_eq!(
+        tm_files::pdf::page_count(&root.join("de.tsv"))
+            .unwrap_err()
+            .catalog_code(),
+        Some(Code::E3302)
+    );
     assert!(tm_files::image::is_image(&root.join("figure.png")).unwrap());
     assert!(!tm_files::image::is_image(&root.join("de.tsv")).unwrap());
     assert!(!tm_files::image::is_image(&root.join("figure.pdf")).unwrap());
@@ -715,19 +753,18 @@ fn pdf_pages_image_panels_and_the_e3301_refusal() {
 fn both_checksum_forms_on_the_fixture_tables() {
     let root = fixtures();
     let hs = HashSettings::default();
-    let entries: Vec<(String, EventId)> = ["de.tsv", "samples.tsv", "counts.tsv"]
+    let entries: Vec<Entry> = ["de.tsv", "samples.tsv", "counts.tsv"]
         .iter()
-        .map(|n| {
-            (
-                (*n).to_owned(),
-                Candidate::of_file(&root.join(n), &hs).unwrap().fingerprint,
-            )
+        .map(|n| Entry {
+            name: (*n).to_owned(),
+            path: root.join(n),
+            fingerprint: Candidate::of_file(&root.join(n), &hs).unwrap().fingerprint,
         })
         .collect();
     let hex = |fp: &EventId| fp.as_str()[7..].to_owned();
     let mut gnu = String::new();
-    for (n, fp) in &entries {
-        let _ = writeln!(gnu, "{}  {n}", hex(fp));
+    for e in &entries {
+        let _ = writeln!(gnu, "{}  {}", hex(&e.fingerprint), e.name);
     }
     let lines = parse_checksums(&gnu).unwrap();
     assert_eq!(lines.len(), 3);
@@ -739,24 +776,38 @@ fn both_checksum_forms_on_the_fixture_tables() {
         .unwrap();
     assert_eq!(ev.get("algorithm"), Some(&json!("sha256")));
     let mut bsd = String::new();
-    for (n, fp) in &entries {
-        let _ = writeln!(bsd, "SHA256 ({n}) = {}", hex(fp));
+    for e in &entries {
+        let _ = writeln!(bsd, "SHA256 ({}) = {}", e.name, hex(&e.fingerprint));
     }
     let c2 = compare(&parse_checksums(&bsd).unwrap(), &entries).unwrap();
     assert!(c2.matched);
     // One wrong digest and one unknown name are the mismatches.
-    let mut wrong = gnu.replace(&hex(&entries[0].1), &"0".repeat(64));
+    let mut wrong = gnu.replace(&hex(&entries[0].fingerprint), &"0".repeat(64));
     let _ = writeln!(wrong, "{}  missing.tsv", "1".repeat(64));
     let c3 = compare(&parse_checksums(&wrong).unwrap(), &entries).unwrap();
     assert_eq!(c3.mismatches, ["de.tsv", "missing.tsv"]);
     assert_eq!(c3.refusal().unwrap().catalog_code(), Some(Code::E3004));
-    // MD5 parses and cannot be compared (rule 4 collision, see the P3 report).
-    let md5 = parse_checksums("d41d8cd98f00b204e9800998ecf8427e  de.tsv\n").unwrap();
-    assert_eq!(md5[0].algorithm, Algorithm::Md5);
-    assert!(matches!(
-        compare(&md5, &entries),
-        Err(Error::Unbuilt { .. })
-    ));
+    // An md5sum list with one wrong digest reports that path.
+    let mut md5_list = String::new();
+    for (i, e) in entries.iter().enumerate() {
+        let digest = if i == 1 {
+            "0".repeat(32)
+        } else {
+            md5_hex(&e.path).unwrap()
+        };
+        let _ = writeln!(md5_list, "{digest}  {}", e.name);
+    }
+    let md5 = parse_checksums(&md5_list).unwrap();
+    assert!(md5.iter().all(|l| l.algorithm == Algorithm::Md5));
+    let c4 = compare(&md5, &entries).unwrap();
+    assert_eq!(c4.algorithm, Algorithm::Md5);
+    assert_eq!(c4.mismatches, ["samples.tsv"]);
+    assert_eq!(
+        c4.event(FileHandle(2), &VersionHandle::parse("F2@v1").unwrap())
+            .unwrap()
+            .get("algorithm"),
+        Some(&json!("md5"))
+    );
 }
 
 // ------------------------------------------------------------------ fold

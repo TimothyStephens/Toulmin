@@ -11,21 +11,20 @@ already-authorized decisions from the Core, and returns events
 | --- | --- | --- |
 | `identity` | 44 | `Identity` (input path, title, description, source, level, retired, removable); `check_input_path` (`E3001`); `register` (`E3002`), `rename`, `mark_removable`, `restore`, each with its event |
 | `attributes` | 46 | `State` and `Action`: the 6.1 to 6.3 transitions behind `E3201` (and `E3301` for panels on a non-image) |
-| `version` | 45 | `Candidate` (what `tm-fsfacts` found), `Version`, `Origin`, `ContentLabel`, the three equivalences (`same_table_by_key`, `decompressed_fingerprint`), `Version::next` and `Version::kept` with their events |
+| `version` | 45 | `Candidate` (what `tm-fsfacts` found, with the decompressed fingerprint of a `.gz` or `.bgz` file), `Version`, `Origin`, `ContentLabel`, the three equivalences (`same_table_by_key`, `decompressed_fingerprint`), `Version::next` and `Version::kept` with their events |
 | `parse` | 47 | `complete_spec` (`tm table spec`: scales from the file), `parse` (CSV and TSV through DuckDB's `read_csv` with every guess off, Parquet through its Arrow reader, cells typed under the spec, item 47's Arrow types), `typed_rows`, `key_tuples`; `E3101`, `E3102`, `E3103` |
 | `parse_cache` | 48 | `ParseCache`: `<cache>/<file fingerprint>/<spec fingerprint>.parquet` |
-| `pdf` | 49 | `page_count` through `lopdf` |
+| `pdf` | 49 | `page_count` through `lopdf`; `E3302` |
 | `image` | 49 | `is_image` by signature; `set_panels` (`file.panels_set`) |
-| `checksum` | 50 | GNU and BSD checksum lines; `compare` against Files' fingerprints; `file.checksum_checked`; the `E3004` refusal |
+| `checksum` | 50 | GNU and BSD checksum lines (`E3006`); `compare` against Files' fingerprints, or the entries' MD5 for an MD5 list; `file.checksum_checked`; the `E3004` refusal |
 | `fold` | 51 | `fold(&mut IndexTx, &Line)` into `files`, `file_versions`, `parse_specs`, `panels` |
 
-Two functions report `Error::Unbuilt` because they need a dependency that
-is not on item 1's list, which the P3 report carries as rule 4
-collisions: `decompressed_fingerprint` (the `.gz`/`.bgz` equivalence
-needs an inflate implementation) and `checksum::compare` for MD5 lists
-(needs an MD5 digest). A directory version's `file.version_added` is
-refused by `tm-formats`, whose manifest check still computes the P1
-fingerprint rule; `tests/files.rs` pins that state until it is ruled.
+`decompressed_fingerprint` reads `.gz` and `.bgz` files through
+`flate2`'s multi-member decoder (`.bgz` is concatenated gzip members) and
+hashes the decompressed bytes; `checksum::compare` hashes the entries'
+bytes with MD5 for an MD5 list (item 1: MD5 is used only there). A page
+citation on a file without a PDF page tree is `E3302`; a checksum list in
+neither form, or with mixed algorithms, is `E3006`.
 
 ## Tests
 

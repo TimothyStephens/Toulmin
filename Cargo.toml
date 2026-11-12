@@ -49,6 +49,11 @@ rustix = { version = "=1.1.6", features = ["fs"] }
 
 # Files, claims, static view, CLI.
 lopdf = { version = "=0.47.0", default-features = false }
+# Inflates .gz and .bgz for D22's decompressed-content equivalence (default
+# backend); compares provider-supplied MD5 lists only, every fingerprint is
+# sha256 (item 1).
+flate2 = "=1.1.11"
+md-5 = "=0.11.0"
 pulldown-cmark = { version = "=0.13.6", default-features = false }
 ammonia = "=4.2.4"
 askama = "=0.16.1"

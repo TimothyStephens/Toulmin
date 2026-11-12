@@ -9,7 +9,9 @@ publish.workspace = true
 [dependencies]
 arrow.workspace = true
 bigdecimal.workspace = true
+flate2.workspace = true
 lopdf.workspace = true
+md-5.workspace = true
 parquet.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

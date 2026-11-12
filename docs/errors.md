@@ -27,6 +27,7 @@ Codes are stable; messages may change. `Gate` is the earliest gate at which the 
 | `E3003` | files | A | non-UTF-8 path |
 | `E3004` | files | A | checksum mismatch |
 | `E3005` | files | A | already hashed |
+| `E3006` | files | A | checksum list unreadable |
 | `E3101` | files | A | duplicate key |
 | `E3102` | files | A | type parse failure |
 | `E3103` | files | A | unknown column |
@@ -36,6 +37,7 @@ Codes are stable; messages may change. `Gate` is the earliest gate at which the 
 | `E3202` | files | A | size above budget |
 | `E3203` | files | A | bytes missing |
 | `E3301` | files | A | not an image |
+| `E3302` | files | A | not a PDF page tree |
 | `E3401` | files | A | hash mismatch |
 | `E4001` | runs | C | malformed receipt |
 | `E4101` | runs | C | path outside project |

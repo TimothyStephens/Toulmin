@@ -2,6 +2,11 @@
 //! two-space form and the BSD `MD5 (file) = hash` form, compared once
 //! against the fingerprints Files holds, reported as `file.checksum_checked`.
 
+use std::fmt::Write as _;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+
+use md5::{Digest, Md5};
 use serde_json::json;
 use tm_formats::events::{EventType, KnownEvent};
 use tm_formats::id::{EventId, FileHandle, VersionHandle};
@@ -55,7 +60,7 @@ pub struct ChecksumLine {
 /// BSD form (`MD5 (<name>) = <hex>`, `SHA256 (<name>) = <hex>`).
 ///
 /// # Errors
-/// [`Error::ChecksumLine`] for a line in neither form.
+/// `E3006` for a line in neither form.
 pub fn parse_checksums(text: &str) -> Result<Vec<ChecksumLine>> {
     let mut out = Vec::new();
     for (i, raw) in text.lines().enumerate() {
@@ -63,10 +68,7 @@ pub fn parse_checksums(text: &str) -> Result<Vec<ChecksumLine>> {
         if line.trim().is_empty() || line.trim_start().starts_with('#') {
             continue;
         }
-        let bad = || Error::ChecksumLine {
-            line: i + 1,
-            text: line.to_owned(),
-        };
+        let bad = || unreadable(i + 1, line);
         // BSD: ALG (name) = hex
         if let Some((alg, rest)) = line.split_once(" (")
             && let Some((name, hex)) = rest.rsplit_once(") = ")
@@ -104,6 +106,47 @@ pub fn parse_checksums(text: &str) -> Result<Vec<ChecksumLine>> {
         });
     }
     Ok(out)
+}
+
+fn unreadable(line: usize, text: &str) -> Error {
+    Error::code(
+        Code::E3006,
+        format!("checksum list line {line} is not a checksum line: {text:?}"),
+    )
+}
+
+/// One file Files holds a fingerprint for, as the comparison sees it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Entry {
+    /// The relative name a list would use (a file's own name, or a manifest
+    /// entry's path).
+    pub name: String,
+    /// Where the bytes are, for an MD5 list.
+    pub path: PathBuf,
+    /// The `sha256:` fingerprint.
+    pub fingerprint: EventId,
+}
+
+/// The MD5 of a file's bytes as lower-case hex.
+///
+/// # Errors
+/// `Error::Io`.
+pub fn md5_hex(path: &Path) -> Result<String> {
+    let mut f = std::fs::File::open(path).map_err(|e| Error::io(path, e))?;
+    let mut h = Md5::new();
+    let mut buf = vec![0u8; 1 << 16];
+    loop {
+        let n = f.read(&mut buf).map_err(|e| Error::io(path, e))?;
+        if n == 0 {
+            break;
+        }
+        h.update(&buf[..n]);
+    }
+    let mut hex = String::with_capacity(32);
+    for b in h.finalize() {
+        let _ = write!(hex, "{b:02x}");
+    }
+    Ok(hex)
 }
 
 /// The one-time comparison's result.
@@ -152,44 +195,36 @@ impl Compared {
     }
 }
 
-/// Compare parsed lines with the fingerprints Files holds: `entries` pairs
-/// each relative name (a single file's own name, or a manifest entry's
-/// path) with its `sha256:` fingerprint. Every line must use one
-/// algorithm. A listed name that is absent from `entries`, or whose digest
-/// differs, is a mismatch; names `entries` has and the file does not list
-/// are not checked.
+/// Compare parsed lines with what Files holds: for a SHA-256 list the
+/// entries' fingerprints, for an MD5 list the MD5 of each listed entry's
+/// bytes (item 50: MD5 is used only here; every Toulmin fingerprint is
+/// sha256). Every line must use one algorithm. A listed name that is absent
+/// from `entries`, or whose digest differs, is a mismatch; names `entries`
+/// has and the list does not name are not checked.
 ///
 /// # Errors
-/// [`Error::Unbuilt`] for an MD5 list: computing MD5 needs a dependency
-/// that is not on item 1's list (reported as a rule 4 collision);
-/// [`Error::ChecksumLine`] for an empty list or mixed algorithms.
-pub fn compare(lines: &[ChecksumLine], entries: &[(String, EventId)]) -> Result<Compared> {
+/// `E3006` for an empty list or mixed algorithms; `Error::Io` when an
+/// MD5 list names a file that cannot be read.
+pub fn compare(lines: &[ChecksumLine], entries: &[Entry]) -> Result<Compared> {
     let Some(first) = lines.first() else {
-        return Err(Error::ChecksumLine {
-            line: 0,
-            text: "the checksum file lists nothing".into(),
-        });
+        return Err(unreadable(0, "the checksum list names nothing"));
     };
     let algorithm = first.algorithm;
     if let Some(mixed) = lines.iter().position(|l| l.algorithm != algorithm) {
-        return Err(Error::ChecksumLine {
-            line: mixed + 1,
-            text: "mixed MD5 and SHA-256 lines".into(),
-        });
-    }
-    if algorithm == Algorithm::Md5 {
-        return Err(Error::Unbuilt {
-            what: "MD5 comparison of provider checksums",
-        });
+        return Err(unreadable(mixed + 1, "mixed MD5 and SHA-256 lines"));
     }
     let mut mismatches = Vec::new();
     for l in lines {
         let name = l.name.strip_prefix("./").unwrap_or(&l.name);
-        let found = entries
-            .iter()
-            .find(|(n, _)| n == name)
-            .map(|(_, fp)| fp.as_str().trim_start_matches("sha256:") == l.hex);
-        if found != Some(true) {
+        let entry = entries.iter().find(|e| e.name == name);
+        let matched = match (entry, algorithm) {
+            (None, _) => false,
+            (Some(e), Algorithm::Sha256) => {
+                e.fingerprint.as_str().trim_start_matches("sha256:") == l.hex
+            }
+            (Some(e), Algorithm::Md5) => md5_hex(&e.path)? == l.hex,
+        };
+        if !matched {
             mismatches.push(l.name.clone());
         }
     }
@@ -224,23 +259,39 @@ mod tests {
         let l2 = parse_checksums(&bsd).unwrap();
         assert_eq!(l2[0].name, "data/a.txt");
         assert_eq!(l2[1].algorithm, Algorithm::Md5);
-        assert!(matches!(
-            parse_checksums("not a checksum\n"),
-            Err(Error::ChecksumLine { line: 1, .. })
-        ));
-        assert!(
-            matches!(compare(&l2, &[]), Err(Error::ChecksumLine { .. })),
+        assert_eq!(
+            parse_checksums("not a checksum\n")
+                .unwrap_err()
+                .catalog_code(),
+            Some(Code::E3006)
+        );
+        assert_eq!(
+            compare(&l2, &[]).unwrap_err().catalog_code(),
+            Some(Code::E3006),
             "mixed"
         );
-        assert!(matches!(compare(&l2[1..], &[]), Err(Error::Unbuilt { .. })));
         let fp = EventId::parse(SHA).unwrap();
-        let entries = vec![("data/a.txt".to_owned(), fp.clone())];
+        let entries = vec![Entry {
+            name: "data/a.txt".to_owned(),
+            path: PathBuf::new(),
+            fingerprint: fp.clone(),
+        }];
         let c = compare(&lines, &entries).unwrap();
         assert!(!c.matched);
         assert_eq!(c.mismatches, ["b.bin"]);
         assert_eq!(c.refusal().unwrap().catalog_code(), Some(Code::E3004));
         let c = compare(&lines[..1], &entries).unwrap();
         assert!(c.matched && c.refusal().is_none());
+        // An MD5 list hashes the entries' bytes.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.txt"), b"").unwrap();
+        let md5 = parse_checksums("d41d8cd98f00b204e9800998ecf8427e  a.txt\n").unwrap();
+        let e = vec![Entry {
+            name: "a.txt".into(),
+            path: dir.path().join("a.txt"),
+            fingerprint: fp,
+        }];
+        assert!(compare(&md5, &e).unwrap().matched, "md5 of the empty file");
         let ev = c
             .event(FileHandle(3), &VersionHandle::parse("F3@v1").unwrap())
             .unwrap();

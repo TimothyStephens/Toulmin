@@ -44,7 +44,7 @@ pub enum Error {
         /// The cause.
         source: std::io::Error,
     },
-    /// A catalog error (`E3001` to `E3301`) or a formats error.
+    /// A catalog error (`E3001` to `E3302`) or a formats error.
     Format(FormatError),
     /// The `DuckDB` engine refused (item 47 reads text tables through it).
     Engine(tm_duckdb::Error),
@@ -54,27 +54,6 @@ pub enum Error {
     Parquet(parquet::errors::ParquetError),
     /// SQLite refused (the fold).
     Index(tm_index::Error),
-    /// `lopdf` could not read a page tree; no catalog code names this.
-    Pdf {
-        /// The file.
-        path: PathBuf,
-        /// `lopdf`'s message.
-        message: String,
-    },
-    /// A checksum file line that is neither the GNU nor the BSD form; no
-    /// catalog code names this.
-    ChecksumLine {
-        /// The 1-based line.
-        line: usize,
-        /// The text.
-        text: String,
-    },
-    /// A function the design asks for that needs a dependency not on item
-    /// 1's list (reported as a rule 4 collision in the P3 report).
-    Unbuilt {
-        /// What is missing.
-        what: &'static str,
-    },
 }
 
 /// Alias for results in this crate.
@@ -115,19 +94,6 @@ impl fmt::Display for Error {
             Error::Arrow(e) => write!(f, "Arrow: {e}"),
             Error::Parquet(e) => write!(f, "Parquet: {e}"),
             Error::Index(e) => write!(f, "index: {e}"),
-            Error::Pdf { path, message } => {
-                write!(f, "{}: not a readable PDF: {message}", path.display())
-            }
-            Error::ChecksumLine { line, text } => {
-                write!(
-                    f,
-                    "checksum file line {line} is not a checksum line: {text:?}"
-                )
-            }
-            Error::Unbuilt { what } => write!(
-                f,
-                "{what} is not built: it needs a dependency that is not on the settled list (rule 4)"
-            ),
         }
     }
 }

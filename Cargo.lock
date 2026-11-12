@@ -1498,7 +1498,9 @@ version = "0.1.0"
 dependencies = [
  "arrow",
  "bigdecimal",
+ "flate2",
  "lopdf",
+ "md-5",
  "parquet",
  "serde_json",
  "sha2",

@@ -485,11 +485,17 @@ fn check_manifest(v: &Value, at: &str) -> Result<(), Error> {
             ));
         }
     }
-    let fp = id_of(&m["entries"]).map_err(|x| x.in_envelope(at))?;
+    // 11.16 (decision 10 as amended 2026-11-11): the fingerprint digests
+    // `[{"path","fingerprint"}]` in entry order; snapshots stay outside it.
+    let pairs: Vec<Value> = entries
+        .iter()
+        .map(|e| serde_json::json!({"path": e["path"], "fingerprint": e["fingerprint"]}))
+        .collect();
+    let fp = id_of(&Value::Array(pairs)).map_err(|x| x.in_envelope(at))?;
     if m["fingerprint"].as_str() != Some(fp.as_str()) {
         return Err(e(
             &ptr(at, "fingerprint"),
-            "the fingerprint is the ID of the canonical entries",
+            "the fingerprint is the ID of the entries' [{path, fingerprint}] list",
         ));
     }
     Ok(())

@@ -2,18 +2,20 @@
 //! with its kept state, origin, and content label. A candidate (what
 //! `tm-fsfacts` found at a path now) becomes a new input version only when
 //! it differs from the latest version under all three equivalences: same
-//! bytes, same table by key, same decompressed content.
+//! bytes, same table by key, same decompressed content (`.gz` and `.bgz`,
+//! the latter concatenated gzip members, read with a multi-member decoder).
 
 use std::collections::BTreeMap;
 use std::path::Path;
 
 use arrow::array::RecordBatch;
+use flate2::read::MultiGzDecoder;
 use serde_json::{Value, json};
 use tm_formats::events::{EventType, KnownEvent};
 use tm_formats::id::{EventId, FileHandle, VersionHandle};
 use tm_formats::parse_spec::ParseSpec;
 use tm_formats::typed_value::TypedValue;
-use tm_fsfacts::hash::{HashSettings, hash_file};
+use tm_fsfacts::hash::{HashSettings, hash_file, hash_reader};
 use tm_fsfacts::manifest::Manifest;
 use tm_fsfacts::snapshot::Snapshot;
 
@@ -89,6 +91,8 @@ pub struct Candidate {
     pub snapshot: Snapshot,
     /// The 11.16 `manifest` object for a directory, `None` for a file.
     pub manifest: Option<Value>,
+    /// `sha256:` of the decompressed bytes, for a `.gz` or `.bgz` file.
+    pub decompressed: Option<EventId>,
 }
 
 impl Candidate {
@@ -98,11 +102,17 @@ impl Candidate {
     /// `Error::Io`.
     pub fn of_file(path: &Path, settings: &HashSettings) -> Result<Candidate> {
         let hashed = hash_file(path, settings)?;
+        let decompressed = if is_compressed_name(path) {
+            Some(decompressed_fingerprint(path, settings)?)
+        } else {
+            None
+        };
         Ok(Candidate {
             fingerprint: hashed.fingerprint,
             size: hashed.bytes,
             snapshot: Snapshot::take(path)?,
             manifest: None,
+            decompressed,
         })
     }
 
@@ -121,6 +131,7 @@ impl Candidate {
             size: manifest.size(),
             snapshot: Snapshot::take(path)?,
             manifest: Some(manifest.to_json()?),
+            decompressed: None,
         })
     }
 }
@@ -143,6 +154,9 @@ pub struct Version {
     pub content_label: Option<ContentLabel>,
     /// The directory manifest, for a directory version.
     pub manifest: Option<Value>,
+    /// `sha256:` of the decompressed bytes, for a `.gz` or `.bgz` version
+    /// (not in the event body; the Core keeps it in the stat cache, 11.17).
+    pub decompressed: Option<EventId>,
     /// Kept state.
     pub kept: Kept,
 }
@@ -177,16 +191,15 @@ pub fn is_compressed_name(path: &Path) -> bool {
 }
 
 /// The fingerprint of a `.gz` or `.bgz` file's decompressed bytes, which
-/// the third equivalence compares.
+/// the third equivalence compares: every gzip member is read in turn
+/// (`.bgz` is concatenated members), through the hashing settings.
 ///
 /// # Errors
-/// [`Error::Unbuilt`]: inflating gzip needs a dependency that is not on
-/// item 1's list, which the P3 report carries as a rule 4 collision.
-pub fn decompressed_fingerprint(path: &Path) -> Result<EventId> {
-    let _ = path;
-    Err(Error::Unbuilt {
-        what: "the decompressed-content equivalence for .gz and .bgz files",
-    })
+/// `Error::Io`, including a stream that is not gzip.
+pub fn decompressed_fingerprint(path: &Path, settings: &HashSettings) -> Result<EventId> {
+    let file = std::fs::File::open(path).map_err(|e| Error::io(path, e))?;
+    let decoder = MultiGzDecoder::new(file);
+    Ok(hash_reader(decoder, path, settings)?.fingerprint)
 }
 
 fn values_equal(a: &TypedValue, b: &TypedValue) -> bool {
@@ -232,17 +245,17 @@ pub fn same_table_by_key(
     }))
 }
 
-/// Decide how `candidate` at `path` relates to `previous`. `tables` carries
-/// the previous version's parsed table (from the parse cache) and the
-/// candidate's, with the identity's spec, when the identity has one.
+/// Decide how `candidate` relates to `previous`. `tables` carries the
+/// previous version's parsed table (from the parse cache) and the
+/// candidate's, with the identity's spec, when the identity has one; the
+/// decompressed fingerprints are the two values' own.
 ///
 /// # Errors
-/// As [`same_table_by_key`] and [`decompressed_fingerprint`].
+/// As [`same_table_by_key`].
 pub fn equivalence(
     previous: &Version,
     candidate: &Candidate,
     tables: Option<(&RecordBatch, &RecordBatch, &ParseSpec)>,
-    path: &Path,
 ) -> Result<Equivalence> {
     if previous.fingerprint == candidate.fingerprint {
         return Ok(Equivalence::SameBytes);
@@ -252,10 +265,10 @@ pub fn equivalence(
     {
         return Ok(Equivalence::SameTableByKey);
     }
-    if is_compressed_name(path) {
-        // Needs the previous version's decompressed fingerprint too; the
-        // function reports the rule 4 collision before that matters.
-        decompressed_fingerprint(path)?;
+    if let (Some(a), Some(b)) = (&previous.decompressed, &candidate.decompressed)
+        && a == b
+    {
+        return Ok(Equivalence::SameDecompressed);
     }
     Ok(Equivalence::Different)
 }
@@ -312,6 +325,7 @@ impl Version {
                 origin,
                 content_label,
                 manifest: candidate.manifest.clone(),
+                decompressed: candidate.decompressed.clone(),
                 kept: Kept::No,
             },
             ev,
@@ -399,6 +413,7 @@ impl Version {
             origin,
             content_label,
             manifest: ev.get("manifest").filter(|m| !m.is_null()).cloned(),
+            decompressed: None,
             kept: Kept::No,
         })
     }
