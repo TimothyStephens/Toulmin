@@ -848,3 +848,57 @@ that fingerprint, which changes a frozen P1 line and its ID.
 decision 10 had before the owner's 2026-11-11 ruling amended it, and a
 directory version from `tm-fsfacts` could not validate while both stood.
 
+## 2026-11-12 P3 review B1: every byte-different candidate is a new version; the label carries the equivalence
+
+**What.** Item 45: a candidate with the latest version's fingerprint adds
+no version; one with another fingerprint is version `n + 1`,
+`content_changed` when it differs under all three equivalences, else
+`metadata_only`. 5.6's `metadata only` row is on any version with the
+reason "snapshot or bytes changed, content did not"; section 8 rule 2
+counts a `metadata_only` or `carried_forward` version as the version it
+equals. `Version::next` takes the `Equivalence` and sets the label; the
+equivalent short-circuit stays only for same bytes. This replaces the
+P3 entry "when an input gets a new version".
+
+**Why.** The P3 review (B1): under the earlier rule a re-sorted table or
+a recompressed `.gz` left the latest version's fingerprint one the disk
+no longer matched, so 7.3 flagged every citing claim `evidence moved`,
+`tm audit` reported `E3401` on an unchanged project, and a later keep
+failed `E3203`. Run outputs already work the other way (a carried-forward
+rerun is a version with a label), and the label, not the absence of a
+version, is what stops the spread (D22).
+
+## 2026-11-12 P3 review M1: `file.version_added` `tv` 2 carries the decompressed fingerprint
+
+**What.** 11.16 gains the `tv` 2 row: `tv` 1's keys plus
+`decompressed_fingerprint`, an ID for a `.gz` or `.bgz` version and
+`null` otherwise. 11.17's `file_versions` gains the column and
+`stat_cache` loses it; 11.5's receipt gains `decompressed` beside
+`hashes`, computed by the wrapper (gate C). `tm-formats` validates both
+versions; Files writes `tv` 2; the fold fills the column; two envelope
+cases for `tv` 2 are added (no P1 case changes). This replaces the P3
+entry that placed the digest in the stat cache.
+
+**Why.** The P3 review (M1): a node-local cache cannot label a version
+on a second login node, so the third equivalence would have held on one
+node and not another, against D22 and G7. The body is on every node; the
+`tv` machinery of 11.11 and 11.16 exists for exactly this change.
+
+## 2026-11-12 P3 review nits N1 to N7
+
+**What.** Item 46: `hash` is a transition (registered, no version, or
+`--again`; `E3005` otherwise) and the two refusals the code makes are
+stated. Item 82a: P8 fills `expected.json` from the README's answers
+before the scenario tests run. Item 47 and 11.6, 11.7: `table.spec`
+records the larger of the draft's scale and the largest seen; Parquet
+decimals are read at their declared scale as written; a key cell that is
+`missing`, `nan`, or `inf` is `E3102`. The hashing budget row notes the
+two passes a compressed entry costs.
+
+**Why.** Each was a gap the review named. On the scale rule the builder
+chose the larger of draft and observed: an owner can then reserve room
+for a later version without changing the spec fingerprint every claim's
+`versions.parse_specs` records, and `E3102` still guards beyond the
+reserved scale; the cost is that a reserved scale wider than the data
+widens the DuckDB `DECIMAL(38, s)` column, which changes no value.
+
