@@ -699,3 +699,16 @@ a temporary directory, empty directories dropped, `diff -r` against
 generator; the diff makes every writer change that alters bytes a visible
 review item, which is what the formats cases give P1.
 
+## 2026-11-12 P2 re-audit N1b: the displaced holder is read from `lock.stale`
+
+**What.** 3.1: the taker reads `main/lock.stale` before removing it; when
+it parses as a holder, that holder is the one displaced, whichever waiter
+won the rename. `finish_lock` does so and uses it when the acquiring
+waiter did not rename anything itself.
+
+**Why.** The re-audit (N1b): with two waiters, the one that renamed the
+stale lock aside can lose the `O_EXCL` create to the other, which clears
+nothing and queued nothing, so the epoch moved but no `lock.taken_over`
+was recorded. The side file is exactly the broken lock's content, so
+reading it completes the audit trail whichever waiter wins.
+
