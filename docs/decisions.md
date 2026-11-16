@@ -962,3 +962,21 @@ positional.
 2026-11-16) makes exponent literals valid and names this case as one to
 regenerate. A frozen P1 case changes only because the design it froze
 changed (c1312c9).
+
+## 2026-11-16 P4: tm-files reads exponent cells in dec columns (ruling 32)
+
+**What.** Before this change a `dec` cell written with an exponent
+(`3.2e-15`) was `E3102` ("is not dec"); a `float64` cell already read
+exponents through Rust's `f64` parser, as item 47 states. Now a `dec`
+cell may carry `[eE][+-]?DIGIT+` after its `dec` `v` form; it is
+converted exactly to positional form (`tm_formats::typed_value::
+parse_dec_written`) before the column-scale rule, both when `table.spec`
+measures the largest scale and when a version is parsed. An `int` cell
+with an exponent stays `E3102`. The converter refuses an exponent whose
+positional form needs more than 38 digits before or after the point,
+which `DECIMAL(38, s)` could not hold anyway (`E3102`, 11.6), so a cell
+like `1e999999` cannot make the reader allocate a million-digit string.
+A fixture-level test reads `3.2e-15` in a `dec` column and `1.5E+300` in
+a `float64` column.
+
+**Why.** Ruling 32 and 11.7 as amended in c1312c9.

@@ -266,6 +266,40 @@ pub fn parse_dec_text(s: &str) -> Option<BigDecimal> {
     Some(BigDecimal::new(n, i64::try_from(frac.len()).ok()?))
 }
 
+/// A `dec` cell of a text table (11.6, 11.7; ruling 32): the `dec` `v`
+/// form, optionally followed by an exponent `[eE][+-]?[0-9]+`, converted
+/// exactly to positional notation. The scale is the number of digits after
+/// the point once written positionally, minimum 0: `1e3` is `1000` (scale
+/// 0), `1.50e-2` is `0.0150` (scale 4). Without an exponent this is
+/// [`parse_dec_text`]. `None` for any other text, and for an exponent
+/// whose positional form would need more than `limit` digits before or
+/// after the point (a caller storing `DECIMAL(38, s)` passes 38, since
+/// such a value cannot fit there anyway).
+#[must_use]
+pub fn parse_dec_written(s: &str, limit: u32) -> Option<BigDecimal> {
+    let Some(at) = s.find(['e', 'E']) else {
+        return parse_dec_text(s);
+    };
+    let (mantissa, exp) = (&s[..at], &s[at + 1..]);
+    let digits = exp.strip_prefix(['+', '-']).unwrap_or(exp);
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let (n, frac) = parse_dec_text(mantissa)?.as_bigint_and_exponent();
+    let exp: i64 = exp.parse().ok()?;
+    let scale = frac.checked_sub(exp)?;
+    let width = i64::try_from(n.magnitude().to_string().len()).ok()?;
+    let limit = i64::from(limit);
+    if scale > limit || width.checked_sub(scale)? > limit {
+        return None;
+    }
+    if scale >= 0 {
+        return Some(BigDecimal::new(n, scale));
+    }
+    let shift = u32::try_from(-scale).ok()?;
+    Some(BigDecimal::new(n * BigInt::from(10).pow(shift), 0))
+}
+
 /// The positional text of a decimal: no exponent, scale kept, no minus on
 /// zero. A negative scale is written as trailing zeros.
 #[must_use]
@@ -984,6 +1018,35 @@ mod tests {
         // Negative zero from arithmetic is written without its sign.
         let z = dec("-1.50") * BigDecimal::from(0);
         assert_eq!(dec_text(&z), "0.00");
+    }
+
+    #[test]
+    fn exponent_text_is_converted_to_positional() {
+        let w = |s: &str| parse_dec_written(s, 38).map(|d| dec_text(&d));
+        assert_eq!(w("1e3").as_deref(), Some("1000"));
+        assert_eq!(w("1.50e-2").as_deref(), Some("0.0150"));
+        assert_eq!(w("3.2e-15").as_deref(), Some("0.0000000000000032"));
+        assert_eq!(w("1.500E+2").as_deref(), Some("150.0"));
+        assert_eq!(w("-2.5E1").as_deref(), Some("-25"));
+        assert_eq!(w("0e5").as_deref(), Some("0"));
+        assert_eq!(w("0.00e1").as_deref(), Some("0.0"));
+        assert_eq!(w("1.25").as_deref(), Some("1.25"), "no exponent");
+        for bad in [
+            "1e",
+            "1e+",
+            "e5",
+            "1.e5",
+            "01e5",
+            "-0e5",
+            "1e5.0",
+            "1e9999999999999999999",
+        ] {
+            assert!(w(bad).is_none(), "{bad}");
+        }
+        // Past the limit on either side of the point.
+        assert!(w("1e-39").is_none());
+        assert!(w("1e38").is_none());
+        assert_eq!(w("1e37").map(|s| s.len()), Some(38));
     }
 
     #[test]

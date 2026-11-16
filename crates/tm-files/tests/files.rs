@@ -463,6 +463,69 @@ fn a_spec_with_each_type_and_the_parse_failures() {
 }
 
 #[test]
+fn exponent_cells_in_dec_and_float64_columns() {
+    // Ruling 32 (11.6, 11.7): a dec cell with an exponent is converted to
+    // positional form before the column-scale rule; a float64 cell is read
+    // as an IEEE double and stored shortest round trip, positional.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let path = tmp.path().join("exp.csv");
+    fs::write(&path, "k,d,f\na,3.2e-15,1.5E+300\nb,1.50e-2,2\n").unwrap();
+    let draft = json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "d", "type": "dec", "missing": []},
+            {"name": "f", "type": "float64", "missing": []}
+        ],
+        "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+    });
+    let table = complete_spec(&path, &draft, &st).unwrap();
+    assert_eq!(
+        table.spec.column("d").unwrap().scale,
+        Some(16),
+        "3.2e-15 is 0.0000000000000032, scale 16"
+    );
+    let rows = typed_rows(&table.batch, &table.spec).unwrap();
+    assert_eq!(rows[0][1].to_json()["v"], "0.0000000000000032");
+    assert_eq!(
+        rows[1][1].to_json()["v"],
+        "0.0150000000000000",
+        "1.50e-2 is 0.0150 (scale 4), then written at the column's scale 16"
+    );
+    assert_eq!(
+        rows[0][2].to_json()["v"],
+        format!("15{}", "0".repeat(299)),
+        "1.5E+300 in positional notation"
+    );
+    // The same file under the completed spec parses to the same rows.
+    let again = parse(&path, &table.spec, &st).unwrap();
+    assert_eq!(typed_rows(&again, &table.spec).unwrap(), rows);
+    // A later version whose exponent cell needs a larger scale is E3102.
+    fs::write(tmp.path().join("finer.csv"), "k,d,f\nc,1e-17,1\n").unwrap();
+    assert_eq!(
+        parse(&tmp.path().join("finer.csv"), &table.spec, &st)
+            .unwrap_err()
+            .catalog_code(),
+        Some(Code::E3102)
+    );
+    // An int column takes no exponent.
+    fs::write(tmp.path().join("int.csv"), "k,n\na,1e3\n").unwrap();
+    let spec_kn = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [{"name": "k", "type": "str", "missing": []}, {"name": "n", "type": "int", "missing": []}],
+        "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+    }))
+    .unwrap();
+    assert_eq!(
+        parse(&tmp.path().join("int.csv"), &spec_kn, &st)
+            .unwrap_err()
+            .catalog_code(),
+        Some(Code::E3102)
+    );
+}
+
+#[test]
 fn a_duplicate_key_is_e3101_with_the_values() {
     let tmp = tempfile::tempdir().unwrap();
     let st = settings(tmp.path());
