@@ -904,3 +904,44 @@ for a later version without changing the spec fingerprint every claim's
 reserved scale; the cost is that a reserved scale wider than the data
 widens the DuckDB `DECIMAL(38, s)` column, which changes no value.
 
+
+## 2026-11-16 P4: the checker.md sign-off applied to the design (rulings 1 to 34)
+
+**What.** `docs/decisions/checker-spec-review.md`'s 34 rulings land in
+the design in one commit: 11.6, 11.7, 11.8, 11.9, 11.12, 11.18.1 to
+11.18.4, 11.20, section 9's read-interface row, section 10's
+`claims.evidence` row, and items 47, 55, and 92. The four contradictions
+(rows 5, 16, 20, 23) lose their losing sentence: "Parsed values keep the
+scale as written", "Decimal overflow beyond 34 digits gives verdict
+`error`", "`tol` is `{"abs":"0","rel":"0"}` by default", and "the row's
+rank in the final table". Row 12's sentence is copied from item 47 into
+11.7 verbatim; item 92 carries rows 1, 2, 3, and 22 verbatim.
+`docs/spec/checker.md` and `docs/spec/formats.md` are regenerated in the
+same commit so `spec-drift.sh` stays green.
+
+Ruling 32's rule as the owner gave it at sign-off: the exponent part is
+`[eE][+-]?DIGIT+` after an `INT` or `DEC`; a number with an exponent is
+always a `dec`; its scale is the number of digits after the point once
+written positionally, minimum 0 (`1e3` is `1000`, scale 0; `1.50e-2` is
+`0.0150`, scale 4); unary minus stays an operator and the minus inside an
+exponent belongs to the literal. In a CSV `dec` column the same
+conversion runs before 11.7's column-scale rule (row 5).
+
+Three placements the table left to the editor:
+- Ruling 34's "tm-checker item that defines the result type" is item 55
+  (`run.rs`), not item 58 (`verdict.rs`): item 58's `Verdict` is the
+  `claim.checked` body, and putting per-step tables there would change
+  11.16 and every stored event; item 55 already owns per-step outputs.
+- Rulings 33 and 34 name "section 9's `claims.evidence` row". Section 9
+  has only the read-interface row that mentions `claims.evidence`;
+  section 10 holds the query's row. Both are edited. The query's
+  `truncated` field and "with neighbors" are replaced by each step's true
+  row count, since ruling 33 moves highlighting from cited rows to the
+  final step.
+- Item 47's "the token must read as the column's type in its 11.6 `v`
+  form" would have contradicted ruling 32 for `dec` cells; it gains the
+  exponent exception, and its largest-fraction rule counts digits in
+  positional form.
+
+**Why.** The owner signed all 31 case-writer rulings and added 32 to 34
+on 2026-11-16 (`docs/decisions/checker-spec-review.md`).
