@@ -945,3 +945,20 @@ Three placements the table left to the editor:
 
 **Why.** The owner signed all 31 case-writer rulings and added 32 to 34
 on 2026-11-16 (`docs/decisions/checker-spec-review.md`).
+
+## 2026-11-16 P4: the expression lexer reads exponent literals; a P1 case changes (ruling 32)
+
+**What.** `tm-formats`' lexer accepts `EXPNUM` per 11.18.1: an `INT` or
+`DEC` followed by `[eE][+-]?DIGIT+` is one `dec` literal, kept as written
+for `{expr}`. The P1 case `conformance/formats/expr/err_exponent.json`
+(`a > 1e5`, `E6006`) is regenerated as a valid case and renamed
+`literal_exponent.json` (render `a > 1e5`, type `bool`);
+`literal_exponent_unary_minus.json` is added (`a * -1.50e-2`, type `dec`:
+unary minus on a literal whose exponent carries its own minus).
+`typed_values/dec_exponent.json` is unchanged: a typed value's `v` stays
+positional.
+
+**Why.** Ruling 32 of `docs/decisions/checker-spec-review.md` (owner,
+2026-11-16) makes exponent literals valid and names this case as one to
+regenerate. A frozen P1 case changes only because the design it froze
+changed (c1312c9).

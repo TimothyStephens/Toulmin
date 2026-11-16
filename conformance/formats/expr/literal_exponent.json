@@ -1,5 +1,5 @@
 {
-  "description": "no exponent form",
+  "description": "an exponent literal is accepted and rendered as written (11.18.1, ruling 32)",
   "input": "a > 1e5",
   "columns": {
     "a": "int",
@@ -15,7 +15,7 @@
     "and": "bool"
   },
   "expect": {
-    "code": "E6006",
-    "field": ""
+    "render": "a > 1e5",
+    "type": "bool"
   }
 }

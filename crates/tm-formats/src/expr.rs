@@ -15,7 +15,9 @@ use crate::typed_value::Tag;
 pub enum Lit {
     /// `INT`, digits as written.
     Int(String),
-    /// `DEC`, digits as written.
+    /// `DEC` or `EXPNUM` (11.18.1), as written, an exponent included; a
+    /// literal with an exponent is a `dec` whose positional value 11.6
+    /// states, and `{expr}` keeps it as written (11.18.4).
     Dec(String),
     /// `STRING`, decoded.
     Str(String),
@@ -182,6 +184,7 @@ fn lex(src: &str, at: &str) -> Result<Vec<Tok>, Error> {
             while i < b.len() && b[i].is_ascii_digit() {
                 i += 1;
             }
+            let mut dec = false;
             if i < b.len() && b[i] == b'.' {
                 let p = i;
                 i += 1;
@@ -195,10 +198,23 @@ fn lex(src: &str, at: &str) -> Result<Vec<Tok>, Error> {
                         format!("a decimal needs digits after the point at offset {p}"),
                     ));
                 }
-                out.push(Tok::Dec(src[s..i].to_owned()));
-            } else {
-                out.push(Tok::Int(src[s..i].to_owned()));
+                dec = true;
             }
+            // EXPNUM: `[eE][+-]?DIGIT+` after an INT or DEC (11.18.1); the
+            // sign belongs to the literal. An `e` not followed by exponent
+            // digits is left to lex as a name, which the parser refuses.
+            if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+                let sign = usize::from(matches!(b.get(i + 1), Some(b'+' | b'-')));
+                if b.get(i + 1 + sign).is_some_and(u8::is_ascii_digit) {
+                    i += 1 + sign;
+                    while i < b.len() && b[i].is_ascii_digit() {
+                        i += 1;
+                    }
+                    dec = true;
+                }
+            }
+            let text = src[s..i].to_owned();
+            out.push(if dec { Tok::Dec(text) } else { Tok::Int(text) });
             continue;
         }
         if c.is_ascii_alphabetic() || c == b'_' {
@@ -767,6 +783,11 @@ mod tests {
         );
         assert_eq!(r("log > 1"), "log > 1");
         assert_eq!(r("(a < b) = c"), "(a < b) = c");
+        assert_eq!(r("a>1e5"), "a > 1e5");
+        assert_eq!(r("a * -1.50e-2"), "a * -1.50e-2");
+        assert_eq!(r("-1e-10"), "-1e-10");
+        assert_eq!(r("a -1E+3"), "a - 1E+3");
+        assert_eq!(r("2.5E10/a"), "2.5E10 / a");
     }
 
     #[test]
@@ -787,6 +808,12 @@ mod tests {
             "(a",
             "a !b",
             "a = = b",
+            "1e",
+            "1e+",
+            "1e-a",
+            "1e5e5",
+            "1 e5",
+            "1.e5",
         ] {
             assert_eq!(code(s), Code::E6006, "{s}");
         }
@@ -807,6 +834,13 @@ mod tests {
         assert_eq!(ty("i + i").unwrap(), Some(Tag::Int));
         assert_eq!(ty("i + d").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("i / i").unwrap(), Some(Tag::Dec));
+        assert_eq!(
+            ty("1e3").unwrap(),
+            Some(Tag::Dec),
+            "an exponent makes a dec"
+        );
+        assert_eq!(ty("i + 1e3").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("-1e-10").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("log(i)").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("coalesce(i, missing, d)").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("missing").unwrap(), None);
