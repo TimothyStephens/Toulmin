@@ -7,8 +7,11 @@
 
 use std::fmt::Write as _;
 
+use bigdecimal::BigDecimal;
+use bigdecimal::num_bigint::BigInt;
+
 use crate::errors::{Code, Error};
-use crate::typed_value::Tag;
+use crate::typed_value::{Tag, TypedValue};
 
 /// A literal, kept as written.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,6 +28,42 @@ pub enum Lit {
     Bool(bool),
     /// `missing`.
     Missing,
+}
+
+impl Lit {
+    /// The literal's typed value, the one the evaluator uses (11.18.1).
+    /// An `INT` is its digits; a `DEC` keeps its fraction digits as scale;
+    /// a literal with an exponent is converted to positional notation
+    /// before any arithmetic, its scale the digits after the point once
+    /// written positionally, minimum 0, so `1e3` is `1000` (scale 0) and
+    /// `1.5e-2` is `0.015` (scale 3) (11.6; rulings 32 and 45). `None` for
+    /// a number whose written exponent does not fit an `i64`; validation
+    /// refuses any literal outside the context range first (ruling 36), so
+    /// a validated expression never gives `None`.
+    #[must_use]
+    pub fn value(&self) -> Option<TypedValue> {
+        Some(match self {
+            Lit::Int(s) => TypedValue::Int(s.parse().ok()?),
+            Lit::Dec(s) => {
+                let (mantissa, exp) = match s.find(['e', 'E']) {
+                    Some(at) => (&s[..at], s[at + 1..].parse::<i64>().ok()?),
+                    None => (s.as_str(), 0),
+                };
+                let (int, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+                let n: BigInt = [int, frac].concat().parse().ok()?;
+                let scale = i64::try_from(frac.len()).ok()?.checked_sub(exp)?;
+                if scale >= 0 {
+                    TypedValue::Dec(BigDecimal::new(n, scale))
+                } else {
+                    let shift = u32::try_from(-scale).ok()?;
+                    TypedValue::Dec(BigDecimal::new(n * BigInt::from(10).pow(shift), 0))
+                }
+            }
+            Lit::Str(s) => TypedValue::str_nfc(s),
+            Lit::Bool(b) => TypedValue::Bool(*b),
+            Lit::Missing => TypedValue::Missing,
+        })
+    }
 }
 
 /// A binary operator.
@@ -858,6 +897,34 @@ mod tests {
         ] {
             assert_eq!(code(s), Code::E6006, "{s}");
         }
+    }
+
+    #[test]
+    fn exponent_literals_are_positional_decs() {
+        // Ruling 45: positional before any arithmetic.
+        let v = |s: &str| match parse(s, "/x").unwrap() {
+            Expr::Lit(l) => l.value().unwrap(),
+            other => panic!("{other:?}"),
+        };
+        let scale = |s: &str| match v(s) {
+            TypedValue::Dec(d) => (
+                crate::typed_value::dec_text(&d),
+                d.as_bigint_and_exponent().1,
+            ),
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(scale("1e3"), ("1000".into(), 0));
+        assert_eq!(scale("1.5e-2"), ("0.015".into(), 3));
+        assert_eq!(scale("1.50e-2"), ("0.0150".into(), 4));
+        assert_eq!(scale("1.500E+2"), ("150.0".into(), 1));
+        assert_eq!(scale("2.50"), ("2.50".into(), 2));
+        assert_eq!(scale("007.5e1"), ("75".into(), 0));
+        assert_eq!(v("042"), TypedValue::Int(42.into()));
+        // 1.5 * 1e3 is 1500.0: the scales add once 1e3 is positional.
+        let (TypedValue::Dec(a), TypedValue::Dec(b)) = (v("1.5"), v("1e3")) else {
+            panic!()
+        };
+        assert_eq!(crate::typed_value::dec_text(&(a * b)), "1500.0");
     }
 
     #[test]

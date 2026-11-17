@@ -1074,3 +1074,17 @@ measured the positional fraction with trailing zeros (a first version
 holding `0.0010` gave scale 4).
 
 **Why.** Ruling 46 and 11.7 as amended in 1f033e1.
+
+## 2026-11-17 P4: an exponent literal gives the evaluator a positional dec (ruling 45)
+
+**What.** Before this change no code turned an expression literal into a
+value: `Lit::Dec` held only the text as written (for `{expr}`), and the
+evaluator is P4's `tm-checker`, not yet written. `Lit::value` now gives
+each literal's typed value: an `INT` its digits, a `DEC` its fraction
+digits as scale, and a literal with an exponent converted to positional
+notation first, scale the digits after the point once positional,
+minimum 0 (`1e3` is `1000`, scale 0; `1.5e-2` is `0.015`, scale 3;
+`1.5 * 1e3` is `1500.0`). `tm-checker`'s `eval.rs` takes literal values
+from it.
+
+**Why.** Ruling 45 and 11.18.1 as amended in 1f033e1.
