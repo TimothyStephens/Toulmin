@@ -5,4 +5,5 @@ source: crates/tm-checker/tests/snapshot_sql.rs
 SELECT "row" FROM "input.de" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
 
 -- step0: c0 = "gene_id" (str), c1 = "fc" (dec), c2 = "p" (dec), c3 = "tissue" (str), c4 = "n" (int); key "gene_id"
+-- step0 also: key = the row's key tuple as canonical JSON (str)
 SELECT first("row" ORDER BY "row") AS "rep", list("row" ORDER BY "row") AS "members", count(*) AS "member_count", 'sha256:' || sha256('[' || string_agg("key", ',' ORDER BY "key" COLLATE "binary") || ']') AS "member_keys_hash", count(*) AS "a0" FROM "step0" GROUP BY "c3" ORDER BY "c3" COLLATE "binary" ASC NULLS FIRST;

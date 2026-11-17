@@ -44,11 +44,9 @@ pub(crate) const TYPES: &[TypeDef] = &[
                 "assertion",
                 Form::Null(&Form::Object(&[
                     ("outcome", Form::Choice(OUTCOMES)),
-                    // The one open form in gate A: 11.16 gives the form the
-                    // Checker writes, but the frozen P1 valid case carries a
-                    // bare typed value here, so the check stays open.
-                    ("observed", Form::Any),
-                    ("expected", Form::Expected),
+                    ("observed", Form::Observed),
+                    // `null` for `compare_rows` and `exists` (11.16).
+                    ("expected", Form::Null(&Form::Expected)),
                 ])),
             ),
             (

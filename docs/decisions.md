@@ -1188,6 +1188,9 @@ not.
 
 ## 2026-11-17 P4: assertion.observed's form is written into 11.16 but not checked
 
+**Superseded, 2026-11-17,** by the P4 review entry on M1 and M2 below:
+`observed` is now checked and the P1 cases are regenerated.
+
 **What.** 11.16 now gives the per-kind form the Checker writes for
 `claim.checked.assertion.observed` (`{"cell"}`, `{"position"}`,
 `{"count"}`, `{"left","right"}`, `{"present"}`). The body check still
@@ -1211,3 +1214,44 @@ failed on main as well as on p4-checker. chrono 0.4.45 is reached only
 through arrow 60.1, which item 1 pins exactly; no Toulmin crate depends on
 it directly. D14's check stays on everything else. Revisit at the next
 arrow upgrade: drop the entry once arrow no longer pulls chrono in.
+
+## 2026-11-17 P4 review M1 and M2: the P1 claim.checked cases change
+
+**What.** 11.16 gives `assertion.expected` a `null` for `compare_rows` and
+`exists` (M1), and `assertion.observed` one of five forms (M2), which
+`tm-formats` now checks (`Form::Null(&Form::Expected)`, `Form::Observed`).
+The two P1 cases are regenerated with
+`"observed":{"cell":{"t":"dec","v":"0.00310"}}`, which changes a frozen P1
+line and its ID:
+
+- `envelope/claim.checked.valid.json`:
+  `sha256:712f5ffbdad786c68505d08e4ec8e5ed855fb4b7b044845265d4a02372d8fa3d`
+  becomes
+  `sha256:b15c1792f9af415b1b0397075b8d61d922fed3f8e6766b6c058bd3402518564b`;
+- `envelope/claim.checked.invalid.json` (no `expect.id`; its line's ID)
+  `sha256:ccaccdb4d479d467f539428069e9400a3825c0044b0486790381c41956a6677a`
+  becomes
+  `sha256:208e229cf40ef65efaa37f782218b58da33ba091d73da01231dfc5bd7c7149a4`,
+  so that its one fault is still `/body/versions/build`.
+
+Two cases are added: `claim.checked.bare_observed.invalid.json`, whose
+line is the old valid line byte for byte (ID `sha256:712f5ffb...`), now
+`E1002` at `/body/assertion/observed`; and
+`claim.checked.compare_rows.valid.json`, with `expected` null and
+`observed` `{"left","right"}`. All four lines were written with the Python
+reference's `line_of`.
+
+**Why.** The P4 review's M1 and M2, adopted by the owner: the Checker
+writes `expected` null for two of the five kinds, which the old form
+refused, and an open `observed` could not be tightened at `tv` 1 once a
+record exists (P7). The P1 valid case was the only `observed` in the
+repository not in the per-kind form. Ruling-driven regeneration, as for
+the P3 manifest cases (2026-11-12).
+
+## 2026-11-17 P4 review N1: gap-filling decisions are logged in the code commit
+
+The review's N1: two decisions in 3accbb9 and b617d20 (with `steps` null,
+step 0 is the cited rows; emphasized columns are limited to those the
+final table has) filled design gaps in code with no `docs/decisions.md`
+entry until 5ce3cfc. From now on a decision that fills a gap during
+coding gets its entry in the same commit as the code.

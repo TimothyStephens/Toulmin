@@ -526,6 +526,41 @@ fn exponent_cells_in_dec_and_float64_columns() {
 }
 
 #[test]
+fn a_float64_text_that_overflows_a_double_is_e3102() {
+    // Ruling 53 (11.7, item 47): a finite number whose double overflows is
+    // E3102; only the declared infinity tokens produce infinity.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "f", "type": "float64", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap();
+    for text in ["1e400", "-1e400", "1.5E+309"] {
+        let path = tmp.path().join("over.csv");
+        fs::write(&path, format!("k,f\na,{text}\n")).unwrap();
+        assert_eq!(
+            parse(&path, &spec, &st).unwrap_err().catalog_code(),
+            Some(Code::E3102),
+            "{text}"
+        );
+    }
+    // The inf tokens are still values under "inf": "value", and the largest
+    // finite double still reads.
+    let path = tmp.path().join("inf.csv");
+    fs::write(&path, "k,f\na,inf\nb,-Infinity\nc,1.7976931348623157e308\n").unwrap();
+    let batch = parse(&path, &spec, &st).unwrap();
+    let rows = typed_rows(&batch, &spec).unwrap();
+    assert_eq!(rows[0][1], TypedValue::Inf(true));
+    assert_eq!(rows[1][1], TypedValue::Inf(false));
+    assert!(matches!(rows[2][1], TypedValue::Dec(_)));
+}
+
+#[test]
 fn a_dec_cell_fits_its_scale_unless_its_value_changes() {
     // Ruling 39 (11.7, item 47): extra trailing zeros are not a change.
     let tmp = tempfile::tempdir().unwrap();

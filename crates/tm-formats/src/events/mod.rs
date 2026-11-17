@@ -51,6 +51,9 @@ pub(crate) enum Form {
     Expected,
     /// An object from version handles to IDs (`versions.parse_specs`).
     SpecMap,
+    /// `claim.checked.assertion.observed`: one of the five per-kind forms
+    /// (11.16).
+    Observed,
     File,
     Version,
     Claim,
@@ -336,6 +339,7 @@ pub(crate) fn check(v: &Value, form: &Form, at: &str) -> Result<(), Error> {
             .map(|_| ())
             .ok_or_else(|| e(at, "a time YYYY-MM-DDTHH:MM:SSZ")),
         Form::Expected => check_expected(v, at),
+        Form::Observed => check_observed(v, at),
         Form::SpecMap => check_spec_map(v, at),
         Form::IntStr => s
             .filter(|s| *s == "0" || positive(s).is_some())
@@ -438,6 +442,39 @@ fn check_expected(v: &Value, at: &str) -> Result<(), Error> {
         None => check(v, &Form::Typed, at),
     }
 }
+
+/// `assertion.observed` (11.16): `{"cell"}`, `{"position"}`, `{"count"}`,
+/// `{"left","right"}`, or `{"present"}`. The forms differ in their keys, so
+/// the keys pick the form; which form an assertion's kind calls for is not
+/// visible here (the kind is in `claim.added` or `claim.revised`).
+fn check_observed(v: &Value, at: &str) -> Result<(), Error> {
+    static CELL: [(&str, Form); 1] = [("cell", Form::Null(&Form::Typed))];
+    static POSITION: [(&str, Form); 1] = [("position", Form::Null(&Form::IntFrom1))];
+    static COUNT: [(&str, Form); 1] = [("count", Form::Int)];
+    static ROWS: [(&str, Form); 2] = [
+        ("left", Form::Null(&Form::Typed)),
+        ("right", Form::Null(&Form::Typed)),
+    ];
+    static PRESENT: [(&str, Form); 1] = [("present", Form::Bool)];
+    let m = v.as_object().ok_or_else(|| e(at, OBSERVED))?;
+    let keys: &[(&str, Form)] = if m.contains_key("cell") {
+        &CELL
+    } else if m.contains_key("position") {
+        &POSITION
+    } else if m.contains_key("count") {
+        &COUNT
+    } else if m.contains_key("left") || m.contains_key("right") {
+        &ROWS
+    } else if m.contains_key("present") {
+        &PRESENT
+    } else {
+        return Err(e(at, OBSERVED));
+    };
+    check_object(m, keys, at)
+}
+
+const OBSERVED: &str =
+    "one of {\"cell\"}, {\"position\"}, {\"count\"}, {\"left\",\"right\"}, {\"present\"}";
 
 /// `versions.parse_specs`: version handles to spec fingerprint IDs.
 fn check_spec_map(v: &Value, at: &str) -> Result<(), Error> {

@@ -563,7 +563,15 @@ fn group(
     out.columns.push(("member_keys_hash".to_owned(), Tag::Str));
     for g in 0..reps.len() {
         let rep = reps[g].ok_or_else(|| Error::new(Code::E5001, "a group with no rows"))?;
-        let mut row: Vec<TypedValue> = by_idx.iter().map(|j| cur.rows[rep][*j].clone()).collect();
+        // Ruling 50 (11.18.2 group): every missing, nan, or inf value of a
+        // component is one group, and its value in the output is missing.
+        let mut row: Vec<TypedValue> = by_idx
+            .iter()
+            .map(|j| match &cur.rows[rep][*j] {
+                TypedValue::Nan | TypedValue::Inf(_) => TypedValue::Missing,
+                v => v.clone(),
+            })
+            .collect();
         for values in &agg_values {
             row.push(values.get(g).cloned().unwrap_or(TypedValue::Missing));
         }

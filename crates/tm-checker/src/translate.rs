@@ -290,6 +290,18 @@ pub fn statement(
             }
             doubles.sort_unstable();
             doubles.dedup();
+            // Name the columns registered besides the cells (11.18.2 Where).
+            let mut extra = vec![format!(
+                "{KEY} = the row's key tuple as canonical JSON (str)"
+            )];
+            extra.extend(doubles.iter().map(|j| {
+                format!(
+                    "{} = {:?} as DOUBLE (mean, median)",
+                    dbl(*j),
+                    t.columns[*j].0
+                )
+            }));
+            let _ = writeln!(sql, "-- {input} also: {}", extra.join(", "));
             let groups: Vec<String> = by.iter().map(|c| q(&col(idx(t, c)))).collect();
             let order: Vec<String> = by
                 .iter()
@@ -346,7 +358,7 @@ mod tests {
     use super::COLLATE;
 
     /// 11.10: the spelling `DuckDB` accepts, and that it orders by bytes;
-    /// the unquoted keyword is a parser error.
+    /// the unquoted keyword, in either case, is a parser error.
     #[test]
     fn collate_spelling_orders_by_bytes() {
         let e =
@@ -368,6 +380,10 @@ mod tests {
         assert_eq!(a.as_deref(), Some("B,Z,a,b,e,é"));
         assert!(
             e.query("SELECT s FROM t ORDER BY s COLLATE BINARY")
+                .is_err()
+        );
+        assert!(
+            e.query("SELECT s FROM t ORDER BY s COLLATE binary")
                 .is_err()
         );
         let sha = e

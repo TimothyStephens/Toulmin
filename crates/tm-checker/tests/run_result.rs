@@ -189,3 +189,175 @@ fn holds_verdict_body_is_valid() {
     assert!(r.verdict.body_members()["key_map"].is_array());
     checked_body(&r);
 }
+
+/// The assertion over the `de` table sorted by `fc` descending, missing
+/// last: EGFR 3.0, TP53 2.5, BRCA1 0.5, MDM2 -1.5, KRAS missing.
+fn sorted_run(assertion: &Value) -> tm_checker::RunResult {
+    let t = tables();
+    let steps = json!({"steps":1,"tables":{"de":"F1@v1"},"from":"de","ops":[
+        {"op":"sort","v":1,"by":[{"column":"fc","dir":"desc"}],"missing":"last"}
+    ]});
+    let settings = case::settings();
+    tm_checker::run(&Request {
+        tables: &t,
+        steps: Some(&steps),
+        assertion,
+        citations: &[],
+        settings: &settings,
+        limit: 100,
+    })
+}
+
+fn gene(g: &str) -> Value {
+    json!([{"t":"str","v":g}])
+}
+
+/// One verdict of each of the five assertion kinds, present and absent rows
+/// included, writes a body tm-formats accepts (11.16, review M1 and M2).
+#[test]
+fn every_assertion_kind_writes_a_valid_body() {
+    let cases: Vec<(Value, Outcome, Value, Value)> = vec![
+        (
+            json!({"assert":1,"kind":"value","row":gene("TP53"),"column":"fc","op":"eq","expected":{"t":"dec","v":"2.5"}}),
+            Outcome::Holds,
+            json!({"cell":{"t":"dec","v":"2.5"}}),
+            json!({"t":"dec","v":"2.5"}),
+        ),
+        (
+            json!({"assert":1,"kind":"value","row":gene("NOPE"),"column":"fc","op":"eq","expected":{"t":"dec","v":"2.5"}}),
+            Outcome::Fails,
+            json!({"cell":null}),
+            json!({"t":"dec","v":"2.5"}),
+        ),
+        (
+            json!({"assert":1,"kind":"rank","row":gene("TP53"),"expected":{"t":"int","v":"2"}}),
+            Outcome::Holds,
+            json!({"position":2}),
+            json!({"t":"int","v":"2"}),
+        ),
+        (
+            json!({"assert":1,"kind":"rank","row":gene("NOPE"),"expected":{"t":"int","v":"2"}}),
+            Outcome::Fails,
+            json!({"position":null}),
+            json!({"t":"int","v":"2"}),
+        ),
+        (
+            json!({"assert":1,"kind":"count","op":"between","expected":[{"t":"int","v":"4"},{"t":"int","v":"6"}]}),
+            Outcome::Holds,
+            json!({"count":5}),
+            json!([{"t":"int","v":"4"},{"t":"int","v":"6"}]),
+        ),
+        (
+            json!({"assert":1,"kind":"compare_rows","left":{"row":gene("EGFR"),"column":"fc"},
+                   "right":{"row":gene("MDM2"),"column":"fc"},"op":"gt"}),
+            Outcome::Holds,
+            json!({"left":{"t":"dec","v":"3.0"},"right":{"t":"dec","v":"-1.5"}}),
+            Value::Null,
+        ),
+        (
+            json!({"assert":1,"kind":"compare_rows","left":{"row":gene("EGFR"),"column":"fc"},
+                   "right":{"row":gene("NOPE"),"column":"fc"},"op":"gt"}),
+            Outcome::Fails,
+            json!({"left":{"t":"dec","v":"3.0"},"right":null}),
+            Value::Null,
+        ),
+        (
+            json!({"assert":1,"kind":"exists","row":gene("KRAS")}),
+            Outcome::Holds,
+            json!({"present":true}),
+            Value::Null,
+        ),
+        (
+            json!({"assert":1,"kind":"exists","row":gene("NOPE")}),
+            Outcome::Fails,
+            json!({"present":false}),
+            Value::Null,
+        ),
+    ];
+    for (assertion, outcome, observed, expected) in cases {
+        let r = sorted_run(&assertion);
+        assert_eq!(
+            r.verdict.outcome, outcome,
+            "{assertion}: {:?}",
+            r.verdict.error
+        );
+        let body = r.verdict.body_members();
+        assert_eq!(body["assertion"]["observed"], observed, "{assertion}");
+        assert_eq!(body["assertion"]["expected"], expected, "{assertion}");
+        checked_body(&r);
+    }
+}
+
+/// Ruling 50 (11.18.2 group): missing, nan, and inf `by` values fall in one
+/// group, first in group order, whose output value is missing.
+#[test]
+fn missing_nan_and_inf_group_together_as_missing() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+    let csv = tmp.path().join("t.csv");
+    std::fs::write(
+        &csv,
+        "k,g,x\na,1.5,1\nb,nan,2\nc,inf,3\nd,NA,4\ne,-inf,5\nf,1.5,6\n",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "g", "type": "float64", "missing": ["NA"]},
+            {"name": "x", "type": "int", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap_or_else(|e| panic!("{e}"));
+    let batch =
+        tm_files::parse::parse(&csv, &spec, &case::settings()).unwrap_or_else(|e| panic!("{e}"));
+    let t = BTreeMap::from([(
+        "t".to_owned(),
+        InputTable {
+            handle: "F1@v1".to_owned(),
+            spec,
+            batch,
+        },
+    )]);
+    let steps = json!({"steps":1,"tables":{"t":"F1@v1"},"from":"t","ops":[
+        {"op":"group","v":1,"by":["g"],"aggregates":[{"as":"s","fn":"sum","column":"x"}]}
+    ]});
+    let assertion = json!({"assert":1,"kind":"count","op":"eq","expected":{"t":"int","v":"2"}});
+    let settings = case::settings();
+    let r = tm_checker::run(&Request {
+        tables: &t,
+        steps: Some(&steps),
+        assertion: &assertion,
+        citations: &[],
+        settings: &settings,
+        limit: 100,
+    });
+    assert_eq!(r.verdict.outcome, Outcome::Holds, "{:?}", r.verdict.error);
+    let rows = r.final_rows.clone().unwrap_or_default();
+    // g, s, member_count (member_keys_hash not compared).
+    let head: Vec<Vec<TypedValue>> = rows.iter().map(|row| row[..3].to_vec()).collect();
+    let int = |n: i64| TypedValue::Int(n.into());
+    assert_eq!(
+        head,
+        vec![
+            vec![TypedValue::Missing, int(14), int(4)],
+            vec![
+                TypedValue::from_json(&json!({"t":"dec","v":"1.5"}), "")
+                    .unwrap_or_else(|e| panic!("{e}")),
+                int(7),
+                int(2)
+            ],
+        ]
+    );
+    assert_eq!(
+        r.verdict.key_map,
+        Some(vec![
+            vec![TypedValue::Missing],
+            vec![
+                TypedValue::from_json(&json!({"t":"dec","v":"1.5"}), "")
+                    .unwrap_or_else(|e| panic!("{e}"))
+            ]
+        ])
+    );
+    checked_body(&r);
+}
