@@ -980,3 +980,33 @@ A fixture-level test reads `3.2e-15` in a `dec` column and `1.5E+300` in
 a `float64` column.
 
 **Why.** Ruling 32 and 11.7 as amended in c1312c9.
+
+## 2026-11-17 P4: owner rulings 35 to 40 applied to the design
+
+**What.** 11.6 and 11.18.2 (Precision, Domain) fix the decimal context in
+both implementations: precision 34, `Emax` 999999, `Emin` -999999,
+half-even; Overflow past `Emax` is `E5002`; underflow is subnormal, then
+zero, and not an error (35; "the context's `Emax`" is replaced by the
+numbers). 11.18.1 and 11.6: a numeric literal whose adjusted exponent is
+outside that range is `E6004` at validation, at its `where` or `expr`
+member (36). Item 92: on error `steps`, `columns`, `final_rows`,
+`final_rows_hash`, and `key_map_hash` are each null (37). 11.20, section
+10's `claims.evidence`, and item 55: steps begin with step 0, the cited
+input table; the final step's rows all come from the key map; the rows
+and column the assertion names carry the emphasis; a capped final step
+adds every assertion-named row beyond the cap with its position (38).
+11.7 and item 47: a `dec` cell is `E3102` only when writing it at the
+column's scale would change its value, replacing the sentence ruling 5
+added (39). Ruling 40 accepts the earlier placements and needs no text.
+`docs/design/runbook-to-p1.md` section 6 gains the P8 row on `dec`
+versus `float64` columns. `docs/spec/` is regenerated in this commit.
+
+Two readings the rulings left to the editor: ruling 36 says "a numeric
+literal", so the range check covers `INT` and `DEC` literals without an
+exponent as well (a literal of a million digits is refused like
+`1e1000000`); and ruling 38 does not withdraw ruling 33's `cells`
+citation columns, so they stay in the emphasized-column list beside the
+assertion's column.
+
+**Why.** Owner rulings 35 to 40 of
+`docs/decisions/checker-spec-review.md`, 2026-11-17.
