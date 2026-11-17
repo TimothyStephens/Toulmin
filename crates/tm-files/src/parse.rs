@@ -414,18 +414,23 @@ fn typed_table(rows: &[Vec<Cell>], spec: &ParseSpec) -> Result<Vec<Vec<TypedValu
     for (i, row) in rows.iter().enumerate() {
         let mut typed = Vec::with_capacity(row.len());
         for (cell, column) in row.iter().zip(&spec.columns) {
-            let v = type_cell(cell, column, spec, i + 1)?;
+            let mut v = type_cell(cell, column, spec, i + 1)?;
             if let (SpecType::Dec, TypedValue::Dec(d), Some(scale)) = (column.ty, &v, column.scale)
-                && fraction_len(&dec_text(d)) > usize::from(scale)
             {
-                return Err(e3102(
-                    i + 1,
-                    &column.name,
-                    format!(
-                        "{} has more fraction digits than the spec's scale {scale}",
-                        dec_text(d)
-                    ),
-                ));
+                // E3102 only when writing the value at the column's scale
+                // would change it; extra trailing zeros fit (11.7, ruling 39).
+                let at_scale = d.with_scale(i64::from(scale));
+                if at_scale != *d {
+                    return Err(e3102(
+                        i + 1,
+                        &column.name,
+                        format!(
+                            "{} does not fit the spec's scale {scale} without changing its value",
+                            dec_text(d)
+                        ),
+                    ));
+                }
+                v = TypedValue::Dec(at_scale);
             }
             typed.push(v);
         }

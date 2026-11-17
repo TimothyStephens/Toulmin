@@ -526,6 +526,32 @@ fn exponent_cells_in_dec_and_float64_columns() {
 }
 
 #[test]
+fn a_dec_cell_fits_its_scale_unless_its_value_changes() {
+    // Ruling 39 (11.7, item 47): extra trailing zeros are not a change.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let spec3 = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "d", "type": "dec", "missing": [], "scale": 3}
+        ],
+        "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+    }))
+    .unwrap();
+    let path = tmp.path().join("zeros.csv");
+    fs::write(&path, "k,d\na,1.0e-3\nb,0.0010\nc,0.001\n").unwrap();
+    let rows = typed_rows(&parse(&path, &spec3, &st).unwrap(), &spec3).unwrap();
+    for row in &rows {
+        assert_eq!(row[1].to_json()["v"], "0.001", "written at scale 3");
+    }
+    let bad = tmp.path().join("bad.csv");
+    fs::write(&bad, "k,d\na,0.0011\n").unwrap();
+    let e = parse(&bad, &spec3, &st).unwrap_err();
+    assert_eq!(e.catalog_code(), Some(Code::E3102), "{e}");
+}
+
+#[test]
 fn a_duplicate_key_is_e3101_with_the_values() {
     let tmp = tempfile::tempdir().unwrap();
     let st = settings(tmp.path());

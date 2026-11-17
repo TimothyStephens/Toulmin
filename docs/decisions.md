@@ -1010,3 +1010,14 @@ assertion's column.
 
 **Why.** Owner rulings 35 to 40 of
 `docs/decisions/checker-spec-review.md`, 2026-11-17.
+
+## 2026-11-17 P4: tm-files accepts a dec cell whose extra digits are zeros (ruling 39)
+
+**What.** A parsed `dec` cell is compared with itself written at the
+column's scale; it is `E3102` only when the two values differ, and it is
+stored at the column's scale (ruling 5). A scale-3 column now accepts
+`0.0010` and `1.0e-3` as `0.001` and still refuses `0.0011`. Before,
+any fraction longer than the scale was `E3102`. `table.spec`'s scale
+measurement (the largest fraction length seen) is unchanged.
+
+**Why.** Ruling 39 and 11.7 as amended in 1b565f5.
