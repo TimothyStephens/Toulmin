@@ -1539,6 +1539,22 @@ case("float64_overflow_cell", ["ov"], "ov", [],
            "(errors.md allows null; AMBIGUITIES.md 41).")
 
 
+case("assert_names_missing_group", ["sc2"], "sc2", [group(["score"], [("n", "count", "id")])],
+     a_value([M], "n", "eq", I(2)), "holds",
+     [(4, "Group by score and compute n = count(id); 4 groups from 6 rows.")],
+     gcols(["score"], ["n"]),
+     [grp_rows({"score": M}, {"n": I(2)}, 2, [[S("d")], [S("f")]]),
+      grp_rows({"score": I(5)}, {"n": I(1)}, 1, [[S("e")]]),
+      grp_rows({"score": I(10)}, {"n": I(1)}, 1, [[S("a")]]),
+      grp_rows({"score": I(20)}, {"n": I(2)}, 2, [[S("b")], [S("c")]])], ["score"],
+     notes="sc2 scores: a 10, b 20, c 20, d missing, e 5, f missing. Group by score: the two missing values "
+           "fall in one group (11.18.2 group), sorted first, by value missing; then 5 {e}, 10 {a}, 20 {b, c}. "
+           "n = count(id): 2, 1, 1, 2; member_count the same. The output key is (score), so the final key of "
+           "the first group is [missing]. 11.9 lets a row component be missing 'to name a missing key "
+           "component', and 11.18.3 'Locating a row' matches it by grouping identity, not by =. The row "
+           "[missing] locates the first group; its n is 2 = 2: holds.")
+
+
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------
 
 EVAL = {

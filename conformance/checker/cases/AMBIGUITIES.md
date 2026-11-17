@@ -59,3 +59,5 @@ Four rulings in 11.7 and 11.18.2. New items:
 
 41. 11.7: "a finite number whose double overflows (`1e400`) being `E3102`". No `field` is given for E3102 on a cell. "`field` points at the offending member" covers parse-spec schema errors, and a CSV cell is not a JSON member. Readings: `null`, which errors.md allows, or a pointer into the spec such as `/columns/1`. Taken: `null`. float64_overflow_cell.
 42. 11.18.2 `group` and Initial order: a group key, and so a final key, can now hold `missing`, but 11.9 says each `row` value is "of its column's type" and "`expected` is never `missing`". Whether an assertion `row` may contain `{"t":"missing"}` to locate such a group is not stated. Avoided: group_missing_values_one_group and sort_missing_key_component_first assert on rows with no missing component.
+
+Items 41 and 42 were ruled on: an E3102 about a data-file cell has `field` null (11.7), and a `row` component may be `missing`, matched by grouping identity (11.9, 11.18.3). float64_overflow_cell already matched the first ruling; assert_names_missing_group covers the second.

@@ -512,3 +512,7 @@ A key holds missing only after a group on a column with missing values. Group by
 ## float64_overflow_cell
 
 In a float64 column 'any other text is read as an IEEE double ... a finite number whose double overflows (1e400) being E3102, so only the declared infinity tokens produce infinity'. 1e400 exceeds the largest double (about 1.8e308): E3102, verdict error, row-level fields null. checker.md gives no field for E3102 on a cell; a CSV cell is not a JSON member, so field is null (errors.md allows null; AMBIGUITIES.md 41).
+
+## assert_names_missing_group
+
+sc2 scores: a 10, b 20, c 20, d missing, e 5, f missing. Group by score: the two missing values fall in one group (11.18.2 group), sorted first, by value missing; then 5 {e}, 10 {a}, 20 {b, c}. n = count(id): 2, 1, 1, 2; member_count the same. The output key is (score), so the final key of the first group is [missing]. 11.9 lets a row component be missing 'to name a missing key component', and 11.18.3 'Locating a row' matches it by grouping identity, not by =. The row [missing] locates the first group; its n is 2 = 2: holds.
