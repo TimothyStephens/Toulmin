@@ -1091,6 +1091,11 @@ from it.
 
 ## 2026-11-17 P4: tm-checker hands DuckDB order keys, not decimal columns, and keeps the typed values in Rust
 
+**Moved into the design, 2026-11-17.** No longer a deviation: the owner
+ruled the encoding a design decision, now stated in 11.18.2's Where row
+(with the property the Checker's correctness rests on and what the stored
+`sql` records) and in item 53. Kept below as the record of why.
+
 **What.** Item 53 lists `isnan` guards among the translator's features, and
 11.6 maps a parsed `dec` column to `DECIMAL(38, s)`. The Checker does not
 pass decimals to `DuckDB` at all. For each relational step it registers the
@@ -1115,6 +1120,10 @@ for.
 
 ## 2026-11-17 P4: tm-checker stores one statement per relational step, not one CTE chain
 
+**Moved into the design, 2026-11-17.** No longer a deviation: 11.18.2's
+Where row and item 53 now say one statement per relational step and what
+the stored `sql` records. Kept below as the record of why.
+
 **What.** Item 53 says "one CTE per step". The stored `sql` is the list of
 statements that ran, in order: step 0 (the start table in key order), then
 one `SELECT` per relational op over the table registered for its input
@@ -1129,6 +1138,10 @@ every step's own table and count (11.20). Storing what ran keeps `sql`
 honest and makes each step reproducible on its own input.
 
 ## 2026-11-17 P4: tm-checker computes the group aggregate sum in Rust
+
+**Moved into the design, 2026-11-17.** No longer a deviation: 11.18.2's
+`group` row and item 53 now say `sum` is computed in Rust from the members
+`DuckDB` lists. Kept below as the record of why.
 
 **What.** 11.18.2 runs `group` in `DuckDB`. The grouping, the group order,
 `count`, `min`, `max`, `mean`, `median`, `member_count`, and
@@ -1152,3 +1165,36 @@ and the `csv_parse` fuzz target read case CSVs through
 **Why.** 4.2 rule 1: libraries never call each other; the Core hands the
 Checker parsed Arrow tables. Reading the cases through Files' own parser
 keeps the tests on the path real checks take.
+
+The tm-files dev-dependency entry above stays a deviation note: the design
+says nothing about a library's dev-dependencies, so there is no design text
+to change (4.2 rule 1 governs only what a library calls at run time).
+
+## 2026-11-17 P4: claim.checked hashes and key_map are nullable on an error verdict (tv 1 kept)
+
+**What.** 11.16's `claim.checked` row now lets `final_rows_hash`,
+`key_map_hash`, and `key_map` be `null`, which the Checker writes when its
+verdict is `error` (it stopped before a final table existed). Before, the
+row gave the two hashes only the ID form and `key_map` only the list form,
+so no valid body could record an error verdict. The body check accepts
+`null` for the three whatever the outcome. `tv` stays 1.
+
+**Why tv 1 stays.** No `claim.checked` line exists in any record yet (the
+Claims library that writes it is P6), and the change only loosens the
+form: every line valid before is valid after, so every frozen valid case
+under `conformance/formats/` keeps its validity and its ID. A `tv` bump is
+for a change a reader of old lines must tell apart, which a loosening is
+not.
+
+## 2026-11-17 P4: assertion.observed's form is written into 11.16 but not checked
+
+**What.** 11.16 now gives the per-kind form the Checker writes for
+`claim.checked.assertion.observed` (`{"cell"}`, `{"position"}`,
+`{"count"}`, `{"left","right"}`, `{"present"}`). The body check still
+accepts any JSON there.
+
+**Why.** The frozen P1 case
+`conformance/formats/envelope/claim.checked.valid.json` carries
+`"observed":{"t":"dec","v":"0.00310"}`, a bare typed value, which is not
+the form. Tightening the check would turn a frozen valid case invalid, so
+11.16 says the check stays open and why.
