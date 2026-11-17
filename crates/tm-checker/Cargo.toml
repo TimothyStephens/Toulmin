@@ -1,0 +1,24 @@
+[package]
+name = "tm-checker"
+version = "0.1.0"
+description = "Toulmin Checker library: expression evaluation, query steps to explicit DuckDB SQL, assertions, step descriptions, general rules, and result hashes"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+arrow.workspace = true
+bigdecimal.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tm-duckdb.workspace = true
+tm-formats.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+proptest.workspace = true
+tempfile.workspace = true
+tm-files.workspace = true
+
+[lints]
+workspace = true

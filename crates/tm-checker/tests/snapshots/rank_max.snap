@@ -1,0 +1,8 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.sc: c0 = "id" (str), c1 = "score" (int), c2 = "grp" (str); key "id"
+SELECT "row" FROM "input.sc" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "id" (str), c1 = "score" (int), c2 = "grp" (str); key "id"
+SELECT "row", count(*) OVER (ORDER BY "c1" COLLATE "binary" DESC NULLS LAST RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS "rank" FROM "step0" ORDER BY "rank" ASC, "c0" COLLATE "binary" ASC NULLS FIRST;

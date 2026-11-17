@@ -1,0 +1,8 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.obs: c0 = "sample" (str), c1 = "gene" (str), c2 = "val" (dec), c3 = "cond" (str); key "sample", "gene"
+SELECT "row" FROM "input.obs" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST, "c1" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "sample" (str), c1 = "gene" (str), c2 = "val" (dec), c3 = "cond" (str); key "sample", "gene"
+SELECT first("row" ORDER BY "row") AS "rep", list("row" ORDER BY "row") AS "members", count(*) AS "member_count", 'sha256:' || sha256('[' || string_agg("key", ',' ORDER BY "key" COLLATE "binary") || ']') AS "member_keys_hash", NULL AS "a0" FROM "step0" GROUP BY "c0" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;

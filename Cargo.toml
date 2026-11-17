@@ -19,6 +19,7 @@ members = [
     "crates/tm-record",
     "crates/tm-owner-cap",
     "crates/tm-files",
+    "crates/tm-checker",
 ]
 
 [workspace.package]
@@ -70,6 +71,8 @@ tm-fsfacts = { path = "crates/tm-fsfacts", version = "=0.1.0" }
 tm-duckdb = { path = "crates/tm-duckdb", version = "=0.1.0" }
 tm-index = { path = "crates/tm-index", version = "=0.1.0" }
 tm-owner-cap = { path = "crates/tm-owner-cap", version = "=0.1.0" }
+tm-files = { path = "crates/tm-files", version = "=0.1.0" }
+tm-checker = { path = "crates/tm-checker", version = "=0.1.0" }
 
 # Test and fuzz.
 proptest = "=1.12.0"

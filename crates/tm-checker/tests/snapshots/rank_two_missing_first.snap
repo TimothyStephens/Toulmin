@@ -1,0 +1,8 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.sc2: c0 = "id" (str), c1 = "score" (int), c2 = "grp" (str); key "id"
+SELECT "row" FROM "input.sc2" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "id" (str), c1 = "score" (int), c2 = "grp" (str); key "id"
+SELECT "row", rank() OVER (ORDER BY "c1" COLLATE "binary" DESC NULLS FIRST) AS "rank" FROM "step0" ORDER BY "rank" ASC, "c0" COLLATE "binary" ASC NULLS FIRST;

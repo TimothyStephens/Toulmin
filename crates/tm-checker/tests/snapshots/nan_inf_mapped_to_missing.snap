@@ -1,0 +1,8 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.flm: c0 = "id" (str), c1 = "x" (dec); key "id"
+SELECT "row" FROM "input.flm" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "id" (str), c1 = "x" (dec); key "id"
+SELECT "row" FROM "step0" ORDER BY "c1" COLLATE "binary" ASC NULLS FIRST, "c0" COLLATE "binary" ASC NULLS FIRST;

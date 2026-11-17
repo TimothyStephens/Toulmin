@@ -1,0 +1,8 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.obs: c0 = "sample" (str), c1 = "gene" (str), c2 = "val" (dec), c3 = "cond" (str); key "sample", "gene"
+SELECT "row" FROM "input.obs" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST, "c1" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "sample" (str), c1 = "gene" (str), c2 = "val" (dec), c3 = "cond" (str); key "sample", "gene"
+SELECT "row" FROM "step0" ORDER BY "c2" COLLATE "binary" DESC NULLS FIRST, "c0" COLLATE "binary" ASC NULLS FIRST, "c1" COLLATE "binary" ASC NULLS FIRST;

@@ -1,0 +1,7 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.pv: c0 = "id" (str), c1 = "p-value" (dec), c2 = "or" (dec); key "id"
+SELECT "row" FROM "input.pv" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- ops/0 filter: evaluated in Rust over step0 (11.18.2 Where); its rows are step1

@@ -1,0 +1,5 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.ev: c0 = "id" (str), c1 = "d" (date), c2 = "d2" (date), c3 = "ts" (datetime), c4 = "k" (str); key "id"
+SELECT "row" FROM "input.ev" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;

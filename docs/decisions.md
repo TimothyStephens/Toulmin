@@ -1088,3 +1088,67 @@ minimum 0 (`1e3` is `1000`, scale 0; `1.5e-2` is `0.015`, scale 3;
 from it.
 
 **Why.** Ruling 45 and 11.18.1 as amended in 1f033e1.
+
+## 2026-11-17 P4: tm-checker hands DuckDB order keys, not decimal columns, and keeps the typed values in Rust
+
+**What.** Item 53 lists `isnan` guards among the translator's features, and
+11.6 maps a parsed `dec` column to `DECIMAL(38, s)`. The Checker does not
+pass decimals to `DuckDB` at all. For each relational step it registers the
+current table with a row number and one column per table column: `str` as
+itself, `bool` as `BOOLEAN`, and every other value as an order key, a text
+whose binary order is the 11.18.2 order and whose equality is value
+equality (`int` `2` and `dec` `2.0` share a key); `missing`, `nan`, and
+`inf` are SQL `NULL`. `DuckDB` sorts, ranks, groups, takes, and joins on
+those keys and returns row numbers, ranks, and group results; the output
+table is assembled in Rust from the input rows, so every typed value,
+scale included, comes out as it went in. There are no `isnan` guards
+because a non-finite value never reaches `DuckDB` as a number.
+
+**Why.** A derived `dec` column holds values of different scales on
+different rows (`10 / 4` is `2.5` and `4 / 4` is `1`, 11.6; the cases
+`derive_div_exact` and `derive_div_rounds`), a 34-digit quotient next to a
+large value needs more than 38 digits at one common scale, and an `int` is
+of arbitrary size. No one `DuckDB` decimal type holds such a column, and
+`DOUBLE` would break ties and equality. The keys keep `DuckDB` doing the
+relational work exactly, with the explicit ordering clauses item 53 asks
+for.
+
+## 2026-11-17 P4: tm-checker stores one statement per relational step, not one CTE chain
+
+**What.** Item 53 says "one CTE per step". The stored `sql` is the list of
+statements that ran, in order: step 0 (the start table in key order), then
+one `SELECT` per relational op over the table registered for its input
+step, each headed by a comment that names the encoded columns. A `filter`
+or `derive` step appears as a comment line naming the table it produced,
+which the next statement reads (11.18.2 Where: "names the derived columns
+as inputs").
+
+**Why.** `filter` and `derive` run in Rust between relational steps, so a
+single CTE chain could not be the SQL that ran, and the claim page needs
+every step's own table and count (11.20). Storing what ran keeps `sql`
+honest and makes each step reproducible on its own input.
+
+## 2026-11-17 P4: tm-checker computes the group aggregate sum in Rust
+
+**What.** 11.18.2 runs `group` in `DuckDB`. The grouping, the group order,
+`count`, `min`, `max`, `mean`, `median`, `member_count`, and
+`member_keys_hash` are computed by the group statement; `sum` is computed
+in Rust from the members `DuckDB` lists, in the 11.6 context (the design
+edit of the same date in 11.18.2's `group` row states the rule). The
+statement carries `NULL AS a<j>` in its place.
+
+**Why.** `DuckDB` can only add the values as decimals of one scale with at
+most 38 digits, which a derived column or a large `int` exceeds, and its
+result would not round at 34 digits as the reference checker's Python
+`decimal` does.
+
+## 2026-11-17 P4: tm-checker takes tm-files only as a dev-dependency
+
+**What.** The conformance test, the snapshot test, `examples/refcheck.rs`,
+and the `csv_parse` fuzz target read case CSVs through
+`tm_files::parse::parse`; the library itself depends on `tm-formats` and
+`tm-duckdb` only.
+
+**Why.** 4.2 rule 1: libraries never call each other; the Core hands the
+Checker parsed Arrow tables. Reading the cases through Files' own parser
+keeps the tests on the path real checks take.
