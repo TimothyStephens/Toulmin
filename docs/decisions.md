@@ -1061,3 +1061,16 @@ is regenerated in this commit.
 
 **Why.** Owner rulings 41 to 47 of
 `docs/decisions/checker-spec-review.md`, 2026-11-17.
+
+## 2026-11-17 P4: tm-files reads nan and inf tokens in a str column as text (ruling 46)
+
+**What.** A `str` cell reading `nan` (or `inf`, `-Inf`, and the rest of
+item 47's tokens) was `E3102` ("declare float64 or list it under
+missing"); it is now the string as written. `int`, `dec`, `bool`,
+`date`, and `datetime` columns still refuse such a token unless it is in
+the `missing` list, and `float64` columns still read it as a value. The
+shown-scale rule of ruling 43 needed no change: `table.spec` already
+measured the positional fraction with trailing zeros (a first version
+holding `0.0010` gave scale 4).
+
+**Why.** Ruling 46 and 11.7 as amended in 1f033e1.

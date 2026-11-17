@@ -552,6 +552,39 @@ fn a_dec_cell_fits_its_scale_unless_its_value_changes() {
 }
 
 #[test]
+fn nan_and_inf_tokens_in_a_str_column_are_text() {
+    // Ruling 46 (11.7, item 47): the nan and inf token rule does not apply
+    // to str columns; it still refuses them in an int column.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let path = tmp.path().join("str.csv");
+    fs::write(&path, "k,s,n\na,nan,1\nb,-Inf,2\nc,NaN,3\n").unwrap();
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "s", "type": "str", "missing": []},
+            {"name": "n", "type": "int", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap();
+    let rows = typed_rows(&parse(&path, &spec, &st).unwrap(), &spec).unwrap();
+    assert_eq!(rows[0][1], s("nan"));
+    assert_eq!(rows[1][1], s("-Inf"));
+    assert_eq!(rows[2][1], s("NaN"));
+    // A str key may read nan too.
+    fs::write(&path, "k,s,n\nnan,x,1\n").unwrap();
+    let rows = typed_rows(&parse(&path, &spec, &st).unwrap(), &spec).unwrap();
+    assert_eq!(rows[0][0], s("nan"));
+    fs::write(&path, "k,s,n\na,x,nan\n").unwrap();
+    assert_eq!(
+        parse(&path, &spec, &st).unwrap_err().catalog_code(),
+        Some(Code::E3102)
+    );
+}
+
+#[test]
 fn a_duplicate_key_is_e3101_with_the_values() {
     let tmp = tempfile::tempdir().unwrap();
     let st = settings(tmp.path());

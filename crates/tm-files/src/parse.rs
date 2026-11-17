@@ -365,7 +365,8 @@ fn type_cell(cell: &Cell, column: &Column, spec: &ParseSpec, row: usize) -> Resu
     if column.missing.iter().any(|m| m == text) {
         return Ok(TypedValue::Missing);
     }
-    if let Some(sp) = special_token(text) {
+    // In a str column every token is text, `nan` included (11.7; ruling 46).
+    if let Some(sp) = special_token(text).filter(|_| t != SpecType::Str) {
         if t != SpecType::Float64 {
             return Err(e3102(
                 row,
