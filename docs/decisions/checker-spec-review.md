@@ -100,3 +100,15 @@ Timothy Stephens, 2026-11-17. Two rulings on the case writer's final pass (its f
 48. (Writer's 39.) Converting a literal to its positional form (11.18.1, ruling 45) is exact and happens outside the decimal context; only the arithmetic that follows applies the context. The reference implementation must not quantize in the precision-34 context, which fails for 9.9e999999. Lands in 11.18.1.
 
 49. (Writer's 40.) A key column written explicitly in a select's list appears in the description, because it was written; the exclusion covers only key columns the op does not list. Lands in 11.18.4.
+
+## Owner rulings on the P4 design review
+
+Timothy Stephens, 2026-11-17. From reviews/2026-11-16-p4-checker-design-decisions.md, findings M3 and the three further Rust-only behaviours. The reviewer drafted these; the owner changed 50.
+
+50. In group's by columns and rank's group_by, every missing, nan, or inf value in a component falls in one group for that component, as SQL GROUP BY does, and that group's value in the output is missing, whatever its members held. This is grouping only: the = rule in expressions still never makes two missing values equal. Missing groups sort first (ruling 26). Lands in 11.18.2 group and rank.
+
+51. When several members are equal under the = rule, min and max return the first such member in input order, as written (2 or 2.0, whichever came first). Lands in 11.18.2 group.
+
+52. When the table key breaks a tie, a missing key component sorts first. Lands in 11.18.2 sort and Initial order.
+
+53. A float64 cell whose text is a finite number that overflows a double (1e400) is E3102. Only the declared inf tokens produce infinity. Lands in 11.7 and item 47.
