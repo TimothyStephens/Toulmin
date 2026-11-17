@@ -74,3 +74,21 @@ Timothy Stephens, 2026-11-17. The design round raised six open items and three f
 39. A dec cell is E3102 only when writing it at the column's scale would change its value. Extra trailing zeros are not a change: a scale-3 column accepts 0.001, 0.0010, and 1.0e-3, and refuses 0.0011. Lands in 11.7 and item 47, replacing the E3102 sentence ruling 5 added.
 
 40. Accepted as the builder chose: item 55 (run.rs) carries the per-step result type, so stored claim.checked bodies are unchanged; the claims.evidence edits in section 10, where the row lives; the edit to item 47; item 47's full case-insensitive nan and inf token list in place of ruling 12's short list; regenerating docs/spec/ inside design commits; and refusing a CSV exponent that needs more than 38 digits either side of the point.
+
+## Owner rulings on the case writer's second list
+
+Timothy Stephens, 2026-11-17. The case writer re-read the revised checker.md and found seven more gaps, numbered 32 to 38 in its list. This is the last case-writer pass on the specification; later findings go to checker-diffs.md.
+
+41. (Writer's 32.) select removes columns and never reorders them: its output keeps the table's column order. The select description's {cols} is the op's column list exactly as written in the op, without the key columns that select keeps implicitly. Lands in 11.18.2 select and 11.18.4.
+
+42. (Writer's 33.) Every evaluation error, E5002 included, points at the member holding the expression or aggregate that raised it (the expr, the where, or the aggregate entry), no finer. This generalizes ruling 27. Lands in 11.12 and 11.18.2.
+
+43. (Writer's 34.) At table.spec, the scale a cell shows is its number of digits after the point once written positionally, trailing zeros included, so 1.50e-2 shows scale 4 and 0.0010 shows scale 4. The column's scale is the largest shown. Ruling 39 still lets a later version's trailing zeros fit. Lands in 11.7 and item 47.
+
+44. (Writer's 35.) Not a conflict: "multiplication's scale is the sum of the operands' scales" describes the exact product, and General Decimal Arithmetic then rounds any result over 34 significant digits, which reduces its scale. State both in one sentence. Lands in 11.6.
+
+45. (Writer's 36.) A literal written with an exponent is a positional dec before any arithmetic (ruling 32), so 1.5 * 1e3 is 1500.0. Python's Decimal('1e3') keeps exponent +3, so the reference implementation quantizes a literal to its positional scale before using it. Lands in 11.18.1.
+
+46. (Writer's 37.) In a str column every token is text, so a cell reading nan is the string "nan". The nan and inf token rule applies only to int, dec, bool, date, and datetime columns, where such a token is E3102 unless it is in the missing list, and to float64 columns, where it is a value. Lands in 11.7 and item 47.
+
+47. (Writer's 38.) Contradiction: the six functions (log, log2, log10, exp, mean, median) and "absorbed rather than tolerated" stand. The sentence in 11.6 saying "these four are the only places last-digit differences are tolerated" is removed.
