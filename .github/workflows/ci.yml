@@ -17,7 +17,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "17 3 * * *" # nightly: fuzz
+    - cron: "17 3 * * 1" # weekly, Monday: the fuzz job (Verification Plan, Fuzzing)
   workflow_dispatch:
 
 permissions:
