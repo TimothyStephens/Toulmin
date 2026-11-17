@@ -58,3 +58,19 @@ Timothy Stephens, 2026-11-16. All 31 rulings stand as written. Three owner rulin
 33. Highlight is driven by citation, not assertion. The final step's rows are highlighted from the key map, any number of them. Within those rows the cells in the column or columns the assertion names are emphasized, plus any columns a cells citation lists. Lands in 11.20 and section 9's claims.evidence row.
 
 34. The claim page shows every step's output in step order, each collapsible, with highlighting on the final step only. claims.evidence returns each step's table capped at limit with its true row count. tm-checker's result type carries per-step tables and the emphasized columns, so P7 does not rebuild it. Lands in 11.20, section 9's claims.evidence row, and the tm-checker item that defines the result type.
+
+## Owner rulings on the design-round report
+
+Timothy Stephens, 2026-11-17. The design round raised six open items and three findings on the exponent and column-scale rules.
+
+35. The decimal context is fixed explicitly in both implementations: precision 34, Emax 999999, Emin -999999, rounding half-even. A result whose adjusted exponent exceeds Emax is GDA Overflow, E5002. Underflow follows GDA (subnormal, then zero) and is not an error, which is Python decimal's default behaviour. Lands in 11.6 and 11.18.2 (Domain, Precision), replacing "the context's Emax".
+
+36. A numeric literal in an expression whose adjusted exponent is above Emax or below Emin is E6004 at validation, pointing at its where or expr member (ruling 27). Python constructs Decimal values exactly without applying the context, so the reference implementation must check this explicitly. Lands in 11.18.1.
+
+37. On error, every row-level field of a case's expected.json is null: steps, columns, final_rows, final_rows_hash, and key_map_hash. Lands in item 92.
+
+38. The claim page's steps begin with step 0, the cited input table before the first op, capped like every step. Every row of the final step comes from the key map. The rows the assertion names (row, left, right) and the cells in the column it names carry the emphasis. A capped final step shows its first limit rows plus every row the assertion names that lies beyond the cap, each labeled with its position (for example "row 4,812 of 20,000"). Removing "with neighbors" and truncated stands. Lands in 11.20, section 10's claims.evidence row, and item 55's result type.
+
+39. A dec cell is E3102 only when writing it at the column's scale would change its value. Extra trailing zeros are not a change: a scale-3 column accepts 0.001, 0.0010, and 1.0e-3, and refuses 0.0011. Lands in 11.7 and item 47, replacing the E3102 sentence ruling 5 added.
+
+40. Accepted as the builder chose: item 55 (run.rs) carries the per-step result type, so stored claim.checked bodies are unchanged; the claims.evidence edits in section 10, where the row lives; the edit to item 47; item 47's full case-insensitive nan and inf token list in place of ruling 12's short list; regenerating docs/spec/ inside design commits; and refusing a CSV exponent that needs more than 38 digits either side of the point.
