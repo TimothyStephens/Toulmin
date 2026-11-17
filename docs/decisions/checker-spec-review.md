@@ -112,3 +112,11 @@ Timothy Stephens, 2026-11-17. From reviews/2026-11-16-p4-checker-design-decision
 52. When the table key breaks a tie, a missing key component sorts first. Lands in 11.18.2 sort and Initial order.
 
 53. A float64 cell whose text is a finite number that overflows a double (1e400) is E3102. Only the declared inf tokens produce infinity. Lands in 11.7 and item 47.
+
+## Owner rulings on the case writer's fourth pass
+
+Timothy Stephens, 2026-11-17.
+
+54. (Writer's 41.) An E3102 about a data file cell has field null; its message names the row and the column. A CSV cell is not a JSON member, and E1001 and E1003 already take null for the same reason. Lands in 11.12 and 11.7.
+
+55. (Writer's 42.) A row value in an assertion (row, left, or right) may be the typed value missing, and it matches a key component that is missing under grouping identity (ruling 50), not under the = rule, so a claim can name the missing group: "312 genes have no annotated pathway". 11.9's "of its column's type" becomes "of its column's type, or missing". Lands in 11.9 and 11.18.3.
