@@ -1,0 +1,54 @@
+# Item 62: fuzz targets for steps JSON, the expression grammar and its
+# evaluator, and CSV parsing (Verification Plan, Fuzzing). Run by the
+# scheduled CI job: `cargo +nightly fuzz run <target> -- -max_total_time=600`
+# from crates/tm-checker/. Its own workspace, as cargo-fuzz expects; the
+# versions are the root workspace's pins.
+
+[package]
+name = "tm-checker-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+arrow = { version = "=60.1.0", default-features = false }
+serde_json = { version = "=1.0.154", features = ["preserve_order"] }
+tempfile = "=3.27.0"
+tm-checker = { path = ".." }
+tm-duckdb = { path = "../../tm-duckdb" }
+tm-files = { path = "../../tm-files" }
+tm-formats = { path = "../../tm-formats" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "steps_json"
+path = "fuzz_targets/steps_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "derive_expr"
+path = "fuzz_targets/derive_expr.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "csv_parse"
+path = "fuzz_targets/csv_parse.rs"
+test = false
+doc = false
+bench = false
+
+# As in the root workspace: the bundled DuckDB without debuginfo, or a dev
+# build's link thrashes under the 4 GiB sandbox limit (docs/decisions.md,
+# P2). cargo-fuzz builds release, which carries no debuginfo either way.
+[profile.dev.package.libduckdb-sys]
+debug = false
