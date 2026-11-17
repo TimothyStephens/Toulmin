@@ -321,6 +321,7 @@ impl Bound {
     /// # Errors
     /// `E5002` at `at` on Overflow; `E6004` at `at` for an operand pair the
     /// type check should have refused.
+    #[allow(clippy::many_single_char_names, reason = "the operands' usual names")]
     pub fn eval(&self, table: &Table, row: usize, at: &str) -> Result<TypedValue, Error> {
         let rows = &table.rows;
         Ok(match self {
@@ -343,77 +344,80 @@ impl Bound {
                 v if is_missing(&v) => TypedValue::Missing,
                 other => return Err(type_error(at, "not", &other)),
             },
-            Bound::Bin(op, l, r) => self.binary(*op, l, r, table, row, at)?,
+            Bound::Bin(op, l, r) => binary(*op, l, r, table, row, at)?,
             Bound::Call(f, args, widen) => call(*f, args, *widen, table, row, at)?,
         })
     }
+}
 
-    fn binary(
-        &self,
-        op: BinOp,
-        l: &Bound,
-        r: &Bound,
-        table: &Table,
-        row: usize,
-        at: &str,
-    ) -> Result<TypedValue, Error> {
-        match op {
-            BinOp::And | BinOp::Or => {
-                let a = l.eval(table, row, at)?;
-                let b = r.eval(table, row, at)?;
-                let truth = |v: &TypedValue| -> Result<Option<bool>, Error> {
-                    match v {
-                        TypedValue::Bool(b) => Ok(Some(*b)),
-                        v if is_missing(v) => Ok(None),
-                        other => Err(type_error(at, "and/or", other)),
-                    }
-                };
-                let (a, b) = (truth(&a)?, truth(&b)?);
-                let out = if op == BinOp::And {
-                    match (a, b) {
-                        (Some(false), _) | (_, Some(false)) => Some(false),
-                        (Some(true), Some(true)) => Some(true),
-                        _ => None,
-                    }
-                } else {
-                    match (a, b) {
-                        (Some(true), _) | (_, Some(true)) => Some(true),
-                        (Some(false), Some(false)) => Some(false),
-                        _ => None,
-                    }
-                };
-                Ok(out.map_or(TypedValue::Missing, TypedValue::Bool))
-            }
-            BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => {
-                let a = l.eval(table, row, at)?;
-                let b = r.eval(table, row, at)?;
-                if is_missing(&a) || is_missing(&b) {
-                    return Ok(TypedValue::Missing);
+#[allow(
+    clippy::many_single_char_names,
+    reason = "a, b, l, r are the operands' usual names"
+)]
+fn binary(
+    op: BinOp,
+    l: &Bound,
+    r: &Bound,
+    table: &Table,
+    row: usize,
+    at: &str,
+) -> Result<TypedValue, Error> {
+    match op {
+        BinOp::And | BinOp::Or => {
+            let a = l.eval(table, row, at)?;
+            let b = r.eval(table, row, at)?;
+            let truth = |v: &TypedValue| -> Result<Option<bool>, Error> {
+                match v {
+                    TypedValue::Bool(b) => Ok(Some(*b)),
+                    v if is_missing(v) => Ok(None),
+                    other => Err(type_error(at, "and/or", other)),
                 }
-                let o = cmp_values(&a, &b).ok_or_else(|| {
-                    Error::at(
-                        Code::E6004,
-                        at,
-                        format!("{:?} does not compare with {:?}", a.tag(), b.tag()),
-                    )
-                })?;
-                Ok(TypedValue::Bool(match op {
-                    BinOp::Eq => o == Ordering::Equal,
-                    BinOp::Ne => o != Ordering::Equal,
-                    BinOp::Lt => o == Ordering::Less,
-                    BinOp::Le => o != Ordering::Greater,
-                    BinOp::Gt => o == Ordering::Greater,
-                    _ => o != Ordering::Less,
-                }))
-            }
-            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => {
-                let a = l.eval(table, row, at)?;
-                let b = r.eval(table, row, at)?;
-                if is_missing(&a) || is_missing(&b) {
-                    return Ok(TypedValue::Missing);
+            };
+            let (a, b) = (truth(&a)?, truth(&b)?);
+            let out = if op == BinOp::And {
+                match (a, b) {
+                    (Some(false), _) | (_, Some(false)) => Some(false),
+                    (Some(true), Some(true)) => Some(true),
+                    _ => None,
                 }
-                arith(op, &a, &b, at)
+            } else {
+                match (a, b) {
+                    (Some(true), _) | (_, Some(true)) => Some(true),
+                    (Some(false), Some(false)) => Some(false),
+                    _ => None,
+                }
+            };
+            Ok(out.map_or(TypedValue::Missing, TypedValue::Bool))
+        }
+        BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => {
+            let a = l.eval(table, row, at)?;
+            let b = r.eval(table, row, at)?;
+            if is_missing(&a) || is_missing(&b) {
+                return Ok(TypedValue::Missing);
             }
+            let o = cmp_values(&a, &b).ok_or_else(|| {
+                Error::at(
+                    Code::E6004,
+                    at,
+                    format!("{:?} does not compare with {:?}", a.tag(), b.tag()),
+                )
+            })?;
+            Ok(TypedValue::Bool(match op {
+                BinOp::Eq => o == Ordering::Equal,
+                BinOp::Ne => o != Ordering::Equal,
+                BinOp::Lt => o == Ordering::Less,
+                BinOp::Le => o != Ordering::Greater,
+                BinOp::Gt => o == Ordering::Greater,
+                _ => o != Ordering::Less,
+            }))
+        }
+        BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => {
+            let a = l.eval(table, row, at)?;
+            let b = r.eval(table, row, at)?;
+            if is_missing(&a) || is_missing(&b) {
+                return Ok(TypedValue::Missing);
+            }
+            arith(op, &a, &b, at)
         }
     }
 }
@@ -427,6 +431,7 @@ fn type_error(at: &str, what: &str, v: &TypedValue) -> Error {
 ///
 /// # Errors
 /// `E5002` on Overflow, `E6004` on a non-number.
+#[allow(clippy::many_single_char_names, reason = "the operands' usual names")]
 pub fn arith(op: BinOp, a: &TypedValue, b: &TypedValue, at: &str) -> Result<TypedValue, Error> {
     if let (TypedValue::Int(x), TypedValue::Int(y)) = (a, b) {
         match op {
@@ -455,6 +460,7 @@ pub fn arith(op: BinOp, a: &TypedValue, b: &TypedValue, at: &str) -> Result<Type
     r.map(TypedValue::Dec).map_err(|_| overflow(at))
 }
 
+#[allow(clippy::many_single_char_names, reason = "the operands' usual names")]
 fn call(
     f: Func,
     args: &[Bound],

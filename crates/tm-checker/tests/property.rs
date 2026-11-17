@@ -291,7 +291,7 @@ proptest! {
     #[test]
     fn ordinal_rank_is_a_bijection(rows in rows(), op in rank(Some("ordinal"))) {
         let natural: Vec<usize> = (0..rows.len()).collect();
-        let r = run(batch(&rows, &natural, false), false, &[op.clone()], &count_any());
+        let r = run(batch(&rows, &natural, false), false, std::slice::from_ref(&op), &count_any());
         ok(&r)?;
         let cols = r.final_columns.clone().unwrap_or_default();
         let gi = cols.iter().position(|c| c == "g");

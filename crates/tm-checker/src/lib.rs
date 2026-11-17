@@ -7,6 +7,10 @@
 //! A library: it never calls another library (4.2). The Core hands it the
 //! cited tables as Arrow with their parse specs ([`InputTable`]).
 
+// The 11.12 error shape is tm-formats' and errors are the cold path, as
+// there; boxing it would buy nothing measurable.
+#![allow(clippy::result_large_err)]
+
 pub mod describe;
 pub mod engine;
 pub mod eval;

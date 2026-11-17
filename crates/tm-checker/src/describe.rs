@@ -10,7 +10,7 @@ pub fn count(n: u64) -> String {
     let s = n.to_string();
     let mut out = String::with_capacity(s.len() + s.len() / 3);
     for (i, c) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -79,6 +79,10 @@ fn func(f: AggFn) -> &'static str {
 /// The description of `op`, given the key of its input table (`{key}`),
 /// its input row count `m`, and its output row count `n`.
 #[must_use]
+#[allow(
+    clippy::many_single_char_names,
+    reason = "n, m, k, d, t are 11.18.4's placeholders"
+)]
 pub fn describe(op: &Op, key: &[String], m: u64, n: u64) -> String {
     let (n, m) = (count(n), count(m));
     match op {

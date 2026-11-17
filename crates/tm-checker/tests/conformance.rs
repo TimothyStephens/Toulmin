@@ -7,6 +7,8 @@
 
 mod common;
 
+use std::fmt::Write as _;
+
 use common::case;
 
 /// Cases with an open `checker-diffs.md` entry, awaiting a ruling.
@@ -18,7 +20,7 @@ fn diff(expected: &serde_json::Value, got: &serde_json::Value) -> String {
         for (k, ev) in e {
             let gv = g.get(k).unwrap_or(&serde_json::Value::Null);
             if ev != gv {
-                out.push_str(&format!("  {k}:\n    expected {ev}\n    got      {gv}\n"));
+                let _ = write!(out, "  {k}:\n    expected {ev}\n    got      {gv}\n");
             }
         }
     }

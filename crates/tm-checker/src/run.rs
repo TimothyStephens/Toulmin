@@ -209,7 +209,7 @@ pub fn run(req: &Request<'_>) -> RunResult {
         Ok((e, f)) => {
             versions.duckdb = f.version;
             versions.extensions = f.extensions;
-            versions.build = f.build.to_owned();
+            f.build.clone_into(&mut versions.build);
             ctx.engine = Some(e);
         }
         Err(e) => return failed(ctx, versions, e, None),
@@ -620,6 +620,10 @@ fn hash_of(v: &Value) -> Result<String, Error> {
     Ok(tm_formats::id::id_of(v)?.as_str().to_owned())
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "locating each assertion kind reads best in one place"
+)]
 fn finish(ctx: Ctx<'_>, versions: Versions, assertion: &Assertion, t: &Table) -> RunResult {
     let tuples = t.key_tuples();
     let names = t.names();
@@ -652,13 +656,13 @@ fn finish(ctx: Ctx<'_>, versions: Versions, assertion: &Assertion, t: &Table) ->
         let r = position(&tuples, key)?;
         Some(t.rows[r][t.index(column)?].clone())
     };
-    let mut named: Vec<(Role, Vec<TypedValue>)> = Vec::new();
+    let mut assertion_rows: Vec<(Role, Vec<TypedValue>)> = Vec::new();
     let mut columns: Vec<String> = Vec::new();
     let (observed, observed_json, expected_json) = match assertion {
         Assertion::Value {
             cell: c, expected, ..
         } => {
-            named.push((Role::Row, c.row.clone()));
+            assertion_rows.push((Role::Row, c.row.clone()));
             columns.push(c.column.clone());
             let v = cell(&c.row, &c.column);
             (
@@ -668,7 +672,7 @@ fn finish(ctx: Ctx<'_>, versions: Versions, assertion: &Assertion, t: &Table) ->
             )
         }
         Assertion::Rank { row, expected, .. } => {
-            named.push((Role::Row, row.clone()));
+            assertion_rows.push((Role::Row, row.clone()));
             let p = position(&tuples, row).map(|p| p as u64 + 1);
             (Obs::Position(p), json!({"position": p}), expected.to_json())
         }
@@ -677,8 +681,8 @@ fn finish(ctx: Ctx<'_>, versions: Versions, assertion: &Assertion, t: &Table) ->
             (Obs::Count(n), json!({"count": n}), expected_value(expected))
         }
         Assertion::CompareRows { left, right, .. } => {
-            named.push((Role::Left, left.row.clone()));
-            named.push((Role::Right, right.row.clone()));
+            assertion_rows.push((Role::Left, left.row.clone()));
+            assertion_rows.push((Role::Right, right.row.clone()));
             columns.push(left.column.clone());
             columns.push(right.column.clone());
             let (l, r) = (
@@ -692,7 +696,7 @@ fn finish(ctx: Ctx<'_>, versions: Versions, assertion: &Assertion, t: &Table) ->
             )
         }
         Assertion::Exists { row } => {
-            named.push((Role::Row, row.clone()));
+            assertion_rows.push((Role::Row, row.clone()));
             let p = position(&tuples, row).is_some();
             (Obs::Present(p), json!({"present": p}), Value::Null)
         }
@@ -715,7 +719,7 @@ fn finish(ctx: Ctx<'_>, versions: Versions, assertion: &Assertion, t: &Table) ->
     let limit = ctx.req.limit;
     let mut emphasized_rows = Vec::new();
     let mut beyond_cap = Vec::new();
-    for (role, key) in named {
+    for (role, key) in assertion_rows {
         let p = position(&tuples, &key);
         if let Some(p) = p
             && p >= limit

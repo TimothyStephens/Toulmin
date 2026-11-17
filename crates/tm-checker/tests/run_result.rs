@@ -110,7 +110,7 @@ fn steps_null_takes_the_cited_rows_in_key_order() {
         limit: 100,
     });
     assert_eq!(r.verdict.outcome, Outcome::Holds, "{:?}", r.verdict.error);
-    assert!(r.verdict.steps.is_empty());
+    assert_eq!(r.verdict.steps, Vec::new());
     assert_eq!(r.steps.len(), 1);
     let rows = r.final_rows.unwrap_or_default();
     assert_eq!(rows.len(), 2);
