@@ -160,6 +160,44 @@ enum Tok {
     Op(&'static str),
 }
 
+/// The decimal context's exponent range (11.6, 11.18.2; ruling 35).
+pub const EMAX: i64 = 999_999;
+/// See [`EMAX`].
+pub const EMIN: i64 = -999_999;
+
+/// The adjusted exponent of a numeric literal as written (`INT`, `DEC`,
+/// or `EXPNUM`): its exponent plus its number of significant digits,
+/// minus one, as Python's `Decimal.adjusted` gives it (`0.000` is -3).
+/// `None` when the written exponent does not fit an `i64`, which is far
+/// outside the context's range either way.
+#[must_use]
+pub fn adjusted_exponent(literal: &str) -> Option<i128> {
+    let (mantissa, exp) = match literal.find(['e', 'E']) {
+        Some(at) => (&literal[..at], literal[at + 1..].parse::<i64>().ok()?),
+        None => (literal, 0),
+    };
+    let (int, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    let digits = [int, frac].concat();
+    let significant = digits.trim_start_matches('0').len().max(1);
+    let exponent = i128::from(exp) - i128::try_from(frac.len()).ok()?;
+    Some(exponent + i128::try_from(significant).ok()? - 1)
+}
+
+/// `E6004` for a literal whose adjusted exponent is outside
+/// [`EMIN`, `EMAX`] (11.18.1; ruling 36), at the expression's pointer.
+fn check_literal_range(literal: &str, at: &str) -> Result<(), Error> {
+    match adjusted_exponent(literal) {
+        Some(a) if (i128::from(EMIN)..=i128::from(EMAX)).contains(&a) => Ok(()),
+        _ => Err(Error::at(
+            Code::E6004,
+            at,
+            format!(
+                "the literal {literal} is outside the decimal context's exponent range ({EMIN} to {EMAX})"
+            ),
+        )),
+    }
+}
+
 fn syntax(at: &str, msg: impl Into<String>) -> Error {
     Error::at(Code::E6006, at, msg)
 }
@@ -636,6 +674,9 @@ impl Expr {
     ) -> Result<Option<Tag>, Error> {
         let mismatch = |msg: String| Error::at(Code::E6004, at, msg);
         let numeric = |t: Option<Tag>| matches!(t, None | Some(Tag::Int | Tag::Dec));
+        if let Expr::Lit(Lit::Int(s) | Lit::Dec(s)) = self {
+            check_literal_range(s, at)?;
+        }
         Ok(match self {
             Expr::Lit(Lit::Int(_)) => Some(Tag::Int),
             Expr::Lit(Lit::Dec(_)) => Some(Tag::Dec),
@@ -841,6 +882,17 @@ mod tests {
         );
         assert_eq!(ty("i + 1e3").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("-1e-10").unwrap(), Some(Tag::Dec));
+        // Ruling 36: a literal outside the context range is E6004.
+        assert_eq!(ty("1e999999").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("1e-999999").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("10e999999").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("i + 1e1000000").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("1e-1000000").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("0.1e-999999").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("1e99999999999999999999").unwrap_err().code, Code::E6004);
+        assert_eq!(adjusted_exponent("0.000"), Some(-3));
+        assert_eq!(adjusted_exponent("007.50e2"), Some(2));
+        assert_eq!(adjusted_exponent("1.50e-2"), Some(-2));
         assert_eq!(ty("log(i)").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("coalesce(i, missing, d)").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("missing").unwrap(), None);

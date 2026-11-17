@@ -1021,3 +1021,20 @@ any fraction longer than the scale was `E3102`. `table.spec`'s scale
 measurement (the largest fraction length seen) is unchanged.
 
 **Why.** Ruling 39 and 11.7 as amended in 1b565f5.
+
+## 2026-11-17 P4: an expression literal outside the decimal context is E6004; two formats cases added (ruling 36)
+
+**What.** `tm-formats`' expression validation (`Expr::type_of`) refuses a
+numeric literal whose adjusted exponent is above `Emax` 999999 or below
+`Emin` -999999 with `E6004` at the expression's pointer (the `where` or
+`expr` member). The adjusted exponent is computed from the written text
+(`expr::adjusted_exponent`, as Python's `Decimal.adjusted`), so
+`1e1000000` is never built. The check covers every numeric literal, as
+the ruling says, not only those with an exponent. Two invalid cases are
+added under `conformance/formats/expr/`: `literal_exponent_overflow`
+(`a > 1e1000000`) and `literal_exponent_underflow` (`a > 1e-1000000`),
+each `E6004`.
+
+**Why.** Ruling 36 of `docs/decisions/checker-spec-review.md` (owner,
+2026-11-17) and 11.18.1 as amended in 1b565f5; it is the reason
+`conformance/formats/` changes in this commit.
