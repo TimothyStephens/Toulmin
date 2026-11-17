@@ -1038,3 +1038,26 @@ each `E6004`.
 **Why.** Ruling 36 of `docs/decisions/checker-spec-review.md` (owner,
 2026-11-17) and 11.18.1 as amended in 1b565f5; it is the reason
 `conformance/formats/` changes in this commit.
+
+## 2026-11-17 P4: owner rulings 41 to 47 applied to the design
+
+**What.** 11.18.2 `select` keeps the table's column order and never
+reorders; 11.18.4's `{cols}` is the op's list as written, for `select`
+without the implicit key columns (41). 11.12 and 11.18.2: every
+evaluation error, `E5002` included, points at the member holding the
+expression or aggregate that raised it (`expr`, `where`, or the
+aggregate entry), no finer, generalizing ruling 27 (42). 11.7 and item
+47: at `table.spec` a cell's shown scale counts trailing zeros in
+positional form, and the column's scale is the largest shown (43). 11.6:
+the exact product has the sum of the scales and GDA then rounds past 34
+significant digits, in one sentence (44). 11.18.1: an exponent literal
+is positional before any arithmetic, and the reference implementation
+quantizes it (45). 11.7 and item 47: in a `str` column `nan` is the
+string `"nan"`; the token rule covers `int`, `dec`, `bool`, `date`, and
+`datetime` (`E3102` unless missing) and `float64` (a value) (46). 11.6:
+"These four are the only places last-digit differences are tolerated" is
+removed; the `log` family row's six functions stand (47). `docs/spec/`
+is regenerated in this commit.
+
+**Why.** Owner rulings 41 to 47 of
+`docs/decisions/checker-spec-review.md`, 2026-11-17.
