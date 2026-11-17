@@ -613,11 +613,15 @@ fn cells_rows(ctx: &mut Ctx<'_>) -> Result<Table, Error> {
     Ok(out)
 }
 
+/// Whether a row's key values name a key tuple (11.18.3 Locating a row):
+/// each component equal under the `=` rule, or both `missing` by grouping
+/// identity (ruling 55; a key holds `missing` only after a `group`).
 fn same_key(a: &[TypedValue], b: &[TypedValue]) -> bool {
     a.len() == b.len()
-        && a.iter()
-            .zip(b)
-            .all(|(x, y)| x.compare(y) == Some(std::cmp::Ordering::Equal))
+        && a.iter().zip(b).all(|(x, y)| {
+            matches!((x, y), (TypedValue::Missing, TypedValue::Missing))
+                || x.compare(y) == Some(std::cmp::Ordering::Equal)
+        })
 }
 
 fn position(tuples: &[Vec<TypedValue>], key: &[TypedValue]) -> Option<usize> {

@@ -31,8 +31,10 @@ pub fn settings() -> EngineSettings {
 }
 
 /// Run a `cases/<name>/` directory; returns the result too, for the
-/// snapshot test.
-pub fn run_case(dir: &Path) -> Result<(Value, RunResult), String> {
+/// snapshot test. A table that `tm-files` refuses with a catalog error
+/// (`E3102` for a cell, field `null`, 11.7 and 11.12) is the case's error
+/// verdict with that code and field, and the Checker does not run (`None`).
+pub fn run_case(dir: &Path) -> Result<(Value, Option<RunResult>), String> {
     let settings = settings();
     let steps = read_json(&dir.join("steps.json"))?;
     let assertion = read_json(&dir.join("assertion.json"))?;
@@ -61,8 +63,21 @@ pub fn run_case(dir: &Path) -> Result<(Value, RunResult), String> {
         let spec =
             ParseSpec::from_json(&read_json(&dir.join("specs").join(format!("{stem}.json")))?)
                 .map_err(|e| format!("spec {stem}: {e}"))?;
-        let batch = tm_files::parse::parse(&path, &spec, &settings)
-            .map_err(|e| format!("parse {stem}: {e}"))?;
+        let batch = match tm_files::parse::parse(&path, &spec, &settings) {
+            Ok(b) => b,
+            Err(tm_files::Error::Format(e)) => {
+                return Ok((
+                    json!({
+                        "verdict": Outcome::Error.as_str(),
+                        "steps": null, "columns": null, "final_rows": null,
+                        "final_rows_hash": null, "key_map_hash": null,
+                        "error": error_json(e.code.as_str(), e.field.as_deref()),
+                    }),
+                    None,
+                ));
+            }
+            Err(e) => return Err(format!("parse {stem}: {e}")),
+        };
         let handle = handles
             .get(&stem)
             .cloned()
@@ -85,7 +100,7 @@ pub fn run_case(dir: &Path) -> Result<(Value, RunResult), String> {
         limit: usize::MAX,
     };
     let r = tm_checker::run(&req);
-    Ok((observed(&r), r))
+    Ok((observed(&r), Some(r)))
 }
 
 /// The `expected.json`-shaped view of a result.

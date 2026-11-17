@@ -1255,3 +1255,21 @@ step 0 is the cited rows; emphasized columns are limited to those the
 final table has) filled design gaps in code with no `docs/decisions.md`
 entry until 5ce3cfc. From now on a decision that fills a gap during
 coding gets its entry in the same commit as the code.
+
+## 2026-11-17 P4: the checker conformance harness reports a table tm-files refuses as the case's error verdict
+
+**What.** `tests/common/case.rs` (shared by the conformance test, the
+snapshot test, and `examples/refcheck.rs`) parses each case table through
+`tm_files::parse::parse`. When that returns a catalog error, the case's
+observed result is now verdict `error` with that code and field, every
+row-level field null (item 92's error form), and the Checker does not run;
+the snapshot records `-- no SQL: a table did not parse (<code>); the
+Checker did not run`. Before, any parse failure was a harness error, so a
+case expecting a cell `E3102` could not pass. A non-catalog failure (I/O,
+Arrow) is still a harness error.
+
+**Why.** The case writer's `float64_overflow_cell` (ruling 53) expects
+verdict `error` with `E3102` and field null (ruling 54), and item 92's case
+format has the case directory hold the raw table, so the harness stands in
+for the parse step the Core runs before the Checker. tm-files already gives
+the cell `E3102` field null, so nothing in tm-files changed for ruling 54.

@@ -288,10 +288,10 @@ fn every_assertion_kind_writes_a_valid_body() {
     }
 }
 
-/// Ruling 50 (11.18.2 group): missing, nan, and inf `by` values fall in one
-/// group, first in group order, whose output value is missing.
-#[test]
-fn missing_nan_and_inf_group_together_as_missing() {
+/// A table whose `g` holds 1.5, nan, inf, missing, -inf, 1.5 (rows a to f,
+/// `x` 1 to 6), grouped by `g` with `s = sum(x)`: the missing group (b, c,
+/// d, e) then 1.5 (a, f), under ruling 50.
+fn missing_group_run(assertion: &Value) -> tm_checker::RunResult {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
     let csv = tmp.path().join("t.csv");
     std::fs::write(
@@ -322,16 +322,23 @@ fn missing_nan_and_inf_group_together_as_missing() {
     let steps = json!({"steps":1,"tables":{"t":"F1@v1"},"from":"t","ops":[
         {"op":"group","v":1,"by":["g"],"aggregates":[{"as":"s","fn":"sum","column":"x"}]}
     ]});
-    let assertion = json!({"assert":1,"kind":"count","op":"eq","expected":{"t":"int","v":"2"}});
     let settings = case::settings();
-    let r = tm_checker::run(&Request {
+    tm_checker::run(&Request {
         tables: &t,
         steps: Some(&steps),
-        assertion: &assertion,
+        assertion,
         citations: &[],
         settings: &settings,
         limit: 100,
-    });
+    })
+}
+
+/// Ruling 50 (11.18.2 group): missing, nan, and inf `by` values fall in one
+/// group, first in group order, whose output value is missing.
+#[test]
+fn missing_nan_and_inf_group_together_as_missing() {
+    let assertion = json!({"assert":1,"kind":"count","op":"eq","expected":{"t":"int","v":"2"}});
+    let r = missing_group_run(&assertion);
     assert_eq!(r.verdict.outcome, Outcome::Holds, "{:?}", r.verdict.error);
     let rows = r.final_rows.clone().unwrap_or_default();
     // g, s, member_count (member_keys_hash not compared).
@@ -360,4 +367,46 @@ fn missing_nan_and_inf_group_together_as_missing() {
         ])
     );
     checked_body(&r);
+}
+
+/// Ruling 55 (11.9, 11.18.3): a row value `missing` names the missing group
+/// by grouping identity, so a claim can count it ("4 rows have no g").
+#[test]
+fn a_row_value_missing_names_the_missing_group() {
+    let missing_row = json!([{"t":"missing"}]);
+    let cases = [
+        (
+            json!({"assert":1,"kind":"value","row":missing_row,"column":"member_count","op":"eq","expected":{"t":"int","v":"4"}}),
+            json!({"cell":{"t":"int","v":"4"}}),
+        ),
+        (
+            json!({"assert":1,"kind":"value","row":missing_row,"column":"s","op":"eq","expected":{"t":"int","v":"14"}}),
+            json!({"cell":{"t":"int","v":"14"}}),
+        ),
+        (
+            json!({"assert":1,"kind":"exists","row":missing_row}),
+            json!({"present":true}),
+        ),
+        (
+            json!({"assert":1,"kind":"rank","row":missing_row,"expected":{"t":"int","v":"1"}}),
+            json!({"position":1}),
+        ),
+    ];
+    for (assertion, observed) in cases {
+        let r = missing_group_run(&assertion);
+        assert_eq!(
+            r.verdict.outcome,
+            Outcome::Holds,
+            "{assertion}: {:?}",
+            r.verdict.error
+        );
+        assert_eq!(
+            r.verdict.body_members()["assertion"]["observed"],
+            observed,
+            "{assertion}"
+        );
+        assert_eq!(r.emphasized_rows.len(), 1, "{assertion}");
+        assert_eq!(r.emphasized_rows[0].position, Some(1), "{assertion}");
+        checked_body(&r);
+    }
 }

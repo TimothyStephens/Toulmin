@@ -543,11 +543,15 @@ fn a_float64_text_that_overflows_a_double_is_e3102() {
     for text in ["1e400", "-1e400", "1.5E+309"] {
         let path = tmp.path().join("over.csv");
         fs::write(&path, format!("k,f\na,{text}\n")).unwrap();
-        assert_eq!(
-            parse(&path, &spec, &st).unwrap_err().catalog_code(),
-            Some(Code::E3102),
-            "{text}"
-        );
+        let err = parse(&path, &spec, &st).unwrap_err();
+        assert_eq!(err.catalog_code(), Some(Code::E3102), "{text}");
+        // Ruling 54 (11.7, 11.12): a cell is not a JSON member, so field is
+        // null; the message names the 1-based row and the column.
+        let Error::Format(e) = err else {
+            panic!("{text}: not a catalog error")
+        };
+        assert_eq!(e.field, None, "{text}");
+        assert!(e.message.contains("row 1, column \"f\""), "{}", e.message);
     }
     // The inf tokens are still values under "inf": "value", and the largest
     // finite double still reads.

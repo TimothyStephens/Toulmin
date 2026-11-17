@@ -1,0 +1,11 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.mm: c0 = "id" (str), c1 = "grp" (str), c2 = "x" (dec), c3 = "n" (int); key "id"
+SELECT "row" FROM "input.mm" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- ops/0 derive: column "m" computed in Rust over step0 (11.18.2 Where); step1 is step0 with it as column c4
+
+-- step1: c0 = "id" (str), c1 = "grp" (str), c2 = "x" (dec), c3 = "n" (int), c4 = "m" (dec); key "id"
+-- step1 also: key = the row's key tuple as canonical JSON (str)
+SELECT first("row" ORDER BY "row") AS "rep", list("row" ORDER BY "row") AS "members", count(*) AS "member_count", 'sha256:' || sha256('[' || string_agg("key", ',' ORDER BY "key" COLLATE "binary") || ']') AS "member_keys_hash", first("row" ORDER BY "c4" COLLATE "binary" ASC, "row") FILTER (WHERE "c4" IS NOT NULL) AS "a0", first("row" ORDER BY "c4" COLLATE "binary" DESC, "row") FILTER (WHERE "c4" IS NOT NULL) AS "a1" FROM "step1" GROUP BY "c1" ORDER BY "c1" COLLATE "binary" ASC NULLS FIRST;

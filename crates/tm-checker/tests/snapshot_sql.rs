@@ -19,7 +19,11 @@ fn generated_sql_per_case() {
                 .unwrap_or("?")
                 .to_owned();
             let sql = match case::run_case(&dir) {
-                Ok((_, r)) => r.verdict.sql,
+                Ok((_, Some(r))) => r.verdict.sql,
+                Ok((v, None)) => format!(
+                    "-- no SQL: a table did not parse ({}); the Checker did not run",
+                    v["error"]["code"].as_str().unwrap_or("?")
+                ),
                 Err(e) => format!("harness error: {e}"),
             };
             insta::assert_snapshot!(name, sql);
