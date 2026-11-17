@@ -113,8 +113,8 @@ pub struct Verdict {
     pub final_rows_hash: Option<String>,
     /// `key_map_hash` (11.18.2 Key mapping); `None` on `error`.
     pub key_map_hash: Option<String>,
-    /// The key map in final-row order; empty on `error`.
-    pub key_map: Vec<Vec<TypedValue>>,
+    /// The key map in final-row order; `None` on `error`.
+    pub key_map: Option<Vec<Vec<TypedValue>>>,
     /// The SQL that ran, in order.
     pub sql: String,
     /// What ran.
@@ -126,9 +126,8 @@ pub struct Verdict {
 impl Verdict {
     /// The Checker's members of the `claim.checked` body: `assertion`,
     /// `steps`, `final_rows_hash`, `key_map_hash`, `key_map`, `sql`,
-    /// `versions`, and `error`. A hash the Checker did not compute (verdict
-    /// `error`) is `null`; 11.16 gives it no form for that case, which the
-    /// Claims library settles when it writes the body (P6).
+    /// `versions`, and `error`. On verdict `error`, `final_rows_hash`,
+    /// `key_map_hash`, and `key_map` are `null` (11.16).
     #[must_use]
     pub fn body_members(&self) -> Map<String, Value> {
         let mut m = Map::new();
@@ -159,12 +158,13 @@ impl Verdict {
         );
         m.insert(
             "key_map".into(),
-            Value::Array(
-                self.key_map
-                    .iter()
-                    .map(|t| Value::Array(t.iter().map(TypedValue::to_json).collect()))
-                    .collect(),
-            ),
+            self.key_map.as_ref().map_or(Value::Null, |m| {
+                Value::Array(
+                    m.iter()
+                        .map(|t| Value::Array(t.iter().map(TypedValue::to_json).collect()))
+                        .collect(),
+                )
+            }),
         );
         m.insert("sql".into(), Value::String(self.sql.clone()));
         m.insert(

@@ -44,7 +44,9 @@ pub(crate) const TYPES: &[TypeDef] = &[
                 "assertion",
                 Form::Null(&Form::Object(&[
                     ("outcome", Form::Choice(OUTCOMES)),
-                    // The one open form in gate A: item 18 decides it at P4.
+                    // The one open form in gate A: 11.16 gives the form the
+                    // Checker writes, but the frozen P1 valid case carries a
+                    // bare typed value here, so the check stays open.
                     ("observed", Form::Any),
                     ("expected", Form::Expected),
                 ])),
@@ -62,9 +64,13 @@ pub(crate) const TYPES: &[TypeDef] = &[
                     ("description", Form::NonEmptyStr),
                 ])),
             ),
-            ("final_rows_hash", Form::Id),
-            ("key_map_hash", Form::Id),
-            ("key_map", Form::List(&Form::List(&Form::Typed))),
+            // `null` on a Checker verdict of `error` (11.16).
+            ("final_rows_hash", Form::Null(&Form::Id)),
+            ("key_map_hash", Form::Null(&Form::Id)),
+            (
+                "key_map",
+                Form::Null(&Form::List(&Form::List(&Form::Typed))),
+            ),
             ("sql", Form::Str),
             (
                 "versions",

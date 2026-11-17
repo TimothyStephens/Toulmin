@@ -6,9 +6,10 @@ mod common;
 
 use std::collections::BTreeMap;
 
-use serde_json::json;
+use serde_json::{Value, json};
 use tm_checker::{InputTable, Outcome, Request, Role};
 use tm_formats::citation::Citation;
+use tm_formats::events::{EventType, KnownEvent};
 use tm_formats::id::VersionHandle;
 use tm_formats::parse_spec::ParseSpec;
 use tm_formats::typed_value::TypedValue;
@@ -87,7 +88,7 @@ fn capped_steps_named_rows_and_columns() {
     // Capped: the full final rows are not carried; the hash is.
     assert!(r.final_rows.is_none());
     assert!(r.verdict.final_rows_hash.is_some());
-    assert_eq!(r.verdict.key_map.len(), 5);
+    assert_eq!(r.verdict.key_map.as_ref().map(Vec::len), Some(5));
 }
 
 #[test]
@@ -122,4 +123,69 @@ fn steps_null_takes_the_cited_rows_in_key_order() {
         body["assertion"]["observed"],
         json!({"cell":{"t":"dec","v":"2.5"}})
     );
+}
+
+/// The Checker's body members plus the four the Claims library adds, as one
+/// `claim.checked` body, checked by tm-formats (11.16).
+fn checked_body(r: &tm_checker::RunResult) -> KnownEvent {
+    let mut body = r.verdict.body_members();
+    body.insert("ref".into(), json!("C1"));
+    body.insert(
+        "revision".into(),
+        json!("sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"),
+    );
+    body.insert("against".into(), json!(["F1@v1"]));
+    body.insert(
+        "evidence".into(),
+        json!({"outcome": r.verdict.outcome.as_str(), "detail": null}),
+    );
+    KnownEvent::new(EventType::ClaimChecked, &Value::Object(body)).unwrap_or_else(|e| panic!("{e}"))
+}
+
+#[test]
+fn error_verdict_nulls_the_hashes_and_key_map_and_the_body_is_valid() {
+    let t = tables();
+    let assertion = json!({"assert":1,"kind":"value","row":[{"t":"str","v":"TP53"}],
+        "column":"nope","op":"eq","expected":{"t":"dec","v":"2.5"}});
+    let steps = json!({"steps":1,"tables":{"de":"F1@v1"},"from":"de","ops":[
+        {"op":"sort","v":1,"by":[{"column":"fc","dir":"desc"}],"missing":"last"}
+    ]});
+    let settings = case::settings();
+    let r = tm_checker::run(&Request {
+        tables: &t,
+        steps: Some(&steps),
+        assertion: &assertion,
+        citations: &[],
+        settings: &settings,
+        limit: 100,
+    });
+    assert_eq!(r.verdict.outcome, Outcome::Error);
+    let body = r.verdict.body_members();
+    assert_eq!(body["final_rows_hash"], Value::Null);
+    assert_eq!(body["key_map_hash"], Value::Null);
+    assert_eq!(body["key_map"], Value::Null);
+    assert!(body["error"]["code"].is_string());
+    checked_body(&r);
+}
+
+#[test]
+fn holds_verdict_body_is_valid() {
+    let t = tables();
+    let assertion = json!({"assert":1,"kind":"value","row":[{"t":"str","v":"TP53"}],
+        "column":"fc","op":"eq","expected":{"t":"dec","v":"2.5"}});
+    let steps = json!({"steps":1,"tables":{"de":"F1@v1"},"from":"de","ops":[
+        {"op":"sort","v":1,"by":[{"column":"fc","dir":"desc"}],"missing":"last"}
+    ]});
+    let settings = case::settings();
+    let r = tm_checker::run(&Request {
+        tables: &t,
+        steps: Some(&steps),
+        assertion: &assertion,
+        citations: &[],
+        settings: &settings,
+        limit: 100,
+    });
+    assert_eq!(r.verdict.outcome, Outcome::Holds, "{:?}", r.verdict.error);
+    assert!(r.verdict.body_members()["key_map"].is_array());
+    checked_body(&r);
 }

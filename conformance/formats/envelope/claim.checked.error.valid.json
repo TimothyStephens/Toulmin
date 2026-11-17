@@ -1,0 +1,9 @@
+{
+  "description": "a valid claim.checked line for a Checker verdict of error: assertion null, no steps, final_rows_hash, key_map_hash, and key_map null, error set (11.16)",
+  "line": "{\"actor\":{\"id\":\"tim\",\"kind\":\"owner\"},\"at\":\"2026-11-09T14:02:11Z\",\"batch\":3,\"body\":{\"against\":[\"F7@v2\"],\"assertion\":null,\"error\":{\"code\":\"E6004\",\"message\":\"padj is dec and \\\"TP53\\\" is str; they do not compare\"},\"evidence\":{\"detail\":null,\"outcome\":\"holds\"},\"final_rows_hash\":null,\"key_map\":null,\"key_map_hash\":null,\"ref\":\"C31\",\"revision\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"sql\":\"-- input.de: c0 = \\\"gene_id\\\" (str), c1 = \\\"padj\\\" (dec); key \\\"gene_id\\\"\\nSELECT \\\"row\\\" FROM \\\"input.de\\\" ORDER BY \\\"c0\\\" COLLATE \\\"binary\\\" ASC NULLS FIRST;\",\"steps\":[],\"versions\":{\"build\":\"musl\",\"duckdb\":\"2.0.0\",\"extensions\":[],\"parse_specs\":{\"F7@v2\":\"sha256:58007c4c2e2dbab16d824563afa477035a7263ada21b756a835a0d7ee0249192\"},\"rules\":\"1\",\"translator\":\"1\"}},\"chain\":\"main\",\"env\":1,\"epoch\":1,\"prev\":\"sha256:7428199f97d2ea659e53f22c9cae947604d822dc0cdcf91b56d16a9280fe74fe\",\"seq\":7,\"src\":{\"harness_env\":false,\"source\":\"cli\",\"tty\":true},\"tv\":1,\"type\":\"claim.checked\",\"id\":\"sha256:2e1e4eb5b3e07b880091096c66bc7b6c91da7c5b1f1efecfa01811fc0026b4f0\"}",
+  "expect": {
+    "id": "sha256:2e1e4eb5b3e07b880091096c66bc7b6c91da7c5b1f1efecfa01811fc0026b4f0",
+    "type": "claim.checked",
+    "event": "known"
+  }
+}
