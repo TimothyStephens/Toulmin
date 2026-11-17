@@ -23,7 +23,10 @@ feature-depth = 1
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+    # Owner decision 2026-11-17 (docs/decisions.md).
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; reached only through arrow 60.1 (pinned); no safe upgrade exists; revisit at the next arrow upgrade" },
+]
 
 [licenses]
 # Workspace crates are unpublished (publish = false) and carry no license

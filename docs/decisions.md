@@ -1198,3 +1198,16 @@ accepts any JSON there.
 `"observed":{"t":"dec","v":"0.00310"}`, a bare typed value, which is not
 the form. Tightening the check would turn a frozen valid case invalid, so
 11.16 says the check stays open and why.
+
+## 2026-11-17 cargo-deny ignores RUSTSEC-2026-0543 (chrono unmaintained)
+
+**What.** `deny.toml` `[advisories] ignore` lists RUSTSEC-2026-0543 by ID,
+with its reason. Every other advisory still fails the check. Owner's
+decision, 2026-11-17.
+
+**Why.** The advisory, published after the last green run, marks every
+chrono version unmaintained with no safe upgrade, so `cargo deny check`
+failed on main as well as on p4-checker. chrono 0.4.45 is reached only
+through arrow 60.1, which item 1 pins exactly; no Toulmin crate depends on
+it directly. D14's check stays on everything else. Revisit at the next
+arrow upgrade: drop the entry once arrow no longer pulls chrono in.
