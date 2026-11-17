@@ -1,0 +1,48 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Keep rows where v = 0.001 (missing values excluded); 3 of 4 rows remain."
+    }
+  ],
+  "columns": [
+    "id",
+    "v"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "v": {
+        "t": "dec",
+        "v": "0.001"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "v": {
+        "t": "dec",
+        "v": "0.001"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "v": {
+        "t": "dec",
+        "v": "0.001"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:514d9fe01eeb2385f0282ec79c626646a3d7b7993d330dc73249c05f82649082",
+  "key_map_hash": "sha256:c903a65ad990c398c2a380b03c95abf7f2330c6e67b092afa9c62cffc898a1f5",
+  "error": null
+}

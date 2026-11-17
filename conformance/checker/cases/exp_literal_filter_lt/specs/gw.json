@@ -1,0 +1,29 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "gene_id",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "padj",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 12
+    }
+  ],
+  "key": [
+    "gene_id"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

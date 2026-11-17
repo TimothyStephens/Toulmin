@@ -1,0 +1,73 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Keep rows where cond = \"trt\" (missing values excluded); 3 of 5 rows remain."
+    }
+  ],
+  "columns": [
+    "sample",
+    "gene",
+    "val",
+    "cond"
+  ],
+  "final_rows": [
+    {
+      "sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "val": {
+        "t": "missing"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s3"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "5.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:6fdde378f275b10cae9971e25bd3fbfa3baab5e2a8bb9aad4abc9460804cdd93",
+  "key_map_hash": "sha256:28a1f50139cb13d5a4a2f3ba9f915fbfb45e495e468a3bb61fc672473455113c",
+  "error": null
+}

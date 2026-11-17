@@ -1,0 +1,56 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Group by grp and compute md = median(score); 2 groups from 5 rows."
+    }
+  ],
+  "columns": [
+    "grp",
+    "md",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "grp": {
+        "t": "str",
+        "v": "x"
+      },
+      "md": {
+        "t": "dec",
+        "v": "10"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "3"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:3eca0614c3b4e94734c3e4721959c2b12fc169a5c493218915abcec0166491ce"
+      }
+    },
+    {
+      "grp": {
+        "t": "str",
+        "v": "y"
+      },
+      "md": {
+        "t": "dec",
+        "v": "20"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:8ddc59fede213f036a3d7d818ff850c18bae81cce99834ac354d1bd8ec1776a3"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:b3b8be24ea44e23b17b158a54eed844a94ba9a16a7176cf66e616b3483170412",
+  "key_map_hash": "sha256:60704e5881c84d89c9ae49b159d925c4a1d70b8712df125ef77ca046c340f516",
+  "error": null
+}

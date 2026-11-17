@@ -1,0 +1,16 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "KRAS"
+    }
+  ],
+  "column": "big",
+  "op": "eq",
+  "expected": {
+    "t": "bool",
+    "v": true
+  }
+}

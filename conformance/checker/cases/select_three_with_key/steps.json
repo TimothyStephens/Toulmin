@@ -1,0 +1,18 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "select",
+      "v": 1,
+      "columns": [
+        "n",
+        "gene_id",
+        "p"
+      ]
+    }
+  ]
+}

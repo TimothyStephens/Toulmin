@@ -1,0 +1,74 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Group by sample and compute s = sum(val); 3 groups from 5 rows."
+    }
+  ],
+  "columns": [
+    "sample",
+    "s",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "sample": {
+        "t": "str",
+        "v": "s1"
+      },
+      "s": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:c0c1676a6e8d308d54c5263dbb9f1af5cfad050147f34eb0034a279d79e51e15"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "s": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:ce355156422964703c802f7fe3898df94b3990e0ac4eeb4549ba03f2118d0849"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s3"
+      },
+      "s": {
+        "t": "dec",
+        "v": "5.0"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:300df3eded578efacbe22482d75cfacb631a47974b399811894ecfbd3c728bcf"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:5e68ab7fad842d7cee240f5a350753c9869285528e936ed7ee64f505b6124dd5",
+  "key_map_hash": "sha256:74a094281b7d14cf45b9c3731b687a0b2685b5686d002ff92a80c59d36f1c790",
+  "error": null
+}

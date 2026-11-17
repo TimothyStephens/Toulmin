@@ -1,0 +1,88 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Keep columns fc and tissue; 5 rows."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "tissue"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "EGFR"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "KRAS"
+      },
+      "fc": {
+        "t": "missing"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "lung"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "MDM2"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "-1.5"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:6cbae3a44fb84252d145c6ed1197be854c6db37a1fb889ca427f35fbaf3a19d9",
+  "key_map_hash": "sha256:56a61eaa7ba005b6dd04c7054392f85a793cbb80bddfadd53b693945a2d81446",
+  "error": null
+}

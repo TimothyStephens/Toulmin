@@ -1,0 +1,22 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "b"
+    }
+  ],
+  "column": "d",
+  "op": "between",
+  "expected": [
+    {
+      "t": "date",
+      "v": "2026-01-01"
+    },
+    {
+      "t": "date",
+      "v": "2026-12-31"
+    }
+  ]
+}

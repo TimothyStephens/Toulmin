@@ -1,0 +1,20 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "m",
+      "expr": "n * 2"
+    },
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "m > 8"
+    }
+  ]
+}

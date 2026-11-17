@@ -1,0 +1,107 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Sort by d descending (missing values placed last; ties broken by id); 4 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "d",
+    "d2",
+    "ts",
+    "k"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "d": {
+        "t": "date",
+        "v": "2026-03-01"
+      },
+      "d2": {
+        "t": "date",
+        "v": "2026-03-01"
+      },
+      "ts": {
+        "t": "datetime",
+        "v": "2026-03-01T00:00:00Z"
+      },
+      "k": {
+        "t": "str",
+        "v": "g1"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "d": {
+        "t": "date",
+        "v": "2026-01-05"
+      },
+      "d2": {
+        "t": "date",
+        "v": "2026-01-01"
+      },
+      "ts": {
+        "t": "datetime",
+        "v": "2026-01-05T10:00:00Z"
+      },
+      "k": {
+        "t": "str",
+        "v": "g1"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "d": {
+        "t": "date",
+        "v": "2025-12-31"
+      },
+      "d2": {
+        "t": "date",
+        "v": "2026-06-30"
+      },
+      "ts": {
+        "t": "datetime",
+        "v": "2025-12-31T23:59:59Z"
+      },
+      "k": {
+        "t": "str",
+        "v": "g2"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "d": {
+        "t": "missing"
+      },
+      "d2": {
+        "t": "date",
+        "v": "2026-01-01"
+      },
+      "ts": {
+        "t": "missing"
+      },
+      "k": {
+        "t": "str",
+        "v": "g2"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:6ac135b5dc224fcfb1b50749a87f105a158c57a9d6c384f2c92248bf10ac6cf5",
+  "key_map_hash": "sha256:8669daed6085c985b97932aa95d1eb5de269cbef3b4f147be9a63f8a5774cd59",
+  "error": null
+}

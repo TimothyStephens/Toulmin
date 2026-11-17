@@ -1,0 +1,65 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Keep rows where not fc > 1.0 (missing values excluded); 2 of 5 rows remain."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.200"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "3"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "MDM2"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "-1.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.040"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "5"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:e223c9abf3836597fedb47fcdf1e673f6fe122e37ea3a262b57e1c2bec0c1a7f",
+  "key_map_hash": "sha256:cecd8097fc12b1607996800290e5cb87fc3fbedaf025aedde01f411f2bcaf4e6",
+  "error": null
+}

@@ -1,0 +1,85 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Add column l = log(x); 5 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "x",
+    "l"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "dec",
+        "v": "0.0"
+      },
+      "l": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "x": {
+        "t": "dec",
+        "v": "-1.0"
+      },
+      "l": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "x": {
+        "t": "dec",
+        "v": "1.0"
+      },
+      "l": {
+        "t": "dec",
+        "v": "0"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "x": {
+        "t": "dec",
+        "v": "100.0"
+      },
+      "l": {
+        "t": "dec",
+        "v": "4.60517018598809"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "e"
+      },
+      "x": {
+        "t": "missing"
+      },
+      "l": {
+        "t": "missing"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:6be7f8c9a96ed93d9d54a58e3b07e559380ef7b216680ddf43edfa5b849dd2fa",
+  "key_map_hash": "sha256:a4f13cd36e88af3257be5f65db55d843195b8e945fab0a85973730c5ef9b5a19",
+  "error": null
+}

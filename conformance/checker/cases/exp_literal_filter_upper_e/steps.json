@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "gw": "F1@v1"
+  },
+  "from": "gw",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "padj<=2.0E-10"
+    }
+  ]
+}

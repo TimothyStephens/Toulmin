@@ -1,0 +1,37 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "p-value",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 3
+    },
+    {
+      "name": "or",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 1
+    }
+  ],
+  "key": [
+    "id"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

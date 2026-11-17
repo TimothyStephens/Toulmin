@@ -1,0 +1,16 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "a"
+    }
+  ],
+  "column": "q",
+  "op": "eq",
+  "expected": {
+    "t": "dec",
+    "v": "0.0000000000000032"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "MDM2"
+    }
+  ],
+  "column": "ann.chrom",
+  "op": "ne",
+  "expected": {
+    "t": "int",
+    "v": "17"
+  }
+}

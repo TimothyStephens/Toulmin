@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "obs": "F1@v1"
+  },
+  "from": "obs",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "cond = \"trt\""
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "steps": 1,
+  "tables": {
+    "ev": "F1@v1"
+  },
+  "from": "ev",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "k"
+      ],
+      "aggregates": [
+        {
+          "as": "mx",
+          "fn": "max",
+          "column": "d"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "steps": 1,
+  "tables": {
+    "big": "F1@v1"
+  },
+  "from": "big",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "sq",
+      "expr": "x * x"
+    }
+  ]
+}

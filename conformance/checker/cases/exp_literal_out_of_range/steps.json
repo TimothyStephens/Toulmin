@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "one": "F1@v1"
+  },
+  "from": "one",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "x < 1e1000000"
+    }
+  ]
+}

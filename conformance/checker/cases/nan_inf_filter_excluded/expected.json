@@ -1,0 +1,38 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Keep rows where x > 0 (missing values excluded); 2 of 6 rows remain."
+    }
+  ],
+  "columns": [
+    "id",
+    "x"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "dec",
+        "v": "1.5"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "f"
+      },
+      "x": {
+        "t": "dec",
+        "v": "0.25"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:68d7a149a1f96d7ecf9e7ffc6fbd4ca07e88b3de23ac253fe19f1119328ff185",
+  "key_map_hash": "sha256:69b8f62e568f6d71a87a58653e850891138860a98bc0c6952cd61c060a95fe69",
+  "error": null
+}

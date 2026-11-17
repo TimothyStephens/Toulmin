@@ -1,0 +1,49 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "d",
+      "type": "date",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "d2",
+      "type": "date",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "ts",
+      "type": "datetime",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "k",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    }
+  ],
+  "key": [
+    "id"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

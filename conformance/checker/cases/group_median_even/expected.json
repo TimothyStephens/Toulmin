@@ -1,0 +1,74 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Group by tissue and compute md = median(n); 3 groups from 5 rows."
+    }
+  ],
+  "columns": [
+    "tissue",
+    "md",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "md": {
+        "t": "dec",
+        "v": "5"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:28991dea7c8f593a67b8b1084cb5c46918517f9789bfbf3756934924cc7c861a"
+      }
+    },
+    {
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "md": {
+        "t": "dec",
+        "v": "4.5"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:d5a1dda95efa75925e935b3c835e20e7f5e2e4a2c7532d66663d72eea4b9654d"
+      }
+    },
+    {
+      "tissue": {
+        "t": "str",
+        "v": "lung"
+      },
+      "md": {
+        "t": "dec",
+        "v": "2"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:0d3de1bedfb4b92f3fe5f22d7997ca986dceb62406f41c3000aac2f1c198a543"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:fb5f080d13fe19d059027ec6080d7cb126a7dfdb39b706d4afe793b326542d2e",
+  "key_map_hash": "sha256:a031387fcb7fcadddae6acf9c26b0032501cb001a1240016923b049cfc855c68",
+  "error": null
+}

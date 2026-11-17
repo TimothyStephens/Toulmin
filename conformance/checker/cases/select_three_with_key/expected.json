@@ -1,0 +1,88 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Keep columns n, gene_id, and p; 5 rows."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "p",
+    "n"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.200"
+      },
+      "n": {
+        "t": "int",
+        "v": "3"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "EGFR"
+      },
+      "p": {
+        "t": "missing"
+      },
+      "n": {
+        "t": "int",
+        "v": "7"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "KRAS"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.010"
+      },
+      "n": {
+        "t": "int",
+        "v": "2"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "MDM2"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.040"
+      },
+      "n": {
+        "t": "int",
+        "v": "5"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.001"
+      },
+      "n": {
+        "t": "int",
+        "v": "4"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:e6865760fe3cffcf399159bc015c58a9cbf42c3021943d47315b698ea326dab2",
+  "key_map_hash": "sha256:56a61eaa7ba005b6dd04c7054392f85a793cbb80bddfadd53b693945a2d81446",
+  "error": null
+}

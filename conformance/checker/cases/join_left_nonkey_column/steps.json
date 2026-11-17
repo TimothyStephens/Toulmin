@@ -1,0 +1,22 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1",
+    "tiss": "F2@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "join",
+      "v": 1,
+      "right": "tiss",
+      "on": [
+        {
+          "left": "tissue",
+          "right": "tissue"
+        }
+      ],
+      "kind": "left"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 1,
+      "description": "Keep rows where name = \"café\" (missing values excluded); 1 of 2 rows remain."
+    }
+  ],
+  "columns": [
+    "id",
+    "name"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "int",
+        "v": "1"
+      },
+      "name": {
+        "t": "str",
+        "v": "café"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:66cc8cb130f5b5a0cd40eeca15960ad2392fb7401087ead9125381ad34148f12",
+  "key_map_hash": "sha256:0b36a2d783076545a91b0e09ef22f7453524092c7494283f720a6352afac4bae",
+  "error": null
+}

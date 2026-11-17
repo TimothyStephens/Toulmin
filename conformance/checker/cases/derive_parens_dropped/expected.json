@@ -1,0 +1,150 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Add column m = n + 1 * 2; 5 rows."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n",
+    "m"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.200"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "3"
+      },
+      "m": {
+        "t": "int",
+        "v": "5"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "EGFR"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "p": {
+        "t": "missing"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "7"
+      },
+      "m": {
+        "t": "int",
+        "v": "9"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "KRAS"
+      },
+      "fc": {
+        "t": "missing"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.010"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "lung"
+      },
+      "n": {
+        "t": "int",
+        "v": "2"
+      },
+      "m": {
+        "t": "int",
+        "v": "4"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "MDM2"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "-1.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.040"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "5"
+      },
+      "m": {
+        "t": "int",
+        "v": "7"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.001"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "4"
+      },
+      "m": {
+        "t": "int",
+        "v": "6"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:456aa17110aea6afa8d312a3cf0856f3a649f24bf621e000f280b42676bda9ac",
+  "key_map_hash": "sha256:56a61eaa7ba005b6dd04c7054392f85a793cbb80bddfadd53b693945a2d81446",
+  "error": null
+}

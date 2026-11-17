@@ -1,0 +1,23 @@
+{
+  "steps": 1,
+  "tables": {
+    "sc": "F1@v1"
+  },
+  "from": "sc",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "grp"
+      ],
+      "aggregates": [
+        {
+          "as": "md",
+          "fn": "median",
+          "column": "score"
+        }
+      ]
+    }
+  ]
+}

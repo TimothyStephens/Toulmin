@@ -1,0 +1,129 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Sort by tissue ascending, then fc descending (missing values placed last; ties broken by gene_id); 5 rows."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "EGFR"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "p": {
+        "t": "missing"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "7"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.200"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "3"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.001"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "4"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "MDM2"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "-1.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.040"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "5"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "KRAS"
+      },
+      "fc": {
+        "t": "missing"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.010"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "lung"
+      },
+      "n": {
+        "t": "int",
+        "v": "2"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:05a0ecc6bb7003c09ce8d4755e9a3df29561bcf6efa387ece51c945083b7d4aa",
+  "key_map_hash": "sha256:4aa79550ba00da7211f05cf472e0eb70d6d80637e99c56abf06ecb102cfff8ae",
+  "error": null
+}

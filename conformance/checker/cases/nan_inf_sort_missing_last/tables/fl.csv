@@ -1,0 +1,7 @@
+id,x
+a,1.5
+b,NaN
+c,Inf
+d,-Inf
+e,NA
+f,0.25

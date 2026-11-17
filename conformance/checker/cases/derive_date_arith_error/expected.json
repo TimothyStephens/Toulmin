@@ -1,0 +1,12 @@
+{
+  "verdict": "error",
+  "steps": null,
+  "columns": null,
+  "final_rows": null,
+  "final_rows_hash": null,
+  "key_map_hash": null,
+  "error": {
+    "code": "E6004",
+    "field": "/ops/0/expr"
+  }
+}

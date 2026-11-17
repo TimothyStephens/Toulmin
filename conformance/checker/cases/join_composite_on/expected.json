@@ -1,0 +1,112 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Inner join with meta on sample = sample and gene = gene; 3 rows."
+    }
+  ],
+  "columns": [
+    "sample",
+    "gene",
+    "val",
+    "cond",
+    "meta.sample",
+    "meta.gene",
+    "meta.qc"
+  ],
+  "final_rows": [
+    {
+      "sample": {
+        "t": "str",
+        "v": "s1"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "1.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "ctl"
+      },
+      "meta.sample": {
+        "t": "str",
+        "v": "s1"
+      },
+      "meta.gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "meta.qc": {
+        "t": "str",
+        "v": "pass"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "val": {
+        "t": "missing"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      },
+      "meta.sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "meta.gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "meta.qc": {
+        "t": "str",
+        "v": "fail"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s3"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "5.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      },
+      "meta.sample": {
+        "t": "str",
+        "v": "s3"
+      },
+      "meta.gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "meta.qc": {
+        "t": "str",
+        "v": "pass"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:17fa534967623dfef5c3477b0036fd8093c7291955c94cb46a4c1a6e37675f3f",
+  "key_map_hash": "sha256:2098e5676f0149b95a9b6cd20715688f8efdd130af99dd642a4a6e48d8e14db3",
+  "error": null
+}

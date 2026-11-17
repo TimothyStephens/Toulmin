@@ -1,0 +1,74 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Add column l = log2(x); 4 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "x",
+    "l"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "dec",
+        "v": "8.0"
+      },
+      "l": {
+        "t": "dec",
+        "v": "3"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "x": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "l": {
+        "t": "dec",
+        "v": "-1"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "x": {
+        "t": "dec",
+        "v": "1000.0"
+      },
+      "l": {
+        "t": "dec",
+        "v": "9.96578428466209"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "x": {
+        "t": "dec",
+        "v": "0.0"
+      },
+      "l": {
+        "t": "missing"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:bfbaefb5ecb2e052a525413f5d6771a65a8010922170e33788ecce3a1dc62543",
+  "key_map_hash": "sha256:ec62fe395f3bcf44a268d9d81ec9a836401ac48455b08b1abd975a0dc972a9d2",
+  "error": null
+}

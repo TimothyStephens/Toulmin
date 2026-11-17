@@ -1,0 +1,87 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Inner join with ann on gene_id = gene_id; 3 rows."
+    },
+    {
+      "rows": 2,
+      "description": "Keep rows where `ann.chrom` = 17 (missing values excluded); 2 of 3 rows remain."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n",
+    "ann.gene_id",
+    "ann.chrom"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.200"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "3"
+      },
+      "ann.gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "ann.chrom": {
+        "t": "int",
+        "v": "17"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.001"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "4"
+      },
+      "ann.gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "ann.chrom": {
+        "t": "int",
+        "v": "17"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:5771bcfcb10acc8e677d26a6a8502c1932ffabedfbf28e758d0c8ed93fe16eee",
+  "key_map_hash": "sha256:4b26cfded47f45835dfa95b540f1e2e3d775db5092db75e35dde6da5f69fa5b7",
+  "error": null
+}

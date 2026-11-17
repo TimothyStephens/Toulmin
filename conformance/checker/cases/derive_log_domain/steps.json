@@ -1,0 +1,15 @@
+{
+  "steps": 1,
+  "tables": {
+    "dom": "F1@v1"
+  },
+  "from": "dom",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "l",
+      "expr": "log(x)"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "verdict": "fails",
+  "steps": [],
+  "columns": [
+    "id",
+    "x"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "dec",
+        "v": "1.5"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "x": {
+        "t": "nan"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "x": {
+        "t": "inf",
+        "s": "+"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "x": {
+        "t": "inf",
+        "s": "-"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "e"
+      },
+      "x": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "f"
+      },
+      "x": {
+        "t": "dec",
+        "v": "0.25"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:8556658563d3001eb727e72f6c6c37c8a38cc38b8dc928b488b065172e3e1240",
+  "key_map_hash": "sha256:81e6b39756afd417e5bc52c3b5ed1ea7c4cf0999ce3c4f85bef70b425389d82f",
+  "error": null
+}

@@ -1,0 +1,43 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 1,
+      "description": "Keep rows where fc < -1 (missing values excluded); 1 of 5 rows remain."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "MDM2"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "-1.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.040"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "5"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:edd436f0aafe89ae94b39174166f791105a77a9bdb8c1bd1b400d0bab520e34e",
+  "key_map_hash": "sha256:5d7974e4d1e5108b54531f4dff107d1b7eca965dd6034d0d9a556a04ec5744eb",
+  "error": null
+}

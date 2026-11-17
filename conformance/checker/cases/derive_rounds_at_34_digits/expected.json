@@ -1,0 +1,33 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 1,
+      "description": "Add column sq = x * x; 1 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "x",
+    "sq"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "dec",
+        "v": "10000000000000000.5"
+      },
+      "sq": {
+        "t": "dec",
+        "v": "100000000000000010000000000000000.2"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:44e5c4a604eaeaada9cad89e46786b9ecb19bc0fd90baa9708915aaf0f4bb32e",
+  "key_map_hash": "sha256:62e824ccecefbcebcdf890fe6f1de04f307fb11b45eb47bf627710791227db11",
+  "error": null
+}

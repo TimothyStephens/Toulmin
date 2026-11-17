@@ -1,0 +1,27 @@
+{
+  "assert": 1,
+  "kind": "compare_rows",
+  "left": {
+    "row": [
+      {
+        "t": "str",
+        "v": "EGFR"
+      }
+    ],
+    "column": "fc"
+  },
+  "right": {
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "fc"
+  },
+  "op": "ne",
+  "tol": {
+    "abs": "0",
+    "rel": "0.2"
+  }
+}

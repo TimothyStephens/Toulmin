@@ -1,0 +1,16 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "a"
+    }
+  ],
+  "column": "ts",
+  "op": "lt",
+  "expected": {
+    "t": "datetime",
+    "v": "2026-01-05T12:00:00Z"
+  }
+}

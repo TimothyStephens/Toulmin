@@ -1,0 +1,20 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "EGFR"
+    }
+  ],
+  "column": "q",
+  "op": "eq",
+  "expected": {
+    "t": "dec",
+    "v": "2.3333333333"
+  },
+  "tol": {
+    "abs": "0.000000001",
+    "rel": "0"
+  }
+}

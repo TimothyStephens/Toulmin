@@ -1,0 +1,6 @@
+sample,gene,val,cond
+s1,A,1.0,ctl
+s1,B,2.0,ctl
+s2,A,3.0,trt
+s2,B,NA,trt
+s3,A,5.0,trt

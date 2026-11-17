@@ -1,0 +1,43 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 1,
+      "description": "Keep rows where d < d2 (missing values excluded); 1 of 4 rows remain."
+    }
+  ],
+  "columns": [
+    "id",
+    "d",
+    "d2",
+    "ts",
+    "k"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "d": {
+        "t": "date",
+        "v": "2025-12-31"
+      },
+      "d2": {
+        "t": "date",
+        "v": "2026-06-30"
+      },
+      "ts": {
+        "t": "datetime",
+        "v": "2025-12-31T23:59:59Z"
+      },
+      "k": {
+        "t": "str",
+        "v": "g2"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:d381daa875e7e7fe4e53cc0944c15f1d1c61d67d37a9422318afc933f96ef4ba",
+  "key_map_hash": "sha256:9efa7c85b1ad42ed03007e88036a5141b2180d966347a4347e39060260b778dd",
+  "error": null
+}

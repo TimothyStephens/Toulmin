@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "ev": "F1@v1"
+  },
+  "from": "ev",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "d < d2"
+    }
+  ]
+}

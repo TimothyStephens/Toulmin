@@ -1,0 +1,22 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1",
+    "ann": "F2@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "join",
+      "v": 1,
+      "right": "ann",
+      "on": [
+        {
+          "left": "gene_id",
+          "right": "gene_id"
+        }
+      ],
+      "kind": "left"
+    }
+  ]
+}

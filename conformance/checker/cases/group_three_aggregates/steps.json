@@ -1,0 +1,33 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "tissue"
+      ],
+      "aggregates": [
+        {
+          "as": "cnt",
+          "fn": "count",
+          "column": "n"
+        },
+        {
+          "as": "s",
+          "fn": "sum",
+          "column": "n"
+        },
+        {
+          "as": "mx",
+          "fn": "max",
+          "column": "n"
+        }
+      ]
+    }
+  ]
+}
