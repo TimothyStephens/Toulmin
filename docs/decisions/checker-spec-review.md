@@ -92,3 +92,11 @@ Timothy Stephens, 2026-11-17. The case writer re-read the revised checker.md and
 46. (Writer's 37.) In a str column every token is text, so a cell reading nan is the string "nan". The nan and inf token rule applies only to int, dec, bool, date, and datetime columns, where such a token is E3102 unless it is in the missing list, and to float64 columns, where it is a value. Lands in 11.7 and item 47.
 
 47. (Writer's 38.) Contradiction: the six functions (log, log2, log10, exp, mean, median) and "absorbed rather than tolerated" stand. The sentence in 11.6 saying "these four are the only places last-digit differences are tolerated" is removed.
+
+## Rulings on the case writer's last pass
+
+Timothy Stephens, 2026-11-17. Two rulings on the case writer's final pass (its findings 39 and 40), applied in the design before any Checker code.
+
+48. (Writer's 39.) Converting a literal to its positional form (11.18.1, ruling 45) is exact and happens outside the decimal context; only the arithmetic that follows applies the context. The reference implementation must not quantize in the precision-34 context, which fails for 9.9e999999. Lands in 11.18.1.
+
+49. (Writer's 40.) A key column written explicitly in a select's list appears in the description, because it was written; the exclusion covers only key columns the op does not list. Lands in 11.18.4.
