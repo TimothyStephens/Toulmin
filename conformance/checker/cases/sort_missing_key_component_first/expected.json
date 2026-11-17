@@ -1,0 +1,112 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Group by a and b and compute k = count(v); 4 groups from 5 rows."
+    },
+    {
+      "rows": 4,
+      "description": "Sort by k descending (missing values placed last; ties broken by a and b); 4 rows."
+    }
+  ],
+  "columns": [
+    "a",
+    "b",
+    "k",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "a": {
+        "t": "str",
+        "v": "x"
+      },
+      "b": {
+        "t": "str",
+        "v": "p"
+      },
+      "k": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:663e21de844c915c9db157e32892ce1395916893fdb681a218d8e12ab5514115"
+      }
+    },
+    {
+      "a": {
+        "t": "str",
+        "v": "x"
+      },
+      "b": {
+        "t": "missing"
+      },
+      "k": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:9a248f310a3383d3ce16ab8cdbaba596c52c1a791500a976b5f25d6135f55178"
+      }
+    },
+    {
+      "a": {
+        "t": "str",
+        "v": "x"
+      },
+      "b": {
+        "t": "str",
+        "v": "q"
+      },
+      "k": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:19c6e82bdb738180c36e92770c130d3f5247ad370623fa37009b1b8bea56cf6c"
+      }
+    },
+    {
+      "a": {
+        "t": "str",
+        "v": "y"
+      },
+      "b": {
+        "t": "str",
+        "v": "p"
+      },
+      "k": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:9377b600c8517b440c31c92c7456510f197f429a9522586181a65c7fee258be0"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:b9fca69f6b8f7cc838521d333e0ffbd1aa4c86221aaaf938ad44feeec700050b",
+  "key_map_hash": "sha256:2b6cae560efbd6418da18428428119d96da93ba2cbba29d9642263d7b7af78ed",
+  "error": null
+}

@@ -1,0 +1,23 @@
+{
+  "assert": 1,
+  "kind": "compare_rows",
+  "left": {
+    "row": [
+      {
+        "t": "str",
+        "v": "g"
+      }
+    ],
+    "column": "lo"
+  },
+  "right": {
+    "row": [
+      {
+        "t": "str",
+        "v": "h"
+      }
+    ],
+    "column": "lo"
+  },
+  "op": "eq"
+}

@@ -1,0 +1,43 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "grp",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "x",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 1
+    },
+    {
+      "name": "n",
+      "type": "int",
+      "missing": [
+        "NA"
+      ]
+    }
+  ],
+  "key": [
+    "id"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

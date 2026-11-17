@@ -52,3 +52,10 @@ Items 32 to 38 were ruled on. Two new ones, not waiting for a ruling:
 
 39. 11.18.1: "the reference implementation quantizes a literal to its positional scale before using it". For `9.9e999999` that positional form has 1,000,000 digits. Python's `quantize` in the stated precision-34 context signals InvalidOperation when the result exceeds the precision. Readings: quantize exactly, outside the context, giving the same number; or quantize in context and fail with a condition that has no code. Taken: exactly. derive_overflow_emax keeps verdict error with E5002 at `/ops/0/expr`. Under the second reading it would fail before the multiplication, with no code given.
 40. 11.18.4: "`{cols}` is the op's column list exactly as written in the op, and for `select` without the key columns it keeps implicitly". When a key column is listed explicitly, it can be read as kept "as written" or dropped as a key the op keeps anyway. Taken: kept, so select_three_with_key stays "Keep columns n, gene_id, and p; 5 rows.".
+
+## Design-review rulings (2026-11-17)
+
+Four rulings in 11.7 and 11.18.2. New items:
+
+41. 11.7: "a finite number whose double overflows (`1e400`) being `E3102`". No `field` is given for E3102 on a cell. "`field` points at the offending member" covers parse-spec schema errors, and a CSV cell is not a JSON member. Readings: `null`, which errors.md allows, or a pointer into the spec such as `/columns/1`. Taken: `null`. float64_overflow_cell.
+42. 11.18.2 `group` and Initial order: a group key, and so a final key, can now hold `missing`, but 11.9 says each `row` value is "of its column's type" and "`expected` is never `missing`". Whether an assertion `row` may contain `{"t":"missing"}` to locate such a group is not stated. Avoided: group_missing_values_one_group and sort_missing_key_component_first assert on rows with no missing component.

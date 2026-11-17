@@ -382,6 +382,58 @@ table(
 )
 
 
+table(
+    "gm",
+    "id,g,v\na,1.5,10\nb,NA,20\nc,NaN,30\nd,Inf,40\ne,1.5,50\nf,-Inf,60\n",
+    spec([col("id", "str"), col("g", "float64"), col("v", "int")], ["id"], nan="value", inf="value"),
+    ["id", "g", "v"], ["id"],
+    {
+        "a": [S("a"), D("1.5"), I(10)],
+        "b": [S("b"), M, I(20)],
+        "c": [S("c"), NAN, I(30)],
+        "d": [S("d"), PINF, I(40)],
+        "e": [S("e"), D("1.5"), I(50)],
+        "f": [S("f"), NINF, I(60)],
+    },
+)
+
+table(
+    "mm",
+    "id,grp,x,n\na,g,2.0,1\nb,g,NA,2\nc,g,3.5,5\nd,h,NA,2\ne,h,2.0,9\n",
+    spec([col("id", "str"), col("grp", "str"), col("x", "dec", 1), col("n", "int")], ["id"]),
+    ["id", "grp", "x", "n"], ["id"],
+    {
+        "a": [S("a"), S("g"), D("2.0"), I(1)],
+        "b": [S("b"), S("g"), M, I(2)],
+        "c": [S("c"), S("g"), D("3.5"), I(5)],
+        "d": [S("d"), S("h"), M, I(2)],
+        "e": [S("e"), S("h"), D("2.0"), I(9)],
+    },
+)
+
+table(
+    "pk",
+    "id,a,b,v\nr1,x,NA,1\nr2,x,p,2\nr3,x,p,3\nr4,x,q,4\nr5,y,p,5\n",
+    spec([col("id", "str"), col("a", "str"), col("b", "str"), col("v", "int")], ["id"]),
+    ["id", "a", "b", "v"], ["id"],
+    {
+        "r1": [S("r1"), S("x"), M, I(1)],
+        "r2": [S("r2"), S("x"), S("p"), I(2)],
+        "r3": [S("r3"), S("x"), S("p"), I(3)],
+        "r4": [S("r4"), S("x"), S("q"), I(4)],
+        "r5": [S("r5"), S("y"), S("p"), I(5)],
+    },
+)
+
+table(
+    "ov",
+    "id,x\na,1.5\nb,1e400\n",
+    spec([col("id", "str"), col("x", "float64")], ["id"]),
+    ["id", "x"], ["id"],
+    {"a": [S("a"), D("1.5")], "b": [S("b"), None]},
+)
+
+
 # ---- row builders -------------------------------------------------------------
 
 def rows(tname, order, add=None, drop=None, prefix=None):
@@ -1429,6 +1481,62 @@ case("exp_literal_out_of_range", ["one"], "one", [filt("x < 1e1000000")],
      a_count("eq", I(1)), "error", error=("E6004", "/ops/0/where"),
      notes="1e1000000 has adjusted exponent 1000000, above Emax 999999: E6004 at validation, pointing "
            "at the where member (11.18.1 names this exact literal).")
+
+
+# -- grouping values, equal min/max, missing key components, float64 overflow (design review) ----------
+case("group_missing_values_one_group", ["gm"], "gm", [group(["g"], [("s", "sum", "v")])],
+     a_value([D("1.5")], "s", "eq", I(60)), "holds",
+     [(2, "Group by g and compute s = sum(v); 2 groups from 6 rows.")],
+     gcols(["g"], ["s"]),
+     [grp_rows({"g": M}, {"s": I(150)}, 4, [[S("b")], [S("c")], [S("d")], [S("f")]]),
+      grp_rows({"g": D("1.5")}, {"s": I(60)}, 2, [[S("a")], [S("e")]])], ["g"],
+     notes="g is float64 with nan and inf mapped to values: a 1.5, b missing, c nan, d +inf, e 1.5, f -inf. "
+           "'Every missing, nan, or inf value in a by component falls in one group ... and that group's value "
+           "in the output is missing, whatever its members held'; 'Missing groups sort first'. Group 1: g "
+           "missing, members b, c, d, f: sum 20+30+40+60 = 150, member_count 4. Group 2: g 1.5, members a, e: "
+           "sum 10+50 = 60 (int, exact), member_count 2. The key map is [[missing], [1.5]]. The assertion "
+           "locates the 1.5 group by value (a row holding missing is avoided, AMBIGUITIES.md 42): 60 = 60: holds.")
+
+case("group_min_max_equal_values", ["mm"], "mm",
+     [derive("m", "coalesce(x, n)"), group(["grp"], [("lo", "min", "m"), ("hi", "max", "m")])],
+     a_cmp([S("g")], "lo", [S("h")], "lo", "eq"), "holds",
+     [(5, "Add column m = coalesce(x, n); 5 rows."),
+      (2, "Group by grp and compute lo = min(m) and hi = max(m); 2 groups from 5 rows.")],
+     gcols(["grp"], ["lo", "hi"]),
+     [grp_rows({"grp": S("g")}, {"lo": D("2.0"), "hi": D("3.5")}, 3, [[S("a")], [S("b")], [S("c")]]),
+      grp_rows({"grp": S("h")}, {"lo": D("2"), "hi": D("2")}, 2, [[S("d")], [S("e")]])], ["grp"],
+     notes="A dec column is written at one scale, so 2 and 2.0 can only differ in a derived column. "
+           "m = coalesce(x, n): a 2.0 (x), b 2 (n widened, scale 0, written '2'), c 3.5, d 2, e 2.0. Input "
+           "order to group is a, b, c, d, e. Group g {a 2.0, b 2, c 3.5}: the minimum value 2 is held by a and "
+           "b, equal under =; the first in input order is a, so lo is '2.0'; hi 3.5. Group h {d 2, e 2.0}: "
+           "both are minimum and maximum; the first is d, so lo and hi are '2'. compare_rows g.lo 2.0 = "
+           "h.lo 2 as decimals: holds; the written forms differ in final_rows.")
+
+case("sort_missing_key_component_first", ["pk"], "pk",
+     [group(["a", "b"], [("k", "count", "v")]), sort([("k", "desc")], "last")],
+     a_rank([S("x"), S("q")], 3), "holds",
+     [(4, "Group by a and b and compute k = count(v); 4 groups from 5 rows."),
+      (4, "Sort by k descending (missing values placed last; ties broken by a and b); 4 rows.")],
+     gcols(["a", "b"], ["k"]),
+     [grp_rows({"a": S("x"), "b": S("p")}, {"k": I(2)}, 2, [[S("r2")], [S("r3")]]),
+      grp_rows({"a": S("x"), "b": M}, {"k": I(1)}, 1, [[S("r1")]]),
+      grp_rows({"a": S("x"), "b": S("q")}, {"k": I(1)}, 1, [[S("r4")]]),
+      grp_rows({"a": S("y"), "b": S("p")}, {"k": I(1)}, 1, [[S("r5")]])], ["a", "b"],
+     notes="A key holds missing only after a group on a column with missing values. Group by (a, b): "
+           "(x, missing) {r1}, (x, p) {r2, r3}, (x, q) {r4}, (y, p) {r5}, in that order (missing component "
+           "first). k = count(v): 1, 2, 1, 1. The key is now (a, b). Sort by k descending: (x, p) k 2 first; "
+           "(x, missing), (x, q), (y, p) tie at 1 and are broken by the key ascending, 'a missing key "
+           "component sorting first': (x, missing) before (x, q) since a ties at x. 'missing values placed "
+           "last' concerns k, which has none. Final order (x,p), (x,missing), (x,q), (y,p). (x, q) is at "
+           "position 3; it would be 2 if the missing component sorted last: holds.")
+
+case("float64_overflow_cell", ["ov"], "ov", [],
+     a_count("eq", I(2)), "error", error=("E3102", None),
+     notes="In a float64 column 'any other text is read as an IEEE double ... a finite number whose double "
+           "overflows (1e400) being E3102, so only the declared infinity tokens produce infinity'. 1e400 "
+           "exceeds the largest double (about 1.8e308): E3102, verdict error, row-level fields null. "
+           "checker.md gives no field for E3102 on a cell; a CSV cell is not a JSON member, so field is null "
+           "(errors.md allows null; AMBIGUITIES.md 41).")
 
 
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------

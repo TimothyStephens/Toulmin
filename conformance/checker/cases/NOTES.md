@@ -496,3 +496,19 @@ Scale-3 column. 1.0e-3 is 0.0010 positionally (scale 4) and 0.0010 is scale 4 as
 ## exp_literal_out_of_range
 
 1e1000000 has adjusted exponent 1000000, above Emax 999999: E6004 at validation, pointing at the where member (11.18.1 names this exact literal).
+
+## group_missing_values_one_group
+
+g is float64 with nan and inf mapped to values: a 1.5, b missing, c nan, d +inf, e 1.5, f -inf. 'Every missing, nan, or inf value in a by component falls in one group ... and that group's value in the output is missing, whatever its members held'; 'Missing groups sort first'. Group 1: g missing, members b, c, d, f: sum 20+30+40+60 = 150, member_count 4. Group 2: g 1.5, members a, e: sum 10+50 = 60 (int, exact), member_count 2. The key map is [[missing], [1.5]]. The assertion locates the 1.5 group by value (a row holding missing is avoided, AMBIGUITIES.md 42): 60 = 60: holds.
+
+## group_min_max_equal_values
+
+A dec column is written at one scale, so 2 and 2.0 can only differ in a derived column. m = coalesce(x, n): a 2.0 (x), b 2 (n widened, scale 0, written '2'), c 3.5, d 2, e 2.0. Input order to group is a, b, c, d, e. Group g {a 2.0, b 2, c 3.5}: the minimum value 2 is held by a and b, equal under =; the first in input order is a, so lo is '2.0'; hi 3.5. Group h {d 2, e 2.0}: both are minimum and maximum; the first is d, so lo and hi are '2'. compare_rows g.lo 2.0 = h.lo 2 as decimals: holds; the written forms differ in final_rows.
+
+## sort_missing_key_component_first
+
+A key holds missing only after a group on a column with missing values. Group by (a, b): (x, missing) {r1}, (x, p) {r2, r3}, (x, q) {r4}, (y, p) {r5}, in that order (missing component first). k = count(v): 1, 2, 1, 1. The key is now (a, b). Sort by k descending: (x, p) k 2 first; (x, missing), (x, q), (y, p) tie at 1 and are broken by the key ascending, 'a missing key component sorting first': (x, missing) before (x, q) since a ties at x. 'missing values placed last' concerns k, which has none. Final order (x,p), (x,missing), (x,q), (y,p). (x, q) is at position 3; it would be 2 if the missing component sorted last: holds.
+
+## float64_overflow_cell
+
+In a float64 column 'any other text is read as an IEEE double ... a finite number whose double overflows (1e400) being E3102, so only the declared infinity tokens produce infinity'. 1e400 exceeds the largest double (about 1.8e308): E3102, verdict error, row-level fields null. checker.md gives no field for E3102 on a cell; a CSV cell is not a JSON member, so field is null (errors.md allows null; AMBIGUITIES.md 41).
