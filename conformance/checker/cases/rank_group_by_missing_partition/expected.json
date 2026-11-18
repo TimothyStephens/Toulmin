@@ -1,0 +1,128 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Group by g and t and compute s = sum(v); 4 groups from 6 rows."
+    },
+    {
+      "rows": 4,
+      "description": "Rank by s descending within each g (ties: min; missing values placed last); 4 rows."
+    }
+  ],
+  "columns": [
+    "g",
+    "t",
+    "s",
+    "member_count",
+    "member_keys_hash",
+    "rank"
+  ],
+  "final_rows": [
+    {
+      "g": {
+        "t": "missing"
+      },
+      "t": {
+        "t": "str",
+        "v": "q"
+      },
+      "s": {
+        "t": "int",
+        "v": "90"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:474ab9eab16f1e6d22f2444fcdb11e8023f0307abcee74a3d59ce58fbf1cf8cf"
+      },
+      "rank": {
+        "t": "int",
+        "v": "1"
+      }
+    },
+    {
+      "g": {
+        "t": "dec",
+        "v": "1.5"
+      },
+      "t": {
+        "t": "str",
+        "v": "q"
+      },
+      "s": {
+        "t": "int",
+        "v": "50"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:fdbfc61abcd2e9049d91227bb5c67930bc06cc88e63114ac9a03f639f44aad47"
+      },
+      "rank": {
+        "t": "int",
+        "v": "1"
+      }
+    },
+    {
+      "g": {
+        "t": "missing"
+      },
+      "t": {
+        "t": "str",
+        "v": "p"
+      },
+      "s": {
+        "t": "int",
+        "v": "60"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:ed26defa54d53c277d4e206ace75d532f06b2f8f1f7de8def1956a20e0581ec4"
+      },
+      "rank": {
+        "t": "int",
+        "v": "2"
+      }
+    },
+    {
+      "g": {
+        "t": "dec",
+        "v": "1.5"
+      },
+      "t": {
+        "t": "str",
+        "v": "p"
+      },
+      "s": {
+        "t": "int",
+        "v": "10"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:62e824ccecefbcebcdf890fe6f1de04f307fb11b45eb47bf627710791227db11"
+      },
+      "rank": {
+        "t": "int",
+        "v": "2"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:b44cf8dc6862f778083b8cfd77d2f9cecff50cb83575283192da516e688dbe8c",
+  "key_map_hash": "sha256:9190da227eb299d86b647aa6581e5d855477bfa90c1e1ecffebb5b2469a5f1e5",
+  "error": null
+}

@@ -434,6 +434,22 @@ table(
 )
 
 
+table(
+    "gp",
+    "id,g,t,v\na,1.5,p,10\nb,NA,p,20\nc,NaN,q,30\nd,Inf,p,40\ne,1.5,q,50\nf,-Inf,q,60\n",
+    spec([col("id", "str"), col("g", "float64"), col("t", "str"), col("v", "int")], ["id"], nan="value", inf="value"),
+    ["id", "g", "t", "v"], ["id"],
+    {
+        "a": [S("a"), D("1.5"), S("p"), I(10)],
+        "b": [S("b"), M, S("p"), I(20)],
+        "c": [S("c"), NAN, S("q"), I(30)],
+        "d": [S("d"), PINF, S("p"), I(40)],
+        "e": [S("e"), D("1.5"), S("q"), I(50)],
+        "f": [S("f"), NINF, S("q"), I(60)],
+    },
+)
+
+
 # ---- row builders -------------------------------------------------------------
 
 def rows(tname, order, add=None, drop=None, prefix=None):
@@ -1553,6 +1569,36 @@ case("assert_names_missing_group", ["sc2"], "sc2", [group(["score"], [("n", "cou
            "the first group is [missing]. 11.9 lets a row component be missing 'to name a missing key "
            "component', and 11.18.3 'Locating a row' matches it by grouping identity, not by =. The row "
            "[missing] locates the first group; its n is 2 = 2: holds.")
+
+
+def ranked_group(by_values, aggs, member_count, member_tuples, rank_value):
+    row = grp_rows(by_values, aggs, member_count, member_tuples)
+    row["rank"] = I(rank_value)
+    return row
+
+
+case("rank_group_by_missing_partition", ["gp"], "gp",
+     [group(["g", "t"], [("s", "sum", "v")]),
+      rank("s", "desc", "min", "last", "group", ["g"])],
+     a_rank([M, S("p")], 3), "holds",
+     [(4, "Group by g and t and compute s = sum(v); 4 groups from 6 rows."),
+      (4, "Rank by s descending within each g (ties: min; missing values placed last); 4 rows.")],
+     gcols(["g", "t"], ["s"]) + ["rank"],
+     [ranked_group({"g": M, "t": S("q")}, {"s": I(90)}, 2, [[S("c")], [S("f")]], 1),
+      ranked_group({"g": D("1.5"), "t": S("q")}, {"s": I(50)}, 1, [[S("e")]], 1),
+      ranked_group({"g": M, "t": S("p")}, {"s": I(60)}, 2, [[S("b")], [S("d")]], 2),
+      ranked_group({"g": D("1.5"), "t": S("p")}, {"s": I(10)}, 1, [[S("a")]], 2)], ["g", "t"],
+     notes="g is float64 with nan and inf as values: a 1.5, b missing, c nan, d +inf, e 1.5, f -inf; t is p or "
+           "q. Group by (g, t): every missing, nan, or inf g falls in one group per t, with g written missing: "
+           "(missing, p) {b, d} s 60; (missing, q) {c, f} s 90; (1.5, p) {a} s 10; (1.5, q) {e} s 50. Missing "
+           "groups sort first: that is the group order. The key is now (g, t). Rank by s descending within "
+           "each g: the two missing-keyed groups form one partition (11.18.2 rank: every missing value in a "
+           "group_by component is one partition): (missing, q) 90 -> 1, (missing, p) 60 -> 2. Partition 1.5: "
+           "(1.5, q) 50 -> 1, (1.5, p) 10 -> 2. Table order is rank ascending then the key, 'a missing key "
+           "component sorting first': rank 1: (missing, q) before (1.5, q); rank 2: (missing, p) before "
+           "(1.5, p). Final order (missing,q), (1.5,q), (missing,p), (1.5,p). The row [missing, p] is located by "
+           "grouping identity (11.18.3) and is at position 3; it would be 4 if the missing component sorted "
+           "last: holds. The rank column follows member_keys_hash as the last column.")
 
 
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------

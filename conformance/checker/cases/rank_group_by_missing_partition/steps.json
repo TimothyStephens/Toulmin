@@ -1,0 +1,36 @@
+{
+  "steps": 1,
+  "tables": {
+    "gp": "F1@v1"
+  },
+  "from": "gp",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "g",
+        "t"
+      ],
+      "aggregates": [
+        {
+          "as": "s",
+          "fn": "sum",
+          "column": "v"
+        }
+      ]
+    },
+    {
+      "op": "rank",
+      "v": 1,
+      "by": "s",
+      "dir": "desc",
+      "ties": "min",
+      "missing": "last",
+      "scope": "group",
+      "group_by": [
+        "g"
+      ]
+    }
+  ]
+}
