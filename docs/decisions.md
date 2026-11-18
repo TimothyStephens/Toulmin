@@ -1273,3 +1273,9 @@ verdict `error` with `E3102` and field null (ruling 54), and item 92's case
 format has the case directory hold the raw table, so the harness stands in
 for the parse step the Core runs before the Checker. tm-files already gives
 the cell `E3102` field null, so nothing in tm-files changed for ruling 54.
+
+## 2026-11-18 P4 close: observed.p1.json removed
+
+**What.** The 28 `observed.p1.json` files under `conformance/checker/assertions/eval/` are deleted.
+
+**Why.** They held the P1 Rust author's answers, kept so the P4 independent case writer could not mistake them for the spec-derived answers. That session wrote `expected.json` beside each from `checker.md` alone, and all 28 pairs agreed (P4 builder's rule 3d diff, confirmed by the P4 review). The agreement is recorded; the files are now a second answer per case and a trap for P5.
