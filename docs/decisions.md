@@ -1279,3 +1279,69 @@ the cell `E3102` field null, so nothing in tm-files changed for ruling 54.
 **What.** The 28 `observed.p1.json` files under `conformance/checker/assertions/eval/` are deleted.
 
 **Why.** They held the P1 Rust author's answers, kept so the P4 independent case writer could not mistake them for the spec-derived answers. That session wrote `expected.json` beside each from `checker.md` alone, and all 28 pairs agreed (P4 builder's rule 3d diff, confirmed by the P4 review). The agreement is recorded; the files are now a second answer per case and a trap for P5.
+
+## 2026-11-18 P5: the case generator's buckets, seeding, and `gen.json` (item 89)
+
+**What.** Item 89 now fixes what the design left open for
+`examples/gencases.rs`: its invocation (`--out DIR --n N [--seed SEED]
+[--start I]`); sixteen named coverage buckets assigned round-robin by case
+index, so N = 10,000 gives 625 cases per bucket; a per-case SplitMix64
+stream seeded from `(SEED, index)`, so a case does not depend on N and one
+case can be regenerated alone; a `gen.json` file in each case directory
+holding `{"seed","index","bucket"}`; how values are drawn (small domains
+for ties, every spec type, NFC and NFD spellings, backticked names,
+exponent cells, NaN and Inf tokens under both settings); three buckets
+that produce errors on purpose (`E6004`, `E3102`, `E5002`); and a redraw
+loop against `tm-formats`' validation for every other bucket, so nearly
+every case runs.
+
+**Why.** The design said what the generator must cover and nothing about
+how, and the P5 brief's design-first rule makes each of those choices a
+design edit before code. Round-robin buckets make the count per bucket a
+property of N alone, which the P5 report can state. The per-case seed
+makes a differing case reproducible from its `gen.json` without rerunning
+the whole suite. Validation-with-redraw keeps the suite about semantics
+rather than about validation refusals, which the conformance suites
+already cover; the three error buckets stay because rulings 36, 53, and
+16 make those errors Checker behaviour the two implementations must share.
+No `rand` dependency: SplitMix64 is a dozen lines, and D24 fixes the
+dependency list.
+
+## 2026-11-18 P5: both refcheck implementations print to standard output (item 59)
+
+**What.** Item 59 said the example binary "writes `observed.json`" beside
+the case; the P4 binary did that and printed nothing. Item 59 and item 89
+now state one contract for both implementations: one case directory as the
+only argument, the item 92 `expected.json` object on standard output, exit
+0 whatever the verdict, non-zero with a message on standard error only when
+the case cannot be run at all. `examples/refcheck.rs` is changed to match.
+
+**Why.** The Python side was given `python3 refcheck.py CASE_DIR` with the
+object on standard output, and a differential script that reads one side
+from a file and the other from a pipe is two code paths for one
+comparison. Writing into the case directory also puts a file item 92 does
+not name next to the inputs the other implementation is about to read.
+
+## 2026-11-18 P5: the differential script's seed, retention path, and runner classes (item 89, Verification Plan)
+
+**What.** `scripts/differential.sh N [SEED]` takes its seed from the
+command line, defaulting to the current Unix time, and prints it first;
+differing cases are kept under `target/differential/<SEED>/<case>/` with
+both outputs and both standard errors; the CI job passes the workflow
+run's id as the seed and uploads that directory as an artifact. The two
+runner classes are `ubuntu-24.04` (x64) and `ubuntu-24.04-arm` (arm64).
+
+**Why.** 11.6 asks for "the same cases on two CPU generations"; one seed
+shared by both matrix legs is what makes them the same cases, and the run
+id is the one value both legs have and a reader can find later. A fresh
+seed per run explores more of the space; any difference is a defect and
+its case is kept, so the suite is no less reproducible for it. The
+retention path is under `target/` because it is build output in the
+git-ignored place for build output, and it is named by seed so two runs
+do not overwrite each other. **Deviation:** GitHub-hosted runners do not
+let a workflow choose an x64 CPU generation (the x64 pool is one class
+whatever the image), so the second class is arm64 rather than an older
+x64 generation. It still meets the purpose, which is to run DuckDB's
+runtime-selected code paths on two different CPUs, and it is the only
+second CPU GitHub offers for Linux. The design text names both classes and
+says why.
