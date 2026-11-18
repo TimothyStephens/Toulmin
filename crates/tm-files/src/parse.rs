@@ -19,7 +19,7 @@ use tm_duckdb::EngineSettings;
 use tm_formats::parse_spec::{Column, Format, ParseSpec};
 use tm_formats::typed_value::{
     Date, DateTime, SpecType, TypedValue, arrow_type, dec_from_f64_shortest, dec_text, from_arrow,
-    parse_dec_text, to_arrow,
+    parse_dec_written, to_arrow,
 };
 
 use crate::{Code, Error, Result, read_file};
@@ -318,6 +318,10 @@ fn special_token(token: &str) -> Option<TypedValue> {
     }
 }
 
+/// The digits a `DECIMAL(38, s)` column holds (11.6), the bound on an
+/// exponent cell's positional form.
+const DEC_DIGITS: u32 = 38;
+
 /// Fraction digits of a decimal text (`0` without a point).
 fn fraction_len(text: &str) -> usize {
     text.split_once('.').map_or(0, |(_, f)| f.len())
@@ -361,7 +365,8 @@ fn type_cell(cell: &Cell, column: &Column, spec: &ParseSpec, row: usize) -> Resu
     if column.missing.iter().any(|m| m == text) {
         return Ok(TypedValue::Missing);
     }
-    if let Some(sp) = special_token(text) {
+    // In a str column every token is text, `nan` included (11.7; ruling 46).
+    if let Some(sp) = special_token(text).filter(|_| t != SpecType::Str) {
         if t != SpecType::Float64 {
             return Err(e3102(
                 row,
@@ -394,6 +399,13 @@ fn type_cell(cell: &Cell, column: &Column, spec: &ParseSpec, row: usize) -> Resu
             .map(TypedValue::Dec)
             .ok_or_else(|| e3102(row, &column.name, format!("{text:?} is not a float64")));
     }
+    if t == SpecType::Dec {
+        // A dec cell may carry an exponent; it is converted to positional
+        // form before the column-scale rule (11.6, 11.7; ruling 32).
+        return parse_dec_written(text, DEC_DIGITS)
+            .map(TypedValue::Dec)
+            .ok_or_else(|| e3102(row, &column.name, format!("{text:?} is not dec")));
+    }
     TypedValue::from_text(text, t)
         .ok_or_else(|| e3102(row, &column.name, format!("{text:?} is not {}", t.as_str())))
 }
@@ -403,18 +415,23 @@ fn typed_table(rows: &[Vec<Cell>], spec: &ParseSpec) -> Result<Vec<Vec<TypedValu
     for (i, row) in rows.iter().enumerate() {
         let mut typed = Vec::with_capacity(row.len());
         for (cell, column) in row.iter().zip(&spec.columns) {
-            let v = type_cell(cell, column, spec, i + 1)?;
+            let mut v = type_cell(cell, column, spec, i + 1)?;
             if let (SpecType::Dec, TypedValue::Dec(d), Some(scale)) = (column.ty, &v, column.scale)
-                && fraction_len(&dec_text(d)) > usize::from(scale)
             {
-                return Err(e3102(
-                    i + 1,
-                    &column.name,
-                    format!(
-                        "{} has more fraction digits than the spec's scale {scale}",
-                        dec_text(d)
-                    ),
-                ));
+                // E3102 only when writing the value at the column's scale
+                // would change it; extra trailing zeros fit (11.7, ruling 39).
+                let at_scale = d.with_scale(i64::from(scale));
+                if at_scale != *d {
+                    return Err(e3102(
+                        i + 1,
+                        &column.name,
+                        format!(
+                            "{} does not fit the spec's scale {scale} without changing its value",
+                            dec_text(d)
+                        ),
+                    ));
+                }
+                v = TypedValue::Dec(at_scale);
             }
             typed.push(v);
         }
@@ -551,10 +568,12 @@ pub fn complete_spec(path: &Path, draft: &Value, settings: &EngineSettings) -> R
                     ));
                 }
             };
-            if parse_dec_text(text.trim()).is_none() {
+            // The scale of the positional form, an exponent converted first
+            // (11.7; ruling 32).
+            let Some(d) = parse_dec_written(text.trim(), DEC_DIGITS) else {
                 return Err(e3102(r + 1, &column.name, format!("{text:?} is not dec")));
-            }
-            scale = scale.max(fraction_len(text.trim()));
+            };
+            scale = scale.max(fraction_len(&dec_text(&d)));
         }
         if scale > 38 {
             return Err(e3102(0, &column.name, "a scale above 38"));

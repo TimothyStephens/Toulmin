@@ -2,3 +2,8 @@
 dev/fixtures/private/
 /target/
 __pycache__/
+# tm-checker: refcheck output and cargo-fuzz working directories (item 62).
+/conformance/checker/**/observed.json
+/crates/tm-checker/fuzz/target/
+/crates/tm-checker/fuzz/corpus/
+/crates/tm-checker/fuzz/artifacts/

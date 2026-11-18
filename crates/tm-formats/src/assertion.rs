@@ -408,7 +408,8 @@ impl Assertion {
     }
 
     /// Check against the final table's schema before anything runs (11.9):
-    /// `row` arity and types, `column` existence, and that `expected` (or
+    /// `row` arity and types (each of its column's type, or `missing`),
+    /// `column` existence, and that `expected` (or
     /// the right cell's column) is of a type the column compares with.
     ///
     /// # Errors
@@ -426,7 +427,9 @@ impl Assertion {
             }
             for (i, (v, k)) in row.iter().zip(&schema.key).enumerate() {
                 let want = schema.tag(k).unwrap_or(Tag::Missing);
-                if !compatible(v.tag(), want) {
+                // Ruling 55 (11.9): a row value may be `missing`, naming a
+                // missing key component (a group's missing value).
+                if !(v.tag() == Tag::Missing || compatible(v.tag(), want)) {
                     return Err(Error::at(
                         Code::E6004,
                         ptr(&ptr(at, "row"), i),
@@ -643,6 +646,39 @@ mod tests {
 
     fn dec(s: &str) -> TypedValue {
         TypedValue::Dec(parse_dec_text(s).unwrap())
+    }
+
+    #[test]
+    fn a_row_value_may_be_missing() {
+        // Ruling 55 (11.9): each row value is of its column's type, or
+        // `missing`; `expected` still never is, and a wrong type still fails.
+        let schema = TableSchema {
+            columns: vec![
+                ("g".to_owned(), Tag::Dec),
+                ("member_count".to_owned(), Tag::Int),
+            ],
+            key: vec!["g".to_owned()],
+        };
+        let ok = Assertion::from_json(&json!({"assert":1,"kind":"value","row":[{"t":"missing"}],"column":"member_count","op":"eq","expected":{"t":"int","v":"312"}})).unwrap();
+        assert_eq!(ok.check(&schema), Ok(()));
+        let exists =
+            Assertion::from_json(&json!({"assert":1,"kind":"exists","row":[{"t":"missing"}]}))
+                .unwrap();
+        assert_eq!(exists.check(&schema), Ok(()));
+        let wrong =
+            Assertion::from_json(&json!({"assert":1,"kind":"exists","row":[{"t":"str","v":"x"}]}))
+                .unwrap();
+        assert_eq!(
+            wrong.check(&schema).map_err(|e| (e.code, e.field)),
+            Err((Code::E6004, Some("/row/0".to_owned())))
+        );
+        let expected = Assertion::from_json(
+            &json!({"assert":1,"kind":"value","row":[{"t":"missing"}],"column":"member_count","op":"eq","expected":{"t":"missing"}}),
+        );
+        assert_eq!(
+            expected.map_err(|e| (e.code, e.field)).err(),
+            Some((Code::E6004, Some("/expected".to_owned())))
+        );
     }
 
     #[test]

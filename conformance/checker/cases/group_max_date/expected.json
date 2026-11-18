@@ -1,0 +1,56 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Group by k and compute mx = max(d); 2 groups from 4 rows."
+    }
+  ],
+  "columns": [
+    "k",
+    "mx",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "k": {
+        "t": "str",
+        "v": "g1"
+      },
+      "mx": {
+        "t": "date",
+        "v": "2026-03-01"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:0d606efc6fde04605d0abbd227eece0eb61d09349c44b5d9ae10955e978b6dce"
+      }
+    },
+    {
+      "k": {
+        "t": "str",
+        "v": "g2"
+      },
+      "mx": {
+        "t": "date",
+        "v": "2025-12-31"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:8ddc59fede213f036a3d7d818ff850c18bae81cce99834ac354d1bd8ec1776a3"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:eeb8bb3ce3e655eab401fb3d7cb54704cc1a21598ca9dd0ce84bc5b443bb5421",
+  "key_map_hash": "sha256:be133ce504b6097f6d0fdf4b976dbd192c4a9d89bcaba67b024a817b57ee9976",
+  "error": null
+}

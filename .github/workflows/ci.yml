@@ -17,7 +17,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "17 3 * * *" # nightly: fuzz
+    - cron: "17 3 * * 1" # weekly, Monday: the fuzz job (Verification Plan, Fuzzing)
   workflow_dispatch:
 
 permissions:
@@ -355,7 +355,11 @@ jobs:
       - run: |
           if [ ! -d crates/tm-checker ]; then echo "::notice::no-op until P4: crates/tm-checker absent"; exit 0; fi
           cargo install cargo-insta --locked
-          cargo insta test -p tm-checker --check --locked
+          # cargo-insta takes no --locked: it hands everything after -- to
+          # the test binaries. The build step enforces the lock, and
+          # cargo insta reuses that build.
+          cargo test -p tm-checker --locked --no-run
+          cargo insta test -p tm-checker --check
 
   fuzz:
     name: fuzz (nightly toolchain, 600 s per target)

@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "tiny": "F1@v1"
+  },
+  "from": "tiny",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "q < 0.001"
+    }
+  ]
+}

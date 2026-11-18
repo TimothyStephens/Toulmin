@@ -1,0 +1,28 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "tissue",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "organ",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    }
+  ],
+  "key": [
+    "tissue"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

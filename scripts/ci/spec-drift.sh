@@ -9,9 +9,12 @@
 #         <!-- design-sections: 11.1-11.17, 11.21, 11.23 -->
 #     naming the design sections it copies (ranges inclusive, in design
 #     order). Item 93 fixes the lists: formats.md 11.1-11.17, 11.21, 11.23;
-#     record.md 3, 11.21; checker.md 11.6-11.10, 11.18; claims.md 7, 11.22.
+#     record.md 3, 11.21; checker.md 11.6-11.10, 11.18, item 92 (the
+#     conformance case format); claims.md 7, 11.22.
 #   * A design section is the text from its numbered heading up to the next
-#     heading of the same or a higher level.
+#     heading of the same or a higher level. `item N` names one entry of the
+#     Detailed Implementation Plan's numbered list: the text from the line
+#     starting `N. ` up to the next list entry or heading.
 #   * Heading normalization: the `#` run and the section number are dropped
 #     from heading lines on both sides, and trailing whitespace and blank-line
 #     runs are collapsed.
@@ -48,6 +51,8 @@ for part in m.group(1).split(","):
         wanted += [f"{pre}{i}" for i in range(lo, hi + 1)]
     else:
         wanted.append(part)
+item_ref = re.compile(r"^item\s+(\d+[a-z]?)$")
+entry = re.compile(r"^(\d+[a-z]?)\.\s")
 heading = re.compile(r"^(#+)\s+(\d+(?:\.\d+)*)\.?\s+(.*)$")
 def normalize(lines):
     out = []
@@ -66,6 +71,21 @@ def normalize(lines):
     while out and out[0] == "":
         out.pop(0)
     return out
+def item(number):
+    start = None
+    for i, line in enumerate(design):
+        e = entry.match(line)
+        if e and e.group(1) == number:
+            start = i
+            break
+    if start is None:
+        return None
+    end = len(design)
+    for j in range(start + 1, len(design)):
+        if entry.match(design[j]) or design[j].startswith("#"):
+            end = j
+            break
+    return design[start:end]
 def section(number):
     start = None
     level = None
@@ -85,9 +105,10 @@ def section(number):
     return design[start:end]
 expected = []
 for num in wanted:
-    body = section(num)
+    ref = item_ref.match(num)
+    body = item(ref.group(1)) if ref else section(num)
     if body is None:
-        print(f"FAIL {spec_path}: design section {num} not found")
+        print(f"FAIL {spec_path}: design {'item' if ref else 'section'} {num} not found")
         sys.exit(1)
     expected += body + [""]
 left = normalize(expected)

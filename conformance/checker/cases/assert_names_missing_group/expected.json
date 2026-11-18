@@ -1,0 +1,91 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Group by score and compute n = count(id); 4 groups from 6 rows."
+    }
+  ],
+  "columns": [
+    "score",
+    "n",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "score": {
+        "t": "missing"
+      },
+      "n": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:e689c561be5b093adb4e83381c060f4d6088fb4c0049bbbb76156f3fa0809cd8"
+      }
+    },
+    {
+      "score": {
+        "t": "int",
+        "v": "5"
+      },
+      "n": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:fdbfc61abcd2e9049d91227bb5c67930bc06cc88e63114ac9a03f639f44aad47"
+      }
+    },
+    {
+      "score": {
+        "t": "int",
+        "v": "10"
+      },
+      "n": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:62e824ccecefbcebcdf890fe6f1de04f307fb11b45eb47bf627710791227db11"
+      }
+    },
+    {
+      "score": {
+        "t": "int",
+        "v": "20"
+      },
+      "n": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:8781397e830c6bdbe95d61d7d8a0b7cd130d6ad5d6d789d297885874e817beb1"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:2a178d8bbbd8074a0f842c5808591589ce2492465f0170e0320dea0ae5b29659",
+  "key_map_hash": "sha256:444ced59c6dad5f066d3cc5786921db6466c4a1aacfce5cc570bd08dff2edb4a",
+  "error": null
+}

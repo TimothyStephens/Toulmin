@@ -1,0 +1,4 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- no SQL: a table did not parse (E3102); the Checker did not run

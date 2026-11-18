@@ -1,0 +1,51 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "gene_id",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "fc",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 1
+    },
+    {
+      "name": "p",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 3
+    },
+    {
+      "name": "tissue",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "n",
+      "type": "int",
+      "missing": [
+        "NA"
+      ]
+    }
+  ],
+  "key": [
+    "gene_id"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

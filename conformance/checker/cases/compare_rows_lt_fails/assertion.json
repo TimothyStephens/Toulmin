@@ -1,0 +1,23 @@
+{
+  "assert": 1,
+  "kind": "compare_rows",
+  "left": {
+    "row": [
+      {
+        "t": "str",
+        "v": "TP53"
+      }
+    ],
+    "column": "fc"
+  },
+  "right": {
+    "row": [
+      {
+        "t": "str",
+        "v": "MDM2"
+      }
+    ],
+    "column": "fc"
+  },
+  "op": "lt"
+}

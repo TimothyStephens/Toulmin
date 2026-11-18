@@ -1,0 +1,55 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Group by g and compute s = sum(v); 2 groups from 6 rows."
+    }
+  ],
+  "columns": [
+    "g",
+    "s",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "g": {
+        "t": "missing"
+      },
+      "s": {
+        "t": "int",
+        "v": "150"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "4"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:9c6129be606a597a756021dede7078698fa70680ee6e0ee5aff3763288ae9036"
+      }
+    },
+    {
+      "g": {
+        "t": "dec",
+        "v": "1.5"
+      },
+      "s": {
+        "t": "int",
+        "v": "60"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:188f6a0d96a74646ed8d981eeb3b24636253b33e863902132be628b73bdd1987"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:d64adee03e9aafc28eb0bcb7fa41551121cb6f0ef1ddbc127ec45c9b8a40ace0",
+  "key_map_hash": "sha256:5490f3268a8609a33fe747988a801ba96990e5a5f13885ae7a8d2284e25fc764",
+  "error": null
+}

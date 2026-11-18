@@ -1,0 +1,43 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 1,
+      "description": "Keep rows where fc > 1.0 and p < 0.050 (missing values excluded); 1 of 5 rows remain."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.001"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "4"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:9aceb3900762d4548723232a03035970ac4e99178144fbfe6fa9b8100c7c7581",
+  "key_map_hash": "sha256:6bbdafda8417c13b34c22c7017867a401be7e7607f0fa5657b5216adf71643c1",
+  "error": null
+}

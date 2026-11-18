@@ -1,0 +1,7 @@
+{
+  "verdict": "error",
+  "error": {
+    "code": "E6004",
+    "field": "/tol"
+  }
+}

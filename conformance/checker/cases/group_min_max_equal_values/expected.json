@@ -1,0 +1,69 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Add column m = coalesce(x, n); 5 rows."
+    },
+    {
+      "rows": 2,
+      "description": "Group by grp and compute lo = min(m) and hi = max(m); 2 groups from 5 rows."
+    }
+  ],
+  "columns": [
+    "grp",
+    "lo",
+    "hi",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "grp": {
+        "t": "str",
+        "v": "g"
+      },
+      "lo": {
+        "t": "dec",
+        "v": "2.0"
+      },
+      "hi": {
+        "t": "dec",
+        "v": "3.5"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "3"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:c903a65ad990c398c2a380b03c95abf7f2330c6e67b092afa9c62cffc898a1f5"
+      }
+    },
+    {
+      "grp": {
+        "t": "str",
+        "v": "h"
+      },
+      "lo": {
+        "t": "dec",
+        "v": "2"
+      },
+      "hi": {
+        "t": "dec",
+        "v": "2"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:1802f8eb3cf8e8e4000b2c3d9b58f7fa2e2e946a3972c76198d6ae9a1ca2b6aa"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:fb67f0832775e8d7a03d6474e71f8bd30e30689b322fc4e06e464db89ce1f9a0",
+  "key_map_hash": "sha256:2657c24e239da5ab3391d90220fa282f38b090b3b9b5bfc26227b461a055be50",
+  "error": null
+}

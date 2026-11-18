@@ -1,0 +1,7 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.s3: c0 = "id" (str), c1 = "v" (dec); key "id"
+SELECT "row" FROM "input.s3" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- ops/0 filter: evaluated in Rust over step0 (11.18.2 Where); its rows are step1

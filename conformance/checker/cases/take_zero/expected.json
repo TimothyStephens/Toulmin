@@ -1,0 +1,24 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Sort by fc ascending (missing values placed last; ties broken by gene_id); 5 rows."
+    },
+    {
+      "rows": 0,
+      "description": "Take the first 0 rows; 0 rows remain."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n"
+  ],
+  "final_rows": [],
+  "final_rows_hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "key_map_hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "error": null
+}

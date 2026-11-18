@@ -1,0 +1,47 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Keep rows where `p-value` < 0.050 and `or` > 1.0 (missing values excluded); 2 of 3 rows remain."
+    }
+  ],
+  "columns": [
+    "id",
+    "p-value",
+    "or"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "r1"
+      },
+      "p-value": {
+        "t": "dec",
+        "v": "0.010"
+      },
+      "or": {
+        "t": "dec",
+        "v": "1.5"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "r3"
+      },
+      "p-value": {
+        "t": "dec",
+        "v": "0.040"
+      },
+      "or": {
+        "t": "dec",
+        "v": "2.0"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:b8da137eeefdb00d0fff1dfa3f80dce69ef41df8ad4adaec6702e221acb602db",
+  "key_map_hash": "sha256:d30471fd5f16c0fccc33a07bcdb4c0273c8191963b3945b9a451a9040f47cef5",
+  "error": null
+}

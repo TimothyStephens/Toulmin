@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "pv": "F1@v1"
+  },
+  "from": "pv",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "`p-value` < 0.050 and `or` > 1.0"
+    }
+  ]
+}

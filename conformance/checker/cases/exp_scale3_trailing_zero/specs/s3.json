@@ -1,0 +1,29 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "v",
+      "type": "dec",
+      "missing": [
+        "NA"
+      ],
+      "scale": 3
+    }
+  ],
+  "key": [
+    "id"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

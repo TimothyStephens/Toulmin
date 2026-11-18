@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "s3": "F1@v1"
+  },
+  "from": "s3",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "v = 0.001"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 2,
+      "description": "Keep rows where padj < 1e-10 (missing values excluded); 2 of 5 rows remain."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "padj"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "a"
+      },
+      "padj": {
+        "t": "dec",
+        "v": "0.000000000001"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "b"
+      },
+      "padj": {
+        "t": "dec",
+        "v": "0.000000000050"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:f7b228c1dadd3ae03b4ac580423dc613c3e67a751226968497e9e350bfcd6bc0",
+  "key_map_hash": "sha256:0d606efc6fde04605d0abbd227eece0eb61d09349c44b5d9ae10955e978b6dce",
+  "error": null
+}

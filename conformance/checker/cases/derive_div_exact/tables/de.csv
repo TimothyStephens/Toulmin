@@ -1,0 +1,6 @@
+gene_id,fc,p,tissue,n
+BRCA1,0.5,0.200,breast,3
+EGFR,3.0,NA,breast,7
+KRAS,NA,0.010,lung,2
+MDM2,-1.5,0.040,liver,5
+TP53,2.5,0.001,liver,4

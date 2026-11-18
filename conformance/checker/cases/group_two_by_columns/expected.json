@@ -1,0 +1,109 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Group by cond and gene and compute k = count(val); 4 groups from 5 rows."
+    }
+  ],
+  "columns": [
+    "cond",
+    "gene",
+    "k",
+    "member_count",
+    "member_keys_hash"
+  ],
+  "final_rows": [
+    {
+      "cond": {
+        "t": "str",
+        "v": "ctl"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "k": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:e1c0ef39b5393aff9fccc3c7a84f2ccd216a14ad049a033ebb975c9137223b79"
+      }
+    },
+    {
+      "cond": {
+        "t": "str",
+        "v": "ctl"
+      },
+      "gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "k": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:c5cc10c475f64f97ba627ab4a294a5408d64a554db2f08ce304f06a75280f90e"
+      }
+    },
+    {
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "k": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "2"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:fa568203d10554d9284bb02ed233a3b0b448c1f27ce5bfd8f0c732ea5481b78d"
+      }
+    },
+    {
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      },
+      "gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "k": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_count": {
+        "t": "int",
+        "v": "1"
+      },
+      "member_keys_hash": {
+        "t": "str",
+        "v": "sha256:3739013d5caaddfc17cba530ff62602bf6aebe093db4d98c3e8672132ef1af42"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:fdbb4a61a596c96a4e64466e9d3a326eedfce430359845fe92923b4f989080c6",
+  "key_map_hash": "sha256:5468352aaf0510ebd81bf7cdc9f365b8fcac6d6793f7a6f337475bbd665f365b",
+  "error": null
+}

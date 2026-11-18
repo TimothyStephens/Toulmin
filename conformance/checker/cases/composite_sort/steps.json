@@ -1,0 +1,20 @@
+{
+  "steps": 1,
+  "tables": {
+    "obs": "F1@v1"
+  },
+  "from": "obs",
+  "ops": [
+    {
+      "op": "sort",
+      "v": 1,
+      "by": [
+        {
+          "column": "val",
+          "dir": "desc"
+        }
+      ],
+      "missing": "first"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "spec": 1,
+  "format": "csv",
+  "delimiter": ",",
+  "header": true,
+  "columns": [
+    {
+      "name": "sample",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "gene",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    },
+    {
+      "name": "qc",
+      "type": "str",
+      "missing": [
+        "NA"
+      ]
+    }
+  ],
+  "key": [
+    "sample",
+    "gene"
+  ],
+  "nan": "missing",
+  "inf": "missing",
+  "encoding": "utf-8"
+}

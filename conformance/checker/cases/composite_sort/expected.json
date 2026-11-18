@@ -1,0 +1,109 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Sort by val descending (missing values placed first; ties broken by sample and gene); 5 rows."
+    }
+  ],
+  "columns": [
+    "sample",
+    "gene",
+    "val",
+    "cond"
+  ],
+  "final_rows": [
+    {
+      "sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "val": {
+        "t": "missing"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s3"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "5.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s2"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "3.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "trt"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s1"
+      },
+      "gene": {
+        "t": "str",
+        "v": "B"
+      },
+      "val": {
+        "t": "dec",
+        "v": "2.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "ctl"
+      }
+    },
+    {
+      "sample": {
+        "t": "str",
+        "v": "s1"
+      },
+      "gene": {
+        "t": "str",
+        "v": "A"
+      },
+      "val": {
+        "t": "dec",
+        "v": "1.0"
+      },
+      "cond": {
+        "t": "str",
+        "v": "ctl"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:aca93ffa2bf5eefc98043b72a741e3eb55c6bf45a3bb0139e3f530ee78232066",
+  "key_map_hash": "sha256:0fd0dd5ee14db8359d022ecc4d53ecd7f769eef88de86c8a44b899b4c09a03de",
+  "error": null
+}

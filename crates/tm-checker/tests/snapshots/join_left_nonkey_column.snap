@@ -1,0 +1,9 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.de: c0 = "gene_id" (str), c1 = "fc" (dec), c2 = "p" (dec), c3 = "tissue" (str), c4 = "n" (int); key "gene_id"
+SELECT "row" FROM "input.de" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "gene_id" (str), c1 = "fc" (dec), c2 = "p" (dec), c3 = "tissue" (str), c4 = "n" (int); key "gene_id"
+-- input.tiss: c0 = "tissue" (str), c1 = "organ" (str); key "tissue"
+SELECT l."row" AS "left_row", r."row" AS "right_row" FROM "step0" AS l LEFT JOIN "input.tiss" AS r ON l."c3" = r."c0" ORDER BY l."row";

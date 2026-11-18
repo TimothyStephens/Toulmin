@@ -1,0 +1,7 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.de: c0 = "gene_id" (str), c1 = "fc" (dec), c2 = "p" (dec), c3 = "tissue" (str), c4 = "n" (int); key "gene_id"
+SELECT "row" FROM "input.de" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- ops/0 derive: column "n1" computed in Rust over step0 (11.18.2 Where); step1 is step0 with it as column c5

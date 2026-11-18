@@ -1,0 +1,26 @@
+{
+  "steps": 1,
+  "tables": {
+    "obs": "F1@v1",
+    "meta": "F2@v1"
+  },
+  "from": "obs",
+  "ops": [
+    {
+      "op": "join",
+      "v": 1,
+      "right": "meta",
+      "on": [
+        {
+          "left": "sample",
+          "right": "sample"
+        },
+        {
+          "left": "gene",
+          "right": "gene"
+        }
+      ],
+      "kind": "inner"
+    }
+  ]
+}

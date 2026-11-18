@@ -1,0 +1,34 @@
+{
+  "steps": 1,
+  "tables": {
+    "mm": "F1@v1"
+  },
+  "from": "mm",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "m",
+      "expr": "coalesce(x, n)"
+    },
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "grp"
+      ],
+      "aggregates": [
+        {
+          "as": "lo",
+          "fn": "min",
+          "column": "m"
+        },
+        {
+          "as": "hi",
+          "fn": "max",
+          "column": "m"
+        }
+      ]
+    }
+  ]
+}

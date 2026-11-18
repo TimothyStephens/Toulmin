@@ -1,0 +1,35 @@
+{
+  "steps": 1,
+  "tables": {
+    "pk": "F1@v1"
+  },
+  "from": "pk",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "a",
+        "b"
+      ],
+      "aggregates": [
+        {
+          "as": "k",
+          "fn": "count",
+          "column": "v"
+        }
+      ]
+    },
+    {
+      "op": "sort",
+      "v": 1,
+      "by": [
+        {
+          "column": "k",
+          "dir": "desc"
+        }
+      ],
+      "missing": "last"
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "verdict": "fails",
+  "steps": [
+    {
+      "rows": 3,
+      "description": "Inner join with ann on gene_id = gene_id; 3 rows."
+    }
+  ],
+  "columns": [
+    "gene_id",
+    "fc",
+    "p",
+    "tissue",
+    "n",
+    "ann.gene_id",
+    "ann.chrom"
+  ],
+  "final_rows": [
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "0.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.200"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "breast"
+      },
+      "n": {
+        "t": "int",
+        "v": "3"
+      },
+      "ann.gene_id": {
+        "t": "str",
+        "v": "BRCA1"
+      },
+      "ann.chrom": {
+        "t": "int",
+        "v": "17"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "KRAS"
+      },
+      "fc": {
+        "t": "missing"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.010"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "lung"
+      },
+      "n": {
+        "t": "int",
+        "v": "2"
+      },
+      "ann.gene_id": {
+        "t": "str",
+        "v": "KRAS"
+      },
+      "ann.chrom": {
+        "t": "int",
+        "v": "12"
+      }
+    },
+    {
+      "gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "fc": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "p": {
+        "t": "dec",
+        "v": "0.001"
+      },
+      "tissue": {
+        "t": "str",
+        "v": "liver"
+      },
+      "n": {
+        "t": "int",
+        "v": "4"
+      },
+      "ann.gene_id": {
+        "t": "str",
+        "v": "TP53"
+      },
+      "ann.chrom": {
+        "t": "int",
+        "v": "17"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:094be8322d410992144a3242eb53b838b7ff41eead1783b4a50b0ee8d01c4eca",
+  "key_map_hash": "sha256:f368e6a9101ebf0f0d81a90d8c4d9c726843a5557e430eb9f16351dcaaa9fb80",
+  "error": null
+}

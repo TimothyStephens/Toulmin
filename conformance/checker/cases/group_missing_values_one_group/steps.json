@@ -1,0 +1,23 @@
+{
+  "steps": 1,
+  "tables": {
+    "gm": "F1@v1"
+  },
+  "from": "gm",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "g"
+      ],
+      "aggregates": [
+        {
+          "as": "s",
+          "fn": "sum",
+          "column": "v"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.pk: c0 = "id" (str), c1 = "a" (str), c2 = "b" (str), c3 = "v" (int); key "id"
+SELECT "row" FROM "input.pk" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- step0: c0 = "id" (str), c1 = "a" (str), c2 = "b" (str), c3 = "v" (int); key "id"
+-- step0 also: key = the row's key tuple as canonical JSON (str)
+SELECT first("row" ORDER BY "row") AS "rep", list("row" ORDER BY "row") AS "members", count(*) AS "member_count", 'sha256:' || sha256('[' || string_agg("key", ',' ORDER BY "key" COLLATE "binary") || ']') AS "member_keys_hash", count(*) AS "a0" FROM "step0" GROUP BY "c1", "c2" ORDER BY "c1" COLLATE "binary" ASC NULLS FIRST, "c2" COLLATE "binary" ASC NULLS FIRST;
+
+-- step1: c0 = "a" (str), c1 = "b" (str), c2 = "k" (int), c3 = "member_count" (int), c4 = "member_keys_hash" (str); key "a", "b"
+SELECT "row" FROM "step1" ORDER BY "c2" COLLATE "binary" DESC NULLS LAST, "c0" COLLATE "binary" ASC NULLS FIRST, "c1" COLLATE "binary" ASC NULLS FIRST;

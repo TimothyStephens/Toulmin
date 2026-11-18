@@ -1,0 +1,23 @@
+{
+  "steps": 1,
+  "tables": {
+    "sc2": "F1@v1"
+  },
+  "from": "sc2",
+  "ops": [
+    {
+      "op": "group",
+      "v": 1,
+      "by": [
+        "score"
+      ],
+      "aggregates": [
+        {
+          "as": "n",
+          "fn": "count",
+          "column": "id"
+        }
+      ]
+    }
+  ]
+}

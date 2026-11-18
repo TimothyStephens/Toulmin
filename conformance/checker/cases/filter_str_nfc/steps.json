@@ -1,0 +1,14 @@
+{
+  "steps": 1,
+  "tables": {
+    "nm": "F1@v1"
+  },
+  "from": "nm",
+  "ops": [
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "name = \"café\""
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "steps": 1,
+  "tables": {
+    "pw": "F1@v1"
+  },
+  "from": "pw",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "l",
+      "expr": "log10(x)"
+    }
+  ]
+}

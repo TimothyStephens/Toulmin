@@ -1,0 +1,23 @@
+{
+  "assert": 1,
+  "kind": "compare_rows",
+  "left": {
+    "row": [
+      {
+        "t": "str",
+        "v": "liver"
+      }
+    ],
+    "column": "lo"
+  },
+  "right": {
+    "row": [
+      {
+        "t": "str",
+        "v": "breast"
+      }
+    ],
+    "column": "hi"
+  },
+  "op": "lt"
+}

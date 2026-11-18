@@ -1,0 +1,7 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.obs: c0 = "sample" (str), c1 = "gene" (str), c2 = "val" (dec), c3 = "cond" (str); key "sample", "gene"
+SELECT "row" FROM "input.obs" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST, "c1" COLLATE "binary" ASC NULLS FIRST;
+
+-- ops/0 filter: evaluated in Rust over step0 (11.18.2 Where); its rows are step1

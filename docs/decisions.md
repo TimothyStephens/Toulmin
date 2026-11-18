@@ -904,3 +904,372 @@ for a later version without changing the spec fingerprint every claim's
 reserved scale; the cost is that a reserved scale wider than the data
 widens the DuckDB `DECIMAL(38, s)` column, which changes no value.
 
+
+## 2026-11-16 P4: the checker.md sign-off applied to the design (rulings 1 to 34)
+
+**What.** `docs/decisions/checker-spec-review.md`'s 34 rulings land in
+the design in one commit: 11.6, 11.7, 11.8, 11.9, 11.12, 11.18.1 to
+11.18.4, 11.20, section 9's read-interface row, section 10's
+`claims.evidence` row, and items 47, 55, and 92. The four contradictions
+(rows 5, 16, 20, 23) lose their losing sentence: "Parsed values keep the
+scale as written", "Decimal overflow beyond 34 digits gives verdict
+`error`", "`tol` is `{"abs":"0","rel":"0"}` by default", and "the row's
+rank in the final table". Row 12's sentence is copied from item 47 into
+11.7 verbatim; item 92 carries rows 1, 2, 3, and 22 verbatim.
+`docs/spec/checker.md` and `docs/spec/formats.md` are regenerated in the
+same commit so `spec-drift.sh` stays green.
+
+Ruling 32's rule as the owner gave it at sign-off: the exponent part is
+`[eE][+-]?DIGIT+` after an `INT` or `DEC`; a number with an exponent is
+always a `dec`; its scale is the number of digits after the point once
+written positionally, minimum 0 (`1e3` is `1000`, scale 0; `1.50e-2` is
+`0.0150`, scale 4); unary minus stays an operator and the minus inside an
+exponent belongs to the literal. In a CSV `dec` column the same
+conversion runs before 11.7's column-scale rule (row 5).
+
+Three placements the table left to the editor:
+- Ruling 34's "tm-checker item that defines the result type" is item 55
+  (`run.rs`), not item 58 (`verdict.rs`): item 58's `Verdict` is the
+  `claim.checked` body, and putting per-step tables there would change
+  11.16 and every stored event; item 55 already owns per-step outputs.
+- Rulings 33 and 34 name "section 9's `claims.evidence` row". Section 9
+  has only the read-interface row that mentions `claims.evidence`;
+  section 10 holds the query's row. Both are edited. The query's
+  `truncated` field and "with neighbors" are replaced by each step's true
+  row count, since ruling 33 moves highlighting from cited rows to the
+  final step.
+- Item 47's "the token must read as the column's type in its 11.6 `v`
+  form" would have contradicted ruling 32 for `dec` cells; it gains the
+  exponent exception, and its largest-fraction rule counts digits in
+  positional form.
+
+**Why.** The owner signed all 31 case-writer rulings and added 32 to 34
+on 2026-11-16 (`docs/decisions/checker-spec-review.md`).
+
+## 2026-11-16 P4: the expression lexer reads exponent literals; a P1 case changes (ruling 32)
+
+**What.** `tm-formats`' lexer accepts `EXPNUM` per 11.18.1: an `INT` or
+`DEC` followed by `[eE][+-]?DIGIT+` is one `dec` literal, kept as written
+for `{expr}`. The P1 case `conformance/formats/expr/err_exponent.json`
+(`a > 1e5`, `E6006`) is regenerated as a valid case and renamed
+`literal_exponent.json` (render `a > 1e5`, type `bool`);
+`literal_exponent_unary_minus.json` is added (`a * -1.50e-2`, type `dec`:
+unary minus on a literal whose exponent carries its own minus).
+`typed_values/dec_exponent.json` is unchanged: a typed value's `v` stays
+positional.
+
+**Why.** Ruling 32 of `docs/decisions/checker-spec-review.md` (owner,
+2026-11-16) makes exponent literals valid and names this case as one to
+regenerate. A frozen P1 case changes only because the design it froze
+changed (c1312c9).
+
+## 2026-11-16 P4: tm-files reads exponent cells in dec columns (ruling 32)
+
+**What.** Before this change a `dec` cell written with an exponent
+(`3.2e-15`) was `E3102` ("is not dec"); a `float64` cell already read
+exponents through Rust's `f64` parser, as item 47 states. Now a `dec`
+cell may carry `[eE][+-]?DIGIT+` after its `dec` `v` form; it is
+converted exactly to positional form (`tm_formats::typed_value::
+parse_dec_written`) before the column-scale rule, both when `table.spec`
+measures the largest scale and when a version is parsed. An `int` cell
+with an exponent stays `E3102`. The converter refuses an exponent whose
+positional form needs more than 38 digits before or after the point,
+which `DECIMAL(38, s)` could not hold anyway (`E3102`, 11.6), so a cell
+like `1e999999` cannot make the reader allocate a million-digit string.
+A fixture-level test reads `3.2e-15` in a `dec` column and `1.5E+300` in
+a `float64` column.
+
+**Why.** Ruling 32 and 11.7 as amended in c1312c9.
+
+## 2026-11-17 P4: owner rulings 35 to 40 applied to the design
+
+**What.** 11.6 and 11.18.2 (Precision, Domain) fix the decimal context in
+both implementations: precision 34, `Emax` 999999, `Emin` -999999,
+half-even; Overflow past `Emax` is `E5002`; underflow is subnormal, then
+zero, and not an error (35; "the context's `Emax`" is replaced by the
+numbers). 11.18.1 and 11.6: a numeric literal whose adjusted exponent is
+outside that range is `E6004` at validation, at its `where` or `expr`
+member (36). Item 92: on error `steps`, `columns`, `final_rows`,
+`final_rows_hash`, and `key_map_hash` are each null (37). 11.20, section
+10's `claims.evidence`, and item 55: steps begin with step 0, the cited
+input table; the final step's rows all come from the key map; the rows
+and column the assertion names carry the emphasis; a capped final step
+adds every assertion-named row beyond the cap with its position (38).
+11.7 and item 47: a `dec` cell is `E3102` only when writing it at the
+column's scale would change its value, replacing the sentence ruling 5
+added (39). Ruling 40 accepts the earlier placements and needs no text.
+`docs/design/runbook-to-p1.md` section 6 gains the P8 row on `dec`
+versus `float64` columns. `docs/spec/` is regenerated in this commit.
+
+Two readings the rulings left to the editor: ruling 36 says "a numeric
+literal", so the range check covers `INT` and `DEC` literals without an
+exponent as well (a literal of a million digits is refused like
+`1e1000000`); and ruling 38 does not withdraw ruling 33's `cells`
+citation columns, so they stay in the emphasized-column list beside the
+assertion's column.
+
+**Why.** Owner rulings 35 to 40 of
+`docs/decisions/checker-spec-review.md`, 2026-11-17.
+
+## 2026-11-17 P4: tm-files accepts a dec cell whose extra digits are zeros (ruling 39)
+
+**What.** A parsed `dec` cell is compared with itself written at the
+column's scale; it is `E3102` only when the two values differ, and it is
+stored at the column's scale (ruling 5). A scale-3 column now accepts
+`0.0010` and `1.0e-3` as `0.001` and still refuses `0.0011`. Before,
+any fraction longer than the scale was `E3102`. `table.spec`'s scale
+measurement (the largest fraction length seen) is unchanged.
+
+**Why.** Ruling 39 and 11.7 as amended in 1b565f5.
+
+## 2026-11-17 P4: an expression literal outside the decimal context is E6004; two formats cases added (ruling 36)
+
+**What.** `tm-formats`' expression validation (`Expr::type_of`) refuses a
+numeric literal whose adjusted exponent is above `Emax` 999999 or below
+`Emin` -999999 with `E6004` at the expression's pointer (the `where` or
+`expr` member). The adjusted exponent is computed from the written text
+(`expr::adjusted_exponent`, as Python's `Decimal.adjusted`), so
+`1e1000000` is never built. The check covers every numeric literal, as
+the ruling says, not only those with an exponent. Two invalid cases are
+added under `conformance/formats/expr/`: `literal_exponent_overflow`
+(`a > 1e1000000`) and `literal_exponent_underflow` (`a > 1e-1000000`),
+each `E6004`.
+
+**Why.** Ruling 36 of `docs/decisions/checker-spec-review.md` (owner,
+2026-11-17) and 11.18.1 as amended in 1b565f5; it is the reason
+`conformance/formats/` changes in this commit.
+
+## 2026-11-17 P4: owner rulings 41 to 47 applied to the design
+
+**What.** 11.18.2 `select` keeps the table's column order and never
+reorders; 11.18.4's `{cols}` is the op's list as written, for `select`
+without the implicit key columns (41). 11.12 and 11.18.2: every
+evaluation error, `E5002` included, points at the member holding the
+expression or aggregate that raised it (`expr`, `where`, or the
+aggregate entry), no finer, generalizing ruling 27 (42). 11.7 and item
+47: at `table.spec` a cell's shown scale counts trailing zeros in
+positional form, and the column's scale is the largest shown (43). 11.6:
+the exact product has the sum of the scales and GDA then rounds past 34
+significant digits, in one sentence (44). 11.18.1: an exponent literal
+is positional before any arithmetic, and the reference implementation
+quantizes it (45). 11.7 and item 47: in a `str` column `nan` is the
+string `"nan"`; the token rule covers `int`, `dec`, `bool`, `date`, and
+`datetime` (`E3102` unless missing) and `float64` (a value) (46). 11.6:
+"These four are the only places last-digit differences are tolerated" is
+removed; the `log` family row's six functions stand (47). `docs/spec/`
+is regenerated in this commit.
+
+**Why.** Owner rulings 41 to 47 of
+`docs/decisions/checker-spec-review.md`, 2026-11-17.
+
+## 2026-11-17 P4: tm-files reads nan and inf tokens in a str column as text (ruling 46)
+
+**What.** A `str` cell reading `nan` (or `inf`, `-Inf`, and the rest of
+item 47's tokens) was `E3102` ("declare float64 or list it under
+missing"); it is now the string as written. `int`, `dec`, `bool`,
+`date`, and `datetime` columns still refuse such a token unless it is in
+the `missing` list, and `float64` columns still read it as a value. The
+shown-scale rule of ruling 43 needed no change: `table.spec` already
+measured the positional fraction with trailing zeros (a first version
+holding `0.0010` gave scale 4).
+
+**Why.** Ruling 46 and 11.7 as amended in 1f033e1.
+
+## 2026-11-17 P4: an exponent literal gives the evaluator a positional dec (ruling 45)
+
+**What.** Before this change no code turned an expression literal into a
+value: `Lit::Dec` held only the text as written (for `{expr}`), and the
+evaluator is P4's `tm-checker`, not yet written. `Lit::value` now gives
+each literal's typed value: an `INT` its digits, a `DEC` its fraction
+digits as scale, and a literal with an exponent converted to positional
+notation first, scale the digits after the point once positional,
+minimum 0 (`1e3` is `1000`, scale 0; `1.5e-2` is `0.015`, scale 3;
+`1.5 * 1e3` is `1500.0`). `tm-checker`'s `eval.rs` takes literal values
+from it.
+
+**Why.** Ruling 45 and 11.18.1 as amended in 1f033e1.
+
+## 2026-11-17 P4: tm-checker hands DuckDB order keys, not decimal columns, and keeps the typed values in Rust
+
+**Moved into the design, 2026-11-17.** No longer a deviation: the owner
+ruled the encoding a design decision, now stated in 11.18.2's Where row
+(with the property the Checker's correctness rests on and what the stored
+`sql` records) and in item 53. Kept below as the record of why.
+
+**What.** Item 53 lists `isnan` guards among the translator's features, and
+11.6 maps a parsed `dec` column to `DECIMAL(38, s)`. The Checker does not
+pass decimals to `DuckDB` at all. For each relational step it registers the
+current table with a row number and one column per table column: `str` as
+itself, `bool` as `BOOLEAN`, and every other value as an order key, a text
+whose binary order is the 11.18.2 order and whose equality is value
+equality (`int` `2` and `dec` `2.0` share a key); `missing`, `nan`, and
+`inf` are SQL `NULL`. `DuckDB` sorts, ranks, groups, takes, and joins on
+those keys and returns row numbers, ranks, and group results; the output
+table is assembled in Rust from the input rows, so every typed value,
+scale included, comes out as it went in. There are no `isnan` guards
+because a non-finite value never reaches `DuckDB` as a number.
+
+**Why.** A derived `dec` column holds values of different scales on
+different rows (`10 / 4` is `2.5` and `4 / 4` is `1`, 11.6; the cases
+`derive_div_exact` and `derive_div_rounds`), a 34-digit quotient next to a
+large value needs more than 38 digits at one common scale, and an `int` is
+of arbitrary size. No one `DuckDB` decimal type holds such a column, and
+`DOUBLE` would break ties and equality. The keys keep `DuckDB` doing the
+relational work exactly, with the explicit ordering clauses item 53 asks
+for.
+
+## 2026-11-17 P4: tm-checker stores one statement per relational step, not one CTE chain
+
+**Moved into the design, 2026-11-17.** No longer a deviation: 11.18.2's
+Where row and item 53 now say one statement per relational step and what
+the stored `sql` records. Kept below as the record of why.
+
+**What.** Item 53 says "one CTE per step". The stored `sql` is the list of
+statements that ran, in order: step 0 (the start table in key order), then
+one `SELECT` per relational op over the table registered for its input
+step, each headed by a comment that names the encoded columns. A `filter`
+or `derive` step appears as a comment line naming the table it produced,
+which the next statement reads (11.18.2 Where: "names the derived columns
+as inputs").
+
+**Why.** `filter` and `derive` run in Rust between relational steps, so a
+single CTE chain could not be the SQL that ran, and the claim page needs
+every step's own table and count (11.20). Storing what ran keeps `sql`
+honest and makes each step reproducible on its own input.
+
+## 2026-11-17 P4: tm-checker computes the group aggregate sum in Rust
+
+**Moved into the design, 2026-11-17.** No longer a deviation: 11.18.2's
+`group` row and item 53 now say `sum` is computed in Rust from the members
+`DuckDB` lists. Kept below as the record of why.
+
+**What.** 11.18.2 runs `group` in `DuckDB`. The grouping, the group order,
+`count`, `min`, `max`, `mean`, `median`, `member_count`, and
+`member_keys_hash` are computed by the group statement; `sum` is computed
+in Rust from the members `DuckDB` lists, in the 11.6 context (the design
+edit of the same date in 11.18.2's `group` row states the rule). The
+statement carries `NULL AS a<j>` in its place.
+
+**Why.** `DuckDB` can only add the values as decimals of one scale with at
+most 38 digits, which a derived column or a large `int` exceeds, and its
+result would not round at 34 digits as the reference checker's Python
+`decimal` does.
+
+## 2026-11-17 P4: tm-checker takes tm-files only as a dev-dependency
+
+**What.** The conformance test, the snapshot test, `examples/refcheck.rs`,
+and the `csv_parse` fuzz target read case CSVs through
+`tm_files::parse::parse`; the library itself depends on `tm-formats` and
+`tm-duckdb` only.
+
+**Why.** 4.2 rule 1: libraries never call each other; the Core hands the
+Checker parsed Arrow tables. Reading the cases through Files' own parser
+keeps the tests on the path real checks take.
+
+The tm-files dev-dependency entry above stays a deviation note: the design
+says nothing about a library's dev-dependencies, so there is no design text
+to change (4.2 rule 1 governs only what a library calls at run time).
+
+## 2026-11-17 P4: claim.checked hashes and key_map are nullable on an error verdict (tv 1 kept)
+
+**What.** 11.16's `claim.checked` row now lets `final_rows_hash`,
+`key_map_hash`, and `key_map` be `null`, which the Checker writes when its
+verdict is `error` (it stopped before a final table existed). Before, the
+row gave the two hashes only the ID form and `key_map` only the list form,
+so no valid body could record an error verdict. The body check accepts
+`null` for the three whatever the outcome. `tv` stays 1.
+
+**Why tv 1 stays.** No `claim.checked` line exists in any record yet (the
+Claims library that writes it is P6), and the change only loosens the
+form: every line valid before is valid after, so every frozen valid case
+under `conformance/formats/` keeps its validity and its ID. A `tv` bump is
+for a change a reader of old lines must tell apart, which a loosening is
+not.
+
+## 2026-11-17 P4: assertion.observed's form is written into 11.16 but not checked
+
+**Superseded, 2026-11-17,** by the P4 review entry on M1 and M2 below:
+`observed` is now checked and the P1 cases are regenerated.
+
+**What.** 11.16 now gives the per-kind form the Checker writes for
+`claim.checked.assertion.observed` (`{"cell"}`, `{"position"}`,
+`{"count"}`, `{"left","right"}`, `{"present"}`). The body check still
+accepts any JSON there.
+
+**Why.** The frozen P1 case
+`conformance/formats/envelope/claim.checked.valid.json` carries
+`"observed":{"t":"dec","v":"0.00310"}`, a bare typed value, which is not
+the form. Tightening the check would turn a frozen valid case invalid, so
+11.16 says the check stays open and why.
+
+## 2026-11-17 cargo-deny ignores RUSTSEC-2026-0543 (chrono unmaintained)
+
+**What.** `deny.toml` `[advisories] ignore` lists RUSTSEC-2026-0543 by ID,
+with its reason. Every other advisory still fails the check. Owner's
+decision, 2026-11-17.
+
+**Why.** The advisory, published after the last green run, marks every
+chrono version unmaintained with no safe upgrade, so `cargo deny check`
+failed on main as well as on p4-checker. chrono 0.4.45 is reached only
+through arrow 60.1, which item 1 pins exactly; no Toulmin crate depends on
+it directly. D14's check stays on everything else. Revisit at the next
+arrow upgrade: drop the entry once arrow no longer pulls chrono in.
+
+## 2026-11-17 P4 review M1 and M2: the P1 claim.checked cases change
+
+**What.** 11.16 gives `assertion.expected` a `null` for `compare_rows` and
+`exists` (M1), and `assertion.observed` one of five forms (M2), which
+`tm-formats` now checks (`Form::Null(&Form::Expected)`, `Form::Observed`).
+The two P1 cases are regenerated with
+`"observed":{"cell":{"t":"dec","v":"0.00310"}}`, which changes a frozen P1
+line and its ID:
+
+- `envelope/claim.checked.valid.json`:
+  `sha256:712f5ffbdad786c68505d08e4ec8e5ed855fb4b7b044845265d4a02372d8fa3d`
+  becomes
+  `sha256:b15c1792f9af415b1b0397075b8d61d922fed3f8e6766b6c058bd3402518564b`;
+- `envelope/claim.checked.invalid.json` (no `expect.id`; its line's ID)
+  `sha256:ccaccdb4d479d467f539428069e9400a3825c0044b0486790381c41956a6677a`
+  becomes
+  `sha256:208e229cf40ef65efaa37f782218b58da33ba091d73da01231dfc5bd7c7149a4`,
+  so that its one fault is still `/body/versions/build`.
+
+Two cases are added: `claim.checked.bare_observed.invalid.json`, whose
+line is the old valid line byte for byte (ID `sha256:712f5ffb...`), now
+`E1002` at `/body/assertion/observed`; and
+`claim.checked.compare_rows.valid.json`, with `expected` null and
+`observed` `{"left","right"}`. All four lines were written with the Python
+reference's `line_of`.
+
+**Why.** The P4 review's M1 and M2, adopted by the owner: the Checker
+writes `expected` null for two of the five kinds, which the old form
+refused, and an open `observed` could not be tightened at `tv` 1 once a
+record exists (P7). The P1 valid case was the only `observed` in the
+repository not in the per-kind form. Ruling-driven regeneration, as for
+the P3 manifest cases (2026-11-12).
+
+## 2026-11-17 P4 review N1: gap-filling decisions are logged in the code commit
+
+The review's N1: two decisions in 3accbb9 and b617d20 (with `steps` null,
+step 0 is the cited rows; emphasized columns are limited to those the
+final table has) filled design gaps in code with no `docs/decisions.md`
+entry until 5ce3cfc. From now on a decision that fills a gap during
+coding gets its entry in the same commit as the code.
+
+## 2026-11-17 P4: the checker conformance harness reports a table tm-files refuses as the case's error verdict
+
+**What.** `tests/common/case.rs` (shared by the conformance test, the
+snapshot test, and `examples/refcheck.rs`) parses each case table through
+`tm_files::parse::parse`. When that returns a catalog error, the case's
+observed result is now verdict `error` with that code and field, every
+row-level field null (item 92's error form), and the Checker does not run;
+the snapshot records `-- no SQL: a table did not parse (<code>); the
+Checker did not run`. Before, any parse failure was a harness error, so a
+case expecting a cell `E3102` could not pass. A non-catalog failure (I/O,
+Arrow) is still a harness error.
+
+**Why.** The case writer's `float64_overflow_cell` (ruling 53) expects
+verdict `error` with `E3102` and field null (ruling 54), and item 92's case
+format has the case directory hold the raw table, so the harness stands in
+for the parse step the Core runs before the Checker. tm-files already gives
+the cell `E3102` field null, so nothing in tm-files changed for ruling 54.

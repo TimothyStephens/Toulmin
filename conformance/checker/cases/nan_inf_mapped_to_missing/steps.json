@@ -1,0 +1,20 @@
+{
+  "steps": 1,
+  "tables": {
+    "flm": "F1@v1"
+  },
+  "from": "flm",
+  "ops": [
+    {
+      "op": "sort",
+      "v": 1,
+      "by": [
+        {
+          "column": "x",
+          "dir": "asc"
+        }
+      ],
+      "missing": "first"
+    }
+  ]
+}

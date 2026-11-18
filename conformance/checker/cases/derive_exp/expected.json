@@ -1,0 +1,86 @@
+{
+  "verdict": "fails",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Add column y = exp(x); 5 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "x",
+    "y"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "int",
+        "v": "0"
+      },
+      "y": {
+        "t": "dec",
+        "v": "1"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "x": {
+        "t": "int",
+        "v": "1"
+      },
+      "y": {
+        "t": "dec",
+        "v": "2.71828182845905"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "x": {
+        "t": "int",
+        "v": "1000"
+      },
+      "y": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "x": {
+        "t": "int",
+        "v": "-1"
+      },
+      "y": {
+        "t": "dec",
+        "v": "0.367879441171442"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "e"
+      },
+      "x": {
+        "t": "missing"
+      },
+      "y": {
+        "t": "missing"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:103a8e1c01ff3d9bb63b41203b2bca789252670fb86b2b300863d2dbbe785ea1",
+  "key_map_hash": "sha256:a4f13cd36e88af3257be5f65db55d843195b8e945fab0a85973730c5ef9b5a19",
+  "error": null
+}

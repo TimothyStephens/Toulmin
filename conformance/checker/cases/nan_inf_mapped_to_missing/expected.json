@@ -1,0 +1,74 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 6,
+      "description": "Sort by x ascending (missing values placed first; ties broken by id); 6 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "x"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "x": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "x": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "x": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "e"
+      },
+      "x": {
+        "t": "missing"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "f"
+      },
+      "x": {
+        "t": "dec",
+        "v": "0.25"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "dec",
+        "v": "1.5"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:bcf0dde0377e5074a84bd76a6d3509a7975099ccc14e5bc407782f05791c7739",
+  "key_map_hash": "sha256:e5f44261ccf3e73446830d1c7f5b1b12b1dbdc9244b1f7d8bd89096ea4cecfe8",
+  "error": null
+}

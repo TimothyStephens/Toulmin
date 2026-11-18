@@ -1,0 +1,23 @@
+{
+  "steps": 1,
+  "tables": {
+    "sc": "F1@v1"
+  },
+  "from": "sc",
+  "ops": [
+    {
+      "op": "rank",
+      "v": 1,
+      "by": "score",
+      "dir": "desc",
+      "ties": "min",
+      "missing": "last",
+      "scope": "all"
+    },
+    {
+      "op": "take",
+      "v": 1,
+      "n": 2
+    }
+  ]
+}

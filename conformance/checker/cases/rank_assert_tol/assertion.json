@@ -1,0 +1,18 @@
+{
+  "assert": 1,
+  "kind": "rank",
+  "row": [
+    {
+      "t": "str",
+      "v": "TP53"
+    }
+  ],
+  "expected": {
+    "t": "int",
+    "v": "4"
+  },
+  "tol": {
+    "abs": "1",
+    "rel": "0"
+  }
+}

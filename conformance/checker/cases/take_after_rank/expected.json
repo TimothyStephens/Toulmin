@@ -1,0 +1,60 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Rank by score descending within all rows (ties: min; missing values placed last); 5 rows."
+    },
+    {
+      "rows": 2,
+      "description": "Take the first 2 rows; 2 rows remain."
+    }
+  ],
+  "columns": [
+    "id",
+    "score",
+    "grp",
+    "rank"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "score": {
+        "t": "int",
+        "v": "20"
+      },
+      "grp": {
+        "t": "str",
+        "v": "x"
+      },
+      "rank": {
+        "t": "int",
+        "v": "1"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "score": {
+        "t": "int",
+        "v": "20"
+      },
+      "grp": {
+        "t": "str",
+        "v": "y"
+      },
+      "rank": {
+        "t": "int",
+        "v": "1"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:5d4d9e9065feb9a88ac014b1ef7337e9e0dd82aaeab8421ff25b51a7a9c8658f",
+  "key_map_hash": "sha256:8781397e830c6bdbe95d61d7d8a0b7cd130d6ad5d6d789d297885874e817beb1",
+  "error": null
+}

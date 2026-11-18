@@ -1,0 +1,25 @@
+{
+  "steps": 1,
+  "tables": {
+    "de": "F1@v1"
+  },
+  "from": "de",
+  "ops": [
+    {
+      "op": "sort",
+      "v": 1,
+      "by": [
+        {
+          "column": "fc",
+          "dir": "asc"
+        }
+      ],
+      "missing": "last"
+    },
+    {
+      "op": "take",
+      "v": 1,
+      "n": 10
+    }
+  ]
+}

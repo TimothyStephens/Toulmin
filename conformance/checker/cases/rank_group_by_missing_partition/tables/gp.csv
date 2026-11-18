@@ -1,0 +1,7 @@
+id,g,t,v
+a,1.5,p,10
+b,NA,p,20
+c,NaN,q,30
+d,Inf,p,40
+e,1.5,q,50
+f,-Inf,q,60

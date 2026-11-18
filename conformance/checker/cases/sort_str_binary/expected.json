@@ -1,0 +1,58 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Sort by name ascending (missing values placed last; ties broken by id); 4 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "name"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "int",
+        "v": "4"
+      },
+      "name": {
+        "t": "str",
+        "v": "Apple"
+      }
+    },
+    {
+      "id": {
+        "t": "int",
+        "v": "2"
+      },
+      "name": {
+        "t": "str",
+        "v": "Banana"
+      }
+    },
+    {
+      "id": {
+        "t": "int",
+        "v": "1"
+      },
+      "name": {
+        "t": "str",
+        "v": "apple"
+      }
+    },
+    {
+      "id": {
+        "t": "int",
+        "v": "3"
+      },
+      "name": {
+        "t": "str",
+        "v": "cherry"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:9ebcdf4b4e90a6ded96a2336c2efd1c7cd0a70f8f93c8e9420b5d645697d80af",
+  "key_map_hash": "sha256:9f267aef08d60ecc434500d9f0de4feef1af960be67c132cf5f5cae35f65e7df",
+  "error": null
+}

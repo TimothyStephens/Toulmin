@@ -1,0 +1,16 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "BRCA1"
+    }
+  ],
+  "column": "liv",
+  "op": "ne",
+  "expected": {
+    "t": "bool",
+    "v": true
+  }
+}

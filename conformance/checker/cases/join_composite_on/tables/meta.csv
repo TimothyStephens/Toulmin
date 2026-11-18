@@ -1,0 +1,4 @@
+sample,gene,qc
+s1,A,pass
+s2,B,fail
+s3,A,pass

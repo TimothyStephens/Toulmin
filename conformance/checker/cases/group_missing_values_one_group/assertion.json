@@ -1,0 +1,16 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "dec",
+      "v": "1.5"
+    }
+  ],
+  "column": "s",
+  "op": "eq",
+  "expected": {
+    "t": "int",
+    "v": "60"
+  }
+}

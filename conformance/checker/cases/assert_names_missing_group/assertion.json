@@ -1,0 +1,15 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "missing"
+    }
+  ],
+  "column": "n",
+  "op": "eq",
+  "expected": {
+    "t": "int",
+    "v": "2"
+  }
+}

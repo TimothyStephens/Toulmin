@@ -463,6 +463,167 @@ fn a_spec_with_each_type_and_the_parse_failures() {
 }
 
 #[test]
+fn exponent_cells_in_dec_and_float64_columns() {
+    // Ruling 32 (11.6, 11.7): a dec cell with an exponent is converted to
+    // positional form before the column-scale rule; a float64 cell is read
+    // as an IEEE double and stored shortest round trip, positional.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let path = tmp.path().join("exp.csv");
+    fs::write(&path, "k,d,f\na,3.2e-15,1.5E+300\nb,1.50e-2,2\n").unwrap();
+    let draft = json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "d", "type": "dec", "missing": []},
+            {"name": "f", "type": "float64", "missing": []}
+        ],
+        "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+    });
+    let table = complete_spec(&path, &draft, &st).unwrap();
+    assert_eq!(
+        table.spec.column("d").unwrap().scale,
+        Some(16),
+        "3.2e-15 is 0.0000000000000032, scale 16"
+    );
+    let rows = typed_rows(&table.batch, &table.spec).unwrap();
+    assert_eq!(rows[0][1].to_json()["v"], "0.0000000000000032");
+    assert_eq!(
+        rows[1][1].to_json()["v"],
+        "0.0150000000000000",
+        "1.50e-2 is 0.0150 (scale 4), then written at the column's scale 16"
+    );
+    assert_eq!(
+        rows[0][2].to_json()["v"],
+        format!("15{}", "0".repeat(299)),
+        "1.5E+300 in positional notation"
+    );
+    // The same file under the completed spec parses to the same rows.
+    let again = parse(&path, &table.spec, &st).unwrap();
+    assert_eq!(typed_rows(&again, &table.spec).unwrap(), rows);
+    // A later version whose exponent cell needs a larger scale is E3102.
+    fs::write(tmp.path().join("finer.csv"), "k,d,f\nc,1e-17,1\n").unwrap();
+    assert_eq!(
+        parse(&tmp.path().join("finer.csv"), &table.spec, &st)
+            .unwrap_err()
+            .catalog_code(),
+        Some(Code::E3102)
+    );
+    // An int column takes no exponent.
+    fs::write(tmp.path().join("int.csv"), "k,n\na,1e3\n").unwrap();
+    let spec_kn = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [{"name": "k", "type": "str", "missing": []}, {"name": "n", "type": "int", "missing": []}],
+        "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+    }))
+    .unwrap();
+    assert_eq!(
+        parse(&tmp.path().join("int.csv"), &spec_kn, &st)
+            .unwrap_err()
+            .catalog_code(),
+        Some(Code::E3102)
+    );
+}
+
+#[test]
+fn a_float64_text_that_overflows_a_double_is_e3102() {
+    // Ruling 53 (11.7, item 47): a finite number whose double overflows is
+    // E3102; only the declared infinity tokens produce infinity.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "f", "type": "float64", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap();
+    for text in ["1e400", "-1e400", "1.5E+309"] {
+        let path = tmp.path().join("over.csv");
+        fs::write(&path, format!("k,f\na,{text}\n")).unwrap();
+        let err = parse(&path, &spec, &st).unwrap_err();
+        assert_eq!(err.catalog_code(), Some(Code::E3102), "{text}");
+        // Ruling 54 (11.7, 11.12): a cell is not a JSON member, so field is
+        // null; the message names the 1-based row and the column.
+        let Error::Format(e) = err else {
+            panic!("{text}: not a catalog error")
+        };
+        assert_eq!(e.field, None, "{text}");
+        assert!(e.message.contains("row 1, column \"f\""), "{}", e.message);
+    }
+    // The inf tokens are still values under "inf": "value", and the largest
+    // finite double still reads.
+    let path = tmp.path().join("inf.csv");
+    fs::write(&path, "k,f\na,inf\nb,-Infinity\nc,1.7976931348623157e308\n").unwrap();
+    let batch = parse(&path, &spec, &st).unwrap();
+    let rows = typed_rows(&batch, &spec).unwrap();
+    assert_eq!(rows[0][1], TypedValue::Inf(true));
+    assert_eq!(rows[1][1], TypedValue::Inf(false));
+    assert!(matches!(rows[2][1], TypedValue::Dec(_)));
+}
+
+#[test]
+fn a_dec_cell_fits_its_scale_unless_its_value_changes() {
+    // Ruling 39 (11.7, item 47): extra trailing zeros are not a change.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let spec3 = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "d", "type": "dec", "missing": [], "scale": 3}
+        ],
+        "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+    }))
+    .unwrap();
+    let path = tmp.path().join("zeros.csv");
+    fs::write(&path, "k,d\na,1.0e-3\nb,0.0010\nc,0.001\n").unwrap();
+    let rows = typed_rows(&parse(&path, &spec3, &st).unwrap(), &spec3).unwrap();
+    for row in &rows {
+        assert_eq!(row[1].to_json()["v"], "0.001", "written at scale 3");
+    }
+    let bad = tmp.path().join("bad.csv");
+    fs::write(&bad, "k,d\na,0.0011\n").unwrap();
+    let e = parse(&bad, &spec3, &st).unwrap_err();
+    assert_eq!(e.catalog_code(), Some(Code::E3102), "{e}");
+}
+
+#[test]
+fn nan_and_inf_tokens_in_a_str_column_are_text() {
+    // Ruling 46 (11.7, item 47): the nan and inf token rule does not apply
+    // to str columns; it still refuses them in an int column.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let path = tmp.path().join("str.csv");
+    fs::write(&path, "k,s,n\na,nan,1\nb,-Inf,2\nc,NaN,3\n").unwrap();
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "s", "type": "str", "missing": []},
+            {"name": "n", "type": "int", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap();
+    let rows = typed_rows(&parse(&path, &spec, &st).unwrap(), &spec).unwrap();
+    assert_eq!(rows[0][1], s("nan"));
+    assert_eq!(rows[1][1], s("-Inf"));
+    assert_eq!(rows[2][1], s("NaN"));
+    // A str key may read nan too.
+    fs::write(&path, "k,s,n\nnan,x,1\n").unwrap();
+    let rows = typed_rows(&parse(&path, &spec, &st).unwrap(), &spec).unwrap();
+    assert_eq!(rows[0][0], s("nan"));
+    fs::write(&path, "k,s,n\na,x,nan\n").unwrap();
+    assert_eq!(
+        parse(&path, &spec, &st).unwrap_err().catalog_code(),
+        Some(Code::E3102)
+    );
+}
+
+#[test]
 fn a_duplicate_key_is_e3101_with_the_values() {
     let tmp = tempfile::tempdir().unwrap();
     let st = settings(tmp.path());

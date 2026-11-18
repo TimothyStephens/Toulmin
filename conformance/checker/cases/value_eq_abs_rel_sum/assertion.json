@@ -1,0 +1,20 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "EGFR"
+    }
+  ],
+  "column": "fc",
+  "op": "eq",
+  "expected": {
+    "t": "dec",
+    "v": "2.8"
+  },
+  "tol": {
+    "abs": "0.1",
+    "rel": "0.05"
+  }
+}

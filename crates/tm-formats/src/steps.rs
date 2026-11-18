@@ -561,17 +561,14 @@ fn check_op<'s>(
             }
         }
         Op::Select { columns } => {
+            // The listed columns and the key columns, in the table's
+            // column order: select never reorders (11.18.2; ruling 41).
             let base = ptr(at, "columns");
-            let mut out = Vec::new();
             for (j, c) in columns.iter().enumerate() {
-                out.push((c.clone(), cur.need(c, &ptr(&base, j))?));
+                cur.need(c, &ptr(&base, j))?;
             }
-            for k in &cur.key {
-                if !columns.contains(k) {
-                    out.push((k.clone(), cur.tag(k).unwrap_or(Tag::Str)));
-                }
-            }
-            cur.columns = out;
+            cur.columns
+                .retain(|(n, _)| columns.contains(n) || cur.key.contains(n));
         }
         Op::Sort { by, .. } => {
             let base = ptr(at, "by");

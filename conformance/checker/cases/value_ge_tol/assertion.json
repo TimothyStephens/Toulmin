@@ -1,0 +1,20 @@
+{
+  "assert": 1,
+  "kind": "value",
+  "row": [
+    {
+      "t": "str",
+      "v": "TP53"
+    }
+  ],
+  "column": "fc",
+  "op": "ge",
+  "expected": {
+    "t": "dec",
+    "v": "2.6"
+  },
+  "tol": {
+    "abs": "0.1",
+    "rel": "0"
+  }
+}

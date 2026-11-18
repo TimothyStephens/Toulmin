@@ -7,15 +7,20 @@
 
 use std::fmt::Write as _;
 
+use bigdecimal::BigDecimal;
+use bigdecimal::num_bigint::BigInt;
+
 use crate::errors::{Code, Error};
-use crate::typed_value::Tag;
+use crate::typed_value::{Tag, TypedValue};
 
 /// A literal, kept as written.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Lit {
     /// `INT`, digits as written.
     Int(String),
-    /// `DEC`, digits as written.
+    /// `DEC` or `EXPNUM` (11.18.1), as written, an exponent included; a
+    /// literal with an exponent is a `dec` whose positional value 11.6
+    /// states, and `{expr}` keeps it as written (11.18.4).
     Dec(String),
     /// `STRING`, decoded.
     Str(String),
@@ -23,6 +28,42 @@ pub enum Lit {
     Bool(bool),
     /// `missing`.
     Missing,
+}
+
+impl Lit {
+    /// The literal's typed value, the one the evaluator uses (11.18.1).
+    /// An `INT` is its digits; a `DEC` keeps its fraction digits as scale;
+    /// a literal with an exponent is converted to positional notation
+    /// before any arithmetic, its scale the digits after the point once
+    /// written positionally, minimum 0, so `1e3` is `1000` (scale 0) and
+    /// `1.5e-2` is `0.015` (scale 3) (11.6; rulings 32 and 45). `None` for
+    /// a number whose written exponent does not fit an `i64`; validation
+    /// refuses any literal outside the context range first (ruling 36), so
+    /// a validated expression never gives `None`.
+    #[must_use]
+    pub fn value(&self) -> Option<TypedValue> {
+        Some(match self {
+            Lit::Int(s) => TypedValue::Int(s.parse().ok()?),
+            Lit::Dec(s) => {
+                let (mantissa, exp) = match s.find(['e', 'E']) {
+                    Some(at) => (&s[..at], s[at + 1..].parse::<i64>().ok()?),
+                    None => (s.as_str(), 0),
+                };
+                let (int, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+                let n: BigInt = [int, frac].concat().parse().ok()?;
+                let scale = i64::try_from(frac.len()).ok()?.checked_sub(exp)?;
+                if scale >= 0 {
+                    TypedValue::Dec(BigDecimal::new(n, scale))
+                } else {
+                    let shift = u32::try_from(-scale).ok()?;
+                    TypedValue::Dec(BigDecimal::new(n * BigInt::from(10).pow(shift), 0))
+                }
+            }
+            Lit::Str(s) => TypedValue::str_nfc(s),
+            Lit::Bool(b) => TypedValue::Bool(*b),
+            Lit::Missing => TypedValue::Missing,
+        })
+    }
 }
 
 /// A binary operator.
@@ -158,6 +199,44 @@ enum Tok {
     Op(&'static str),
 }
 
+/// The decimal context's exponent range (11.6, 11.18.2; ruling 35).
+pub const EMAX: i64 = 999_999;
+/// See [`EMAX`].
+pub const EMIN: i64 = -999_999;
+
+/// The adjusted exponent of a numeric literal as written (`INT`, `DEC`,
+/// or `EXPNUM`): its exponent plus its number of significant digits,
+/// minus one, as Python's `Decimal.adjusted` gives it (`0.000` is -3).
+/// `None` when the written exponent does not fit an `i64`, which is far
+/// outside the context's range either way.
+#[must_use]
+pub fn adjusted_exponent(literal: &str) -> Option<i128> {
+    let (mantissa, exp) = match literal.find(['e', 'E']) {
+        Some(at) => (&literal[..at], literal[at + 1..].parse::<i64>().ok()?),
+        None => (literal, 0),
+    };
+    let (int, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    let digits = [int, frac].concat();
+    let significant = digits.trim_start_matches('0').len().max(1);
+    let exponent = i128::from(exp) - i128::try_from(frac.len()).ok()?;
+    Some(exponent + i128::try_from(significant).ok()? - 1)
+}
+
+/// `E6004` for a literal whose adjusted exponent is outside
+/// [`EMIN`, `EMAX`] (11.18.1; ruling 36), at the expression's pointer.
+fn check_literal_range(literal: &str, at: &str) -> Result<(), Error> {
+    match adjusted_exponent(literal) {
+        Some(a) if (i128::from(EMIN)..=i128::from(EMAX)).contains(&a) => Ok(()),
+        _ => Err(Error::at(
+            Code::E6004,
+            at,
+            format!(
+                "the literal {literal} is outside the decimal context's exponent range ({EMIN} to {EMAX})"
+            ),
+        )),
+    }
+}
+
 fn syntax(at: &str, msg: impl Into<String>) -> Error {
     Error::at(Code::E6006, at, msg)
 }
@@ -182,6 +261,7 @@ fn lex(src: &str, at: &str) -> Result<Vec<Tok>, Error> {
             while i < b.len() && b[i].is_ascii_digit() {
                 i += 1;
             }
+            let mut dec = false;
             if i < b.len() && b[i] == b'.' {
                 let p = i;
                 i += 1;
@@ -195,10 +275,23 @@ fn lex(src: &str, at: &str) -> Result<Vec<Tok>, Error> {
                         format!("a decimal needs digits after the point at offset {p}"),
                     ));
                 }
-                out.push(Tok::Dec(src[s..i].to_owned()));
-            } else {
-                out.push(Tok::Int(src[s..i].to_owned()));
+                dec = true;
             }
+            // EXPNUM: `[eE][+-]?DIGIT+` after an INT or DEC (11.18.1); the
+            // sign belongs to the literal. An `e` not followed by exponent
+            // digits is left to lex as a name, which the parser refuses.
+            if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+                let sign = usize::from(matches!(b.get(i + 1), Some(b'+' | b'-')));
+                if b.get(i + 1 + sign).is_some_and(u8::is_ascii_digit) {
+                    i += 1 + sign;
+                    while i < b.len() && b[i].is_ascii_digit() {
+                        i += 1;
+                    }
+                    dec = true;
+                }
+            }
+            let text = src[s..i].to_owned();
+            out.push(if dec { Tok::Dec(text) } else { Tok::Int(text) });
             continue;
         }
         if c.is_ascii_alphabetic() || c == b'_' {
@@ -620,6 +713,9 @@ impl Expr {
     ) -> Result<Option<Tag>, Error> {
         let mismatch = |msg: String| Error::at(Code::E6004, at, msg);
         let numeric = |t: Option<Tag>| matches!(t, None | Some(Tag::Int | Tag::Dec));
+        if let Expr::Lit(Lit::Int(s) | Lit::Dec(s)) = self {
+            check_literal_range(s, at)?;
+        }
         Ok(match self {
             Expr::Lit(Lit::Int(_)) => Some(Tag::Int),
             Expr::Lit(Lit::Dec(_)) => Some(Tag::Dec),
@@ -767,6 +863,11 @@ mod tests {
         );
         assert_eq!(r("log > 1"), "log > 1");
         assert_eq!(r("(a < b) = c"), "(a < b) = c");
+        assert_eq!(r("a>1e5"), "a > 1e5");
+        assert_eq!(r("a * -1.50e-2"), "a * -1.50e-2");
+        assert_eq!(r("-1e-10"), "-1e-10");
+        assert_eq!(r("a -1E+3"), "a - 1E+3");
+        assert_eq!(r("2.5E10/a"), "2.5E10 / a");
     }
 
     #[test]
@@ -787,9 +888,43 @@ mod tests {
             "(a",
             "a !b",
             "a = = b",
+            "1e",
+            "1e+",
+            "1e-a",
+            "1e5e5",
+            "1 e5",
+            "1.e5",
         ] {
             assert_eq!(code(s), Code::E6006, "{s}");
         }
+    }
+
+    #[test]
+    fn exponent_literals_are_positional_decs() {
+        // Ruling 45: positional before any arithmetic.
+        let v = |s: &str| match parse(s, "/x").unwrap() {
+            Expr::Lit(l) => l.value().unwrap(),
+            other => panic!("{other:?}"),
+        };
+        let scale = |s: &str| match v(s) {
+            TypedValue::Dec(d) => (
+                crate::typed_value::dec_text(&d),
+                d.as_bigint_and_exponent().1,
+            ),
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(scale("1e3"), ("1000".into(), 0));
+        assert_eq!(scale("1.5e-2"), ("0.015".into(), 3));
+        assert_eq!(scale("1.50e-2"), ("0.0150".into(), 4));
+        assert_eq!(scale("1.500E+2"), ("150.0".into(), 1));
+        assert_eq!(scale("2.50"), ("2.50".into(), 2));
+        assert_eq!(scale("007.5e1"), ("75".into(), 0));
+        assert_eq!(v("042"), TypedValue::Int(42.into()));
+        // 1.5 * 1e3 is 1500.0: the scales add once 1e3 is positional.
+        let (TypedValue::Dec(a), TypedValue::Dec(b)) = (v("1.5"), v("1e3")) else {
+            panic!()
+        };
+        assert_eq!(crate::typed_value::dec_text(&(a * b)), "1500.0");
     }
 
     #[test]
@@ -807,6 +942,24 @@ mod tests {
         assert_eq!(ty("i + i").unwrap(), Some(Tag::Int));
         assert_eq!(ty("i + d").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("i / i").unwrap(), Some(Tag::Dec));
+        assert_eq!(
+            ty("1e3").unwrap(),
+            Some(Tag::Dec),
+            "an exponent makes a dec"
+        );
+        assert_eq!(ty("i + 1e3").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("-1e-10").unwrap(), Some(Tag::Dec));
+        // Ruling 36: a literal outside the context range is E6004.
+        assert_eq!(ty("1e999999").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("1e-999999").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("10e999999").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("i + 1e1000000").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("1e-1000000").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("0.1e-999999").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("1e99999999999999999999").unwrap_err().code, Code::E6004);
+        assert_eq!(adjusted_exponent("0.000"), Some(-3));
+        assert_eq!(adjusted_exponent("007.50e2"), Some(2));
+        assert_eq!(adjusted_exponent("1.50e-2"), Some(-2));
         assert_eq!(ty("log(i)").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("coalesce(i, missing, d)").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("missing").unwrap(), None);

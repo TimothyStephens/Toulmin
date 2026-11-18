@@ -1,0 +1,109 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 5,
+      "description": "Rank by score descending within all rows (ties: ordinal; missing values placed last); 5 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "score",
+    "grp",
+    "rank"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "score": {
+        "t": "int",
+        "v": "20"
+      },
+      "grp": {
+        "t": "str",
+        "v": "x"
+      },
+      "rank": {
+        "t": "int",
+        "v": "1"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "score": {
+        "t": "int",
+        "v": "20"
+      },
+      "grp": {
+        "t": "str",
+        "v": "y"
+      },
+      "rank": {
+        "t": "int",
+        "v": "2"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "score": {
+        "t": "int",
+        "v": "10"
+      },
+      "grp": {
+        "t": "str",
+        "v": "x"
+      },
+      "rank": {
+        "t": "int",
+        "v": "3"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "e"
+      },
+      "score": {
+        "t": "int",
+        "v": "5"
+      },
+      "grp": {
+        "t": "str",
+        "v": "x"
+      },
+      "rank": {
+        "t": "int",
+        "v": "4"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "score": {
+        "t": "missing"
+      },
+      "grp": {
+        "t": "str",
+        "v": "y"
+      },
+      "rank": {
+        "t": "int",
+        "v": "5"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:2861c1b5d54e9ebf4a3dce51f3fb80e743aea9b1268857398ee15acb1338ae1a",
+  "key_map_hash": "sha256:2213a8ba4080af42f2aaa2e903299d4458fedd252d732b2ff45a6075a0dfd877",
+  "error": null
+}
