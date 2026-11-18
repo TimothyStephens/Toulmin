@@ -904,9 +904,3 @@ for a later version without changing the spec fingerprint every claim's
 reserved scale; the cost is that a reserved scale wider than the data
 widens the DuckDB `DECIMAL(38, s)` column, which changes no value.
 
-
-## 2026-11-18 P4 close: observed.p1.json removed
-
-**What.** The 28 `observed.p1.json` files under `conformance/checker/assertions/eval/` are deleted.
-
-**Why.** They held the P1 Rust author's answers, kept so the P4 independent case writer could not mistake them for the spec-derived answers. That session wrote `expected.json` beside each from `checker.md` alone, and all 28 pairs agreed (P4 builder's rule 3d diff, confirmed by the P4 review). The agreement is recorded; the files are now a second answer per case and a trap for P5.
