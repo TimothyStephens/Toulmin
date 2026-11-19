@@ -125,8 +125,13 @@ jobs:
       - name: checker
         run: |
           if [ ! -f reference/checker/refcheck.py ]; then echo "::notice::no-op until P5: reference/checker absent"; exit 0; fi
-          python3 -I reference/checker/refcheck.py conformance/checker
-          python3 -I reference/checker/validate.py conformance/formats/steps/invalid conformance/formats/assertions
+          # refcheck.py takes one case directory; validate.py takes schema
+          # case files (reference/checker/README.md).
+          for d in conformance/checker/cases/*/ conformance/checker/assertions/eval/*/; do
+            python3 -I reference/checker/refcheck.py "$d" --check
+          done
+          python3 -I reference/checker/validate.py --check conformance/formats/steps/invalid/*.json conformance/formats/steps/valid/*.json
+          python3 -I reference/checker/validate.py --check conformance/formats/assertions/schema/*.json
 
   differential:
     name: differential (${{ matrix.runner }})
