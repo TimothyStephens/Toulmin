@@ -2193,8 +2193,9 @@ fn pretty(v: &Value) -> String {
     s
 }
 
-/// Generate case `index` into `out`; returns its bucket and whether it
-/// was accepted with a refusal after the redraws.
+/// Generate case `index` into `out`; returns its bucket and whether
+/// validation refuses the written case (after the redraws, outside the
+/// error buckets).
 fn generate(out: &Path, seed: u64, index: u64) -> Result<(&'static str, bool), String> {
     let bucket = BUCKETS[(index % BUCKETS.len() as u64) as usize];
     let error_bucket = ERROR_BUCKETS.contains(&bucket);
@@ -2276,9 +2277,12 @@ fn main() -> ExitCode {
     );
     for b in BUCKETS {
         if let Some((count, refused)) = per_bucket.get(b) {
-            eprintln!(
-                "  {b:<16} {count:>6} cases, {refused:>4} accepted with a refusal after {REDRAWS} redraws"
-            );
+            let how = if ERROR_BUCKETS.contains(&b) {
+                "that validation refuses (error bucket, no redraw)"
+            } else {
+                "still refused after the redraws"
+            };
+            eprintln!("  {b:<16} {count:>6} cases, {refused:>4} {how}");
         }
     }
     ExitCode::SUCCESS
