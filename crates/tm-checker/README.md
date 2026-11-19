@@ -35,8 +35,14 @@ keys and returns row numbers; the typed values never leave Rust. See
 - `tests/snapshot_sql.rs` (item 61): the generated SQL per conformance
   case, `cargo insta test -p tm-checker`.
 - `examples/refcheck.rs` (item 59): `cargo run -p tm-checker --example
-  refcheck -- <case-dir>...` writes `observed.json` beside each case, in
-  the shape of `expected.json`; it never writes `expected.json`.
+  refcheck -- <case-dir>` prints the case's `expected.json`-shaped object
+  on standard output, the contract it shares with `refcheck.py` (item 89);
+  it never writes `expected.json`.
+- `examples/gencases.rs` (item 89): `cargo run -p tm-checker --example
+  gencases -- --out DIR --n N [--seed SEED] [--start I]` writes N
+  differential cases in item 92's layout, one `gen.json` each with the
+  seed, index, and bucket; `scripts/differential.sh N [SEED]` runs both
+  refcheck implementations over them and tabulates every differing field.
 - `fuzz/` (item 62): `steps_json`, `derive_expr`, `csv_parse`, run weekly
   by CI with `cargo +nightly fuzz run <target> -- -max_total_time=600`
   from this directory.
