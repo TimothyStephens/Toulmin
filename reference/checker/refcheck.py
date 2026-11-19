@@ -16,7 +16,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path[:0] = [HERE, os.path.join(os.path.dirname(os.path.dirname(HERE)), "reference-formats")]
+sys.path[:0] = [HERE, os.path.join(os.path.dirname(HERE), "formats")]
 
 import assertion  # noqa: E402
 import ops  # noqa: E402
