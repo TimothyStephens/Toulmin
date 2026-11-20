@@ -382,10 +382,11 @@ fn mean_and_median_keep_a_subnormal_double() {
     for count in [2usize, 3, 4] {
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
         let csv = tmp.path().join("t.csv");
-        let mut text = String::from("k,x\n");
-        for i in 0..count {
-            text.push_str(&format!("{i},5e-324\n"));
-        }
+        let text = (0..count).fold(String::from("k,x\n"), |mut t, i| {
+            use std::fmt::Write;
+            let _ = writeln!(t, "{i},5e-324");
+            t
+        });
         std::fs::write(&csv, text).unwrap_or_else(|e| panic!("{e}"));
         let spec = ParseSpec::from_json(&json!({
             "spec": 1, "format": "csv", "delimiter": ",", "header": true,
