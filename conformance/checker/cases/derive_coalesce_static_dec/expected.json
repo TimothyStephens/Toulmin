@@ -1,0 +1,87 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 4,
+      "description": "Add column d1 = coalesce(i, x) * coalesce(i, x); 4 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "i",
+    "x",
+    "d1"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "i": {
+        "t": "int",
+        "v": "100000000000000001"
+      },
+      "x": {
+        "t": "missing"
+      },
+      "d1": {
+        "t": "dec",
+        "v": "10000000000000000200000000000000000"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "b"
+      },
+      "i": {
+        "t": "missing"
+      },
+      "x": {
+        "t": "dec",
+        "v": "2.5"
+      },
+      "d1": {
+        "t": "dec",
+        "v": "6.25"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "c"
+      },
+      "i": {
+        "t": "int",
+        "v": "3"
+      },
+      "x": {
+        "t": "dec",
+        "v": "4.0"
+      },
+      "d1": {
+        "t": "dec",
+        "v": "9"
+      }
+    },
+    {
+      "id": {
+        "t": "str",
+        "v": "d"
+      },
+      "i": {
+        "t": "missing"
+      },
+      "x": {
+        "t": "missing"
+      },
+      "d1": {
+        "t": "missing"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:bdc8bb31185028fbbd7083e0a34e1d71cfdef778abd4f2a39b5eb8a7c52d36f8",
+  "key_map_hash": "sha256:ec62fe395f3bcf44a268d9d81ec9a836401ac48455b08b1abd975a0dc972a9d2",
+  "error": null
+}

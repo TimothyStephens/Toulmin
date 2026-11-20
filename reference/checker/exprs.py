@@ -343,10 +343,32 @@ def infer(node, schema):
 # --- evaluation (11.18.2) ---------------------------------------------------
 
 
+def bind(node, schema):
+    """The tree prepared for evaluation over tables of `schema`: every
+    `coalesce` whose static type is `dec` is marked, as a fourth element,
+    to widen the value it chooses, so an `int` cell chosen beside a `dec`
+    column is a `dec` at run time and the arithmetic around it rounds at 34
+    digits (11.18.2 Precision, "arithmetic is performed in the expression's
+    static type"; ruling D19 of 2026-11-20). `infer` must have accepted the
+    tree over `schema` first."""
+    kind = node[0]
+    if kind in ("lit", "col"):
+        return node
+    if kind in ("neg", "not"):
+        return (kind, bind(node[1], schema))
+    if kind == "call":
+        args = [bind(a, schema) for a in node[2]]
+        if node[1] == "coalesce" and infer(node, schema) == "dec":
+            return ("call", "coalesce", args, True)
+        return ("call", node[1], args)
+    return (kind, node[1], bind(node[2], schema), bind(node[3], schema))
+
+
 def evaluate(node, row, result_type=None):
-    """Evaluate over `row` (dict name -> Value). `result_type` is the static
-    type of the whole expression; a number result is widened to it (an int
-    widened to dec has scale 0). Raises E5002 on decimal Overflow."""
+    """Evaluate over `row` (dict name -> Value); `node` comes from `bind`.
+    `result_type` is the static type of the whole expression; a number
+    result is widened to it (an int widened to dec has scale 0). Raises
+    E5002 on decimal Overflow."""
     value = _eval(node, row)
     if result_type == "dec" and value.t == "int":
         return Value("dec", Decimal(value.v))
@@ -375,7 +397,7 @@ def _eval(node, row):
             return MISSING
         return Value("bool", not v.v)
     if kind == "call":
-        return _call(node[1], node[2], row)
+        return _call(node, row)
     op, left, right = node[1], node[2], node[3]
     if op in ("and", "or"):
         lv, rv = _eval(left, row), _eval(right, row)
@@ -436,11 +458,15 @@ def _fix(operation, d):
         raise CheckError("E5002", "arithmetic overflow") from None
 
 
-def _call(name, args, row):
+def _call(node, row):
+    name, args = node[1], node[2]
     if name == "coalesce":
+        widen = len(node) > 3 and node[3]
         for a in args:
             v = _eval(a, row)
             if not v.absent:
+                if widen and v.t == "int":
+                    return Value("dec", Decimal(v.v))
                 return v
         return MISSING
     v = _eval(args[0], row)

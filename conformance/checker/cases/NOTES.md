@@ -217,6 +217,10 @@ exp(0) = 1; exp(1) = 2.718281828459045 -> 2.71828182845905; exp(1000) overflows 
 
 Re-derived from the revised text (was derive_overflow_error). x = 10000000000000000.5 (18 significant digits, scale 1). The exact product is 100000000000000010000000000000000.25: 33 integer digits + 2 fraction digits = 35 significant digits, scale 2. 'dec results round to 34 significant digits, half-even' and 'Rounding at 34 significant digits is not an overflow: the result rounds and the check goes on'. Dropping the last digit 5 exactly half-way, the kept digit 2 is even, so it stays: 100000000000000010000000000000000.2, scale 1 (rounding overrides the sum-of-scales rule). Adjusted exponent 32, far below Emax 999999, so no Overflow. a.sq equals the rounded value: holds.
 
+## derive_coalesce_static_dec
+
+Ruling D19 (2026-11-20): arithmetic is performed in the expression's static type. coalesce(i, x) is dec because x is a dec column, so the product is dec and rounds at 34 significant digits whichever branch coalesce took at run time. a: both operands are the int cell 100000000000000001 (18 digits), chosen by coalesce and widened to dec; the exact square 10000000000000000200000000000000001 has 35 significant digits and rounds half-even to 34, dropping the final 1: 10000000000000000200000000000000000 (an int product would have kept it). b: i is missing, so 2.5 * 2.5 = 6.25. c: 3 * 3 = 9, written as the integer. d: both missing, so missing. a.d1 equals the rounded value: holds.
+
 ## derive_date_arith_error
 
 Arithmetic on a date is E6004 (Dates row), checked before anything runs.

@@ -419,10 +419,11 @@ def step(i, op, expr, table, load_table):
     name = op["op"]
     f = f"/ops/{i}"
     if name == "filter":
+        bound = exprs.bind(expr, table.schema)
         kept = []
         for row in table.rows:
             try:
-                v = exprs.evaluate(expr, row)
+                v = exprs.evaluate(bound, row)
             except CheckError as e:
                 raise e.at(f + "/where")
             if v.t == "bool" and v.v is True:
@@ -447,10 +448,11 @@ def step(i, op, expr, table, load_table):
         return out, describe.rank(op, len(rows))
     if name == "derive":
         result_type = exprs.infer(expr, table.schema)
+        bound = exprs.bind(expr, table.schema)
         rows = []
         for row in table.rows:
             try:
-                v = exprs.evaluate(expr, row, result_type)
+                v = exprs.evaluate(bound, row, result_type)
             except CheckError as e:
                 raise e.at(f + "/expr")
             new = dict(row)

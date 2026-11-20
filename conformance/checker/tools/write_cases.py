@@ -232,6 +232,19 @@ table(
 )
 
 table(
+    "cw",
+    "id,i,x\na,100000000000000001,NA\nb,NA,2.5\nc,3,4.0\nd,NA,NA\n",
+    spec([col("id", "str"), col("i", "int"), col("x", "dec", 1)], ["id"]),
+    ["id", "i", "x"], ["id"],
+    {
+        "a": [S("a"), I(100000000000000001), M],
+        "b": [S("b"), M, D("2.5")],
+        "c": [S("c"), I(3), D("4.0")],
+        "d": [S("d"), M, M],
+    },
+)
+
+table(
     "ev",
     "id,d,d2,ts,k\n"
     "a,2026-01-05,2026-01-01,2026-01-05T10:00:00Z,g1\n"
@@ -1028,6 +1041,22 @@ case("derive_rounds_at_34_digits", ["big"], "big", [derive("sq", "x * x")],
            "half-way, the kept digit 2 is even, so it stays: 100000000000000010000000000000000.2, "
            "scale 1 (rounding overrides the sum-of-scales rule). Adjusted exponent 32, far below Emax "
            "999999, so no Overflow. a.sq equals the rounded value: holds.")
+
+case("derive_coalesce_static_dec", ["cw"], "cw", [derive("d1", "coalesce(i, x) * coalesce(i, x)")],
+     a_value([S("a")], "d1", "eq", D("10000000000000000200000000000000000")), "holds",
+     [(4, "Add column d1 = coalesce(i, x) * coalesce(i, x); 4 rows.")],
+     cols_of("cw", add=["d1"]),
+     rows("cw", ["a", "b", "c", "d"], add={"a": {"d1": D("10000000000000000200000000000000000")},
+                                           "b": {"d1": D("6.25")}, "c": {"d1": D("9")},
+                                           "d": {"d1": M}}), ["id"],
+     notes="Ruling D19 (2026-11-20): arithmetic is performed in the expression's static type. "
+           "coalesce(i, x) is dec because x is a dec column, so the product is dec and rounds at 34 "
+           "significant digits whichever branch coalesce took at run time. a: both operands are the "
+           "int cell 100000000000000001 (18 digits), chosen by coalesce and widened to dec; the exact "
+           "square 10000000000000000200000000000000001 has 35 significant digits and rounds half-even "
+           "to 34, dropping the final 1: 10000000000000000200000000000000000 (an int product would "
+           "have kept it). b: i is missing, so 2.5 * 2.5 = 6.25. c: 3 * 3 = 9, written as the integer. "
+           "d: both missing, so missing. a.d1 equals the rounded value: holds.")
 
 case("derive_date_arith_error", ["ev"], "ev", [derive("d3", "d + 1")],
      a_count("eq", I(4)), "error", error=("E6004", "/ops/0/expr"),
