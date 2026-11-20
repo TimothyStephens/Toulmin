@@ -388,8 +388,8 @@ fn type_cell(cell: &Cell, column: &Column, spec: &ParseSpec, row: usize) -> Resu
         });
     }
     if t == SpecType::Float64 {
+        // Read as written, no trimming (11.7, ruling D11 of 2026-11-20).
         let x: f64 = text
-            .trim()
             .parse()
             .map_err(|_| e3102(row, &column.name, format!("{text:?} is not a float64")))?;
         if !x.is_finite() {
@@ -570,7 +570,7 @@ pub fn complete_spec(path: &Path, draft: &Value, settings: &EngineSettings) -> R
             };
             // The scale of the positional form, an exponent converted first
             // (11.7; ruling 32).
-            let Some(d) = parse_dec_written(text.trim(), DEC_DIGITS) else {
+            let Some(d) = parse_dec_written(&text, DEC_DIGITS) else {
                 return Err(e3102(r + 1, &column.name, format!("{text:?} is not dec")));
             };
             scale = scale.max(fraction_len(&dec_text(&d)));

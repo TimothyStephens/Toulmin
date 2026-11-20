@@ -52,7 +52,7 @@ pub struct Statement {
     pub sql: String,
     /// Extra columns the encoded input needs.
     pub key_json: bool,
-    /// Columns that need a double for `mean` or `median`.
+    /// Columns that need a double for `mean`.
     pub doubles: Vec<usize>,
 }
 
@@ -263,16 +263,14 @@ pub fn statement(
                 let c = q(&col(j));
                 let expr = match agg.func {
                     AggFn::Count => "count(*)".to_owned(),
-                    // Exact in Rust under the 11.6 context over the
-                    // `members` list (docs/decisions.md, 2026-11-17).
-                    AggFn::Sum => "NULL".to_owned(),
+                    // Both in Rust over the `members` list: `sum` exact under
+                    // the 11.6 context (docs/decisions.md, 2026-11-17), and
+                    // `median` because DuckDB's loses a subnormal result
+                    // (11.18.2 `group`, checker-diffs D4).
+                    AggFn::Sum | AggFn::Median => "NULL".to_owned(),
                     AggFn::Mean => {
                         doubles.push(j);
                         format!("avg({})", q(&dbl(j)))
-                    }
-                    AggFn::Median => {
-                        doubles.push(j);
-                        format!("median({})", q(&dbl(j)))
                     }
                     AggFn::Min | AggFn::Max => format!(
                         "first({} ORDER BY {} {}, {}) FILTER (WHERE {c} IS NOT NULL)",
@@ -294,13 +292,11 @@ pub fn statement(
             let mut extra = vec![format!(
                 "{KEY} = the row's key tuple as canonical JSON (str)"
             )];
-            extra.extend(doubles.iter().map(|j| {
-                format!(
-                    "{} = {:?} as DOUBLE (mean, median)",
-                    dbl(*j),
-                    t.columns[*j].0
-                )
-            }));
+            extra.extend(
+                doubles
+                    .iter()
+                    .map(|j| format!("{} = {:?} as DOUBLE (mean)", dbl(*j), t.columns[*j].0)),
+            );
             let _ = writeln!(sql, "-- {input} also: {}", extra.join(", "));
             let groups: Vec<String> = by.iter().map(|c| q(&col(idx(t, c)))).collect();
             let order: Vec<String> = by

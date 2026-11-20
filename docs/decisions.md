@@ -1279,3 +1279,131 @@ the cell `E3102` field null, so nothing in tm-files changed for ruling 54.
 **What.** The 28 `observed.p1.json` files under `conformance/checker/assertions/eval/` are deleted.
 
 **Why.** They held the P1 Rust author's answers, kept so the P4 independent case writer could not mistake them for the spec-derived answers. That session wrote `expected.json` beside each from `checker.md` alone, and all 28 pairs agreed (P4 builder's rule 3d diff, confirmed by the P4 review). The agreement is recorded; the files are now a second answer per case and a trap for P5.
+
+## 2026-11-18 P5: the case generator's buckets, seeding, and `gen.json` (item 89)
+
+**What.** Item 89 now fixes what the design left open for
+`examples/gencases.rs`: its invocation (`--out DIR --n N [--seed SEED]
+[--start I]`); sixteen named coverage buckets assigned round-robin by case
+index, so N = 10,000 gives 625 cases per bucket; a per-case SplitMix64
+stream seeded from `(SEED, index)`, so a case does not depend on N and one
+case can be regenerated alone; a `gen.json` file in each case directory
+holding `{"seed","index","bucket"}`; how values are drawn (small domains
+for ties, every spec type, NFC and NFD spellings, backticked names,
+exponent cells, NaN and Inf tokens under both settings); three buckets
+that produce errors on purpose (`E6004`, `E3102`, `E5002`); and a redraw
+loop against `tm-formats`' validation for every other bucket, so nearly
+every case runs.
+
+**Why.** The design said what the generator must cover and nothing about
+how, and the P5 brief's design-first rule makes each of those choices a
+design edit before code. Round-robin buckets make the count per bucket a
+property of N alone, which the P5 report can state. The per-case seed
+makes a differing case reproducible from its `gen.json` without rerunning
+the whole suite. Validation-with-redraw keeps the suite about semantics
+rather than about validation refusals, which the conformance suites
+already cover; the three error buckets stay because rulings 36, 53, and
+16 make those errors Checker behaviour the two implementations must share.
+No `rand` dependency: SplitMix64 is a dozen lines, and D24 fixes the
+dependency list.
+
+## 2026-11-18 P5: both refcheck implementations print to standard output (item 59)
+
+**What.** Item 59 said the example binary "writes `observed.json`" beside
+the case; the P4 binary did that and printed nothing. Item 59 and item 89
+now state one contract for both implementations: one case directory as the
+only argument, the item 92 `expected.json` object on standard output, exit
+0 whatever the verdict, non-zero with a message on standard error only when
+the case cannot be run at all. `examples/refcheck.rs` is changed to match.
+
+**Why.** The Python side was given `python3 refcheck.py CASE_DIR` with the
+object on standard output, and a differential script that reads one side
+from a file and the other from a pipe is two code paths for one
+comparison. Writing into the case directory also puts a file item 92 does
+not name next to the inputs the other implementation is about to read.
+
+## 2026-11-18 P5: the differential script's seed, retention path, and runner classes (item 89, Verification Plan)
+
+**What.** `scripts/differential.sh N [SEED]` takes its seed from the
+command line, defaulting to the current Unix time, and prints it first;
+differing cases are kept under `target/differential/<SEED>/<case>/` with
+both outputs and both standard errors; the CI job passes the workflow
+run's id as the seed and uploads that directory as an artifact. The two
+runner classes are `ubuntu-24.04` (x64) and `ubuntu-24.04-arm` (arm64).
+
+**Why.** 11.6 asks for "the same cases on two CPU generations"; one seed
+shared by both matrix legs is what makes them the same cases, and the run
+id is the one value both legs have and a reader can find later. A fresh
+seed per run explores more of the space; any difference is a defect and
+its case is kept, so the suite is no less reproducible for it. The
+retention path is under `target/` because it is build output in the
+git-ignored place for build output, and it is named by seed so two runs
+do not overwrite each other. **Deviation:** GitHub-hosted runners do not
+let a workflow choose an x64 CPU generation (the x64 pool is one class
+whatever the image), so the second class is arm64 rather than an older
+x64 generation. It still meets the purpose, which is to run DuckDB's
+runtime-selected code paths on two different CPUs, and it is the only
+second CPU GitHub offers for Linux. The design text names both classes and
+says why.
+
+## 2026-11-20 P5: rulings D3, D4, D5 and two clarifications edit 11.6, 11.9, 11.18.2, 11.18.3, and item 92
+
+**What.** After the first two 10,000-case differential runs
+(`docs/decisions/checker-diffs.md`, entries D1 to D5), the owner ruled and
+the design changed first: 11.9 and the 11.18.3 `compare_rows` row make the
+operator and `tol` check static against the left column's type (D3); 11.6
+says a subnormal double is a value and is never flushed to zero and that
+an integral double is written `7`, not `7.0` (D4, D2); the 11.18.2 Where
+and `group` rows move `median` from DuckDB to Rust over the member doubles,
+with the formula stated (D4); item 92 says every table file is
+`tables/<name>.csv` whatever its format (D1) and that a harness parses
+every table before validating the steps and the assertion (D5). The
+Python reference checker changed twice under ruling-specified exceptions
+to its no-edit rule: the `7.0` form (D2) and the parse-first order (D5).
+
+**Why.** D3: whether a claim is well-formed cannot depend on which rows a
+version of the data contains, and the M5 ruling already made the check
+static for `value`. D4: DuckDB's `median` interpolates between the two
+middle doubles in a way that loses a subnormal result (`5e-324` twice gives
+`0`, `1e-310` twice loses low bits), while `avg` over the same members and
+`median` over an odd count are right, so the loss is inside the
+interpolation and the member rows DuckDB already lists for `sum` are the
+clean source; a 324-digit positional `dec` is accepted because the
+no-exponent rule stands for every value (changing it would change every
+hash) and the static view may display it in scientific notation (ruling
+32). D5: the product parses a table at `table.spec`, before any claim
+exists, so a claim is never validated against a table that did not parse.
+
+## 2026-11-20 P5: the reference checker's README readings become design rules
+
+**What.** `reference/checker/README.md` lists 22 readings the Python
+session took where `checker.md` was silent. Readings 11 and 15 are the D5
+and D3 rulings above. Of the other 20, the ones both implementations
+already follow are now one sentence each in the section they concern:
+reading 4's agreeing half and 19 in 11.8; 9, 12, and 21's header and
+datetime parts in 11.7; 16's `/op` half and 17's codes in 11.9; 5, 7, 8,
+and 13 in the 11.18.2 Types, `group`, Domain, and Missing rows; 14 in
+11.18.4; 22 in item 92, inline, replacing the pointer to
+`crates/tm-formats/README.md`. The readings the two implementations do
+not share went to `docs/decisions/checker-diffs.md` as entries D6 to D17
+instead of into the design: 1, 2, 3, 4's other half, 6, 10, 16's pointer,
+17's phase, 18, 21's pointer, and 20 (moot once D16 is ruled). Reading
+21's blank-line rule is in neither, since what Rust does with a blank
+line in a CSV was not established.
+
+**Why.** A fourth implementer should not rediscover a reading that both
+implementations already share, and the design is where it is found. A
+reading only one side follows is not yet a rule: writing it into the
+design would put one implementation out of conformance before the owner
+chose a side, which the P5 brief ("fix nothing until the owner rules")
+forbids, so each is an entry with a proposed sentence. The source is the
+README's list, kept there so the code and its assumptions stay together;
+the README itself was not edited beyond reading 11, which the D5 ruling
+changed.
+
+## 2026-11-20 P5: rulings D6 to D18 on the latent differences
+
+**What.** The owner ruled on the twelve latent differences the README readings exposed (`docs/decisions/checker-diffs.md` D6 to D17) and one more found while ruling (D18, blank lines). The design changed first: 11.7 (no trimming in any column type; blank lines skipped; `E3103` at `/columns/<i>/name`), 11.8 (the version handle form; a `tables` entry with no spec; repeated names in a column list; a `v` that is not a positive integer and an empty `as` as `E6004`; the finer `E6002` pointers for `group` and `join`; the within-op check order and `as` before `expr`), 11.9 (`/op` before `/tol`; `/expected/1` for `between` bounds; `list`, `nan`, and `inf` in `row` refused at the shape check), the 11.18.2 Precision row (unary minus and `abs` apply the context), and item 92 (the `observed.p1.json` mention, removed on 2026-11-18, is gone). Item 89 gains a generator bucket that draws malformed ops. Rust changes for D6, D8, D9, D11, D13, D14, and D17's order; Python for D7, D10, D12, D15, D16, and D17's codes, under the same ruling-specified exception as D2 and D5.
+
+**Why.** Each is a place the specification was silent and the two implementations chose differently; none showed in 30,000 generated cases because the generator does not draw the inputs. A fourth implementer should find each decided, and the differential should be able to reach them, which the new bucket gives it.
+

@@ -545,12 +545,18 @@ fn group(
                 .iter()
                 .map(|m| eval::sum(m.iter().map(|r| &cur.rows[*r][j]), tag, &aat))
                 .collect::<Result<_, _>>()?,
-            AggFn::Mean | AggFn::Median => engine::doubles(&b, c)?
+            AggFn::Mean => engine::doubles(&b, c)?
                 .into_iter()
                 .map(|x| {
                     x.and_then(dec_from_f64_round15)
                         .map_or(TypedValue::Missing, TypedValue::Dec)
                 })
+                .collect(),
+            // In Rust from the members, like `sum`: DuckDB's `median` loses
+            // a subnormal result (11.18.2 `group`, checker-diffs D4).
+            AggFn::Median => members
+                .iter()
+                .map(|m| eval::median(m.iter().map(|r| &cur.rows[*r][j])))
                 .collect(),
             AggFn::Min | AggFn::Max => engine::rows(&b, c)?
                 .into_iter()

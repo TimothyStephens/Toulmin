@@ -565,6 +565,66 @@ fn a_float64_text_that_overflows_a_double_is_e3102() {
 }
 
 #[test]
+fn a_padded_cell_is_e3102_in_every_column_type() {
+    // Ruling D11 of 2026-11-20 (11.7): a cell is read as written, with no
+    // trimming in any column type, so a padded numeric cell is E3102; a
+    // padded str cell keeps its spaces.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "i", "type": "int", "missing": []},
+            {"name": "d", "type": "dec", "scale": 2, "missing": []},
+            {"name": "f", "type": "float64", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap();
+    for (name, line) in [
+        ("int", "a, 1,1.50,2.5"),
+        ("dec", "a,1, 1.50,2.5"),
+        ("float64", "a,1,1.50, 2.5"),
+        ("float64 trailing", "a,1,1.50,2.5 "),
+    ] {
+        let path = tmp.path().join("pad.csv");
+        fs::write(&path, format!("k,i,d,f\n{line}\n")).unwrap();
+        let err = parse(&path, &spec, &st).unwrap_err();
+        assert_eq!(err.catalog_code(), Some(Code::E3102), "{name}");
+    }
+    let path = tmp.path().join("str.csv");
+    fs::write(&path, "k,i,d,f\n a ,1,1.50,2.5\n").unwrap();
+    let batch = parse(&path, &spec, &st).unwrap();
+    let rows = typed_rows(&batch, &spec).unwrap();
+    assert_eq!(rows[0][0], s(" a "));
+}
+
+#[test]
+fn a_blank_line_in_a_table_file_is_skipped() {
+    // Ruling D18 of 2026-11-20 (11.7): a blank line between two rows and
+    // one at the end of the file are skipped, not rows.
+    let tmp = tempfile::tempdir().unwrap();
+    let st = settings(tmp.path());
+    let spec = ParseSpec::from_json(&json!({
+        "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+        "columns": [
+            {"name": "k", "type": "str", "missing": []},
+            {"name": "i", "type": "int", "missing": []}
+        ],
+        "key": ["k"], "nan": "value", "inf": "value", "encoding": "utf-8"
+    }))
+    .unwrap();
+    let path = tmp.path().join("blank.csv");
+    fs::write(&path, "k,i\na,1\n\nb,2\n\n").unwrap();
+    let batch = parse(&path, &spec, &st).unwrap();
+    let rows = typed_rows(&batch, &spec).unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0][0], s("a"));
+    assert_eq!(rows[1][0], s("b"));
+}
+
+#[test]
 fn a_dec_cell_fits_its_scale_unless_its_value_changes() {
     // Ruling 39 (11.7, item 47): extra trailing zeros are not a change.
     let tmp = tempfile::tempdir().unwrap();
