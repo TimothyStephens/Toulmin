@@ -369,6 +369,67 @@ fn missing_nan_and_inf_group_together_as_missing() {
     checked_body(&r);
 }
 
+/// Checker-diffs D4 (11.6, 11.18.2 `group`): a subnormal double is a value
+/// and is never flushed to zero; `mean` and `median` of members all `5e-324`
+/// are `4.94065645841247e-324`, written positionally, for counts 2, 3, and 4.
+#[test]
+fn mean_and_median_keep_a_subnormal_double() {
+    let want = TypedValue::from_json(
+        &json!({"t":"dec","v":format!("0.{}494065645841247", "0".repeat(323))}),
+        "",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    for count in [2usize, 3, 4] {
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+        let csv = tmp.path().join("t.csv");
+        let mut text = String::from("k,x\n");
+        for i in 0..count {
+            text.push_str(&format!("{i},5e-324\n"));
+        }
+        std::fs::write(&csv, text).unwrap_or_else(|e| panic!("{e}"));
+        let spec = ParseSpec::from_json(&json!({
+            "spec": 1, "format": "csv", "delimiter": ",", "header": true,
+            "columns": [
+                {"name": "k", "type": "int", "missing": []},
+                {"name": "x", "type": "float64", "missing": ["NA"]}
+            ],
+            "key": ["k"], "nan": "missing", "inf": "missing", "encoding": "utf-8"
+        }))
+        .unwrap_or_else(|e| panic!("{e}"));
+        let batch = tm_files::parse::parse(&csv, &spec, &case::settings())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let t = BTreeMap::from([(
+            "t".to_owned(),
+            InputTable {
+                handle: "F1@v1".to_owned(),
+                spec,
+                batch,
+            },
+        )]);
+        let steps = json!({"steps":1,"tables":{"t":"F1@v1"},"from":"t","ops":[
+            {"op":"group","v":1,"by":["x"],"aggregates":[
+                {"as":"m","fn":"mean","column":"x"},
+                {"as":"d","fn":"median","column":"x"}
+            ]}
+        ]});
+        let assertion = json!({"assert":1,"kind":"count","op":"eq","expected":{"t":"int","v":"1"}});
+        let settings = case::settings();
+        let r = tm_checker::run(&Request {
+            tables: &t,
+            steps: Some(&steps),
+            assertion: &assertion,
+            citations: &[],
+            settings: &settings,
+            limit: 100,
+        });
+        assert_eq!(r.verdict.outcome, Outcome::Holds, "{:?}", r.verdict.error);
+        let rows = r.final_rows.clone().unwrap_or_default();
+        // x, m, d, member_count, member_keys_hash
+        assert_eq!(rows[0][1], want, "mean of {count}");
+        assert_eq!(rows[0][2], want, "median of {count}");
+    }
+}
+
 /// Ruling 55 (11.9, 11.18.3): a row value `missing` names the missing group
 /// by grouping identity, so a claim can count it ("4 rows have no g").
 #[test]

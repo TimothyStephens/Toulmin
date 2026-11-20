@@ -409,13 +409,14 @@ impl Assertion {
 
     /// Check against the final table's schema before anything runs (11.9):
     /// `row` arity and types (each of its column's type, or `missing`),
-    /// `column` existence, and that `expected` (or
-    /// the right cell's column) is of a type the column compares with.
+    /// `column` existence, that `expected` (or the right cell's column) is
+    /// of a type the column compares with, and for `compare_rows` that the
+    /// left column's type allows `op` and `tol`.
     ///
     /// # Errors
     /// `E6004` at `/row/<i>` (under `/left` or `/right` for `compare_rows`),
     /// `E6005` at `/column` (or `/left/column`, `/right/column`), `E6004`
-    /// at `/expected` or `/right/column`.
+    /// at `/expected`, `/right/column`, `/op`, or `/tol`.
     pub fn check(&self, schema: &TableSchema) -> Result<(), Error> {
         let row_ok = |row: &[TypedValue], at: &str| -> Result<(), Error> {
             if row.len() != schema.key.len() {
@@ -466,7 +467,12 @@ impl Assertion {
             }
             Assertion::Rank { row, .. } | Assertion::Exists { row } => row_ok(row, ""),
             Assertion::Count { .. } => Ok(()),
-            Assertion::CompareRows { left, right, .. } => {
+            Assertion::CompareRows {
+                left,
+                right,
+                op,
+                tol,
+            } => {
                 let l = cell_ok(left, "/left")?;
                 let r = cell_ok(right, "/right")?;
                 if !compatible(l, r) {
@@ -474,6 +480,25 @@ impl Assertion {
                         Code::E6004,
                         "/right/column",
                         format!("{l:?} does not compare with {r:?}"),
+                    ));
+                }
+                // 11.9 (checker-diffs D3, ruling 2026-11-20): the operator
+                // and `tol` are checked against the left column's type
+                // before any row is located, as against `expected`'s type
+                // for `value`; `op` before `tol`, the reference checker's
+                // order.
+                if matches!(l, Tag::Str | Tag::Bool) && !matches!(op, Cmp::Eq | Cmp::Ne) {
+                    return Err(Error::at(
+                        Code::E6004,
+                        "/op",
+                        format!("{l:?} values take only eq and ne"),
+                    ));
+                }
+                if !is_numeric(l) && tol.is_some() {
+                    return Err(Error::at(
+                        Code::E6004,
+                        "/tol",
+                        format!("`tol` does not apply to {l:?}"),
                     ));
                 }
                 Ok(())
@@ -679,6 +704,51 @@ mod tests {
             expected.map_err(|e| (e.code, e.field)).err(),
             Some((Code::E6004, Some("/expected".to_owned())))
         );
+    }
+
+    #[test]
+    fn compare_rows_operator_and_tol_are_checked_against_the_left_column() {
+        // 11.9 (checker-diffs D3): static, whether or not the rows exist.
+        let schema = TableSchema {
+            columns: vec![
+                ("gene".to_owned(), Tag::Str),
+                ("fc".to_owned(), Tag::Dec),
+                ("day".to_owned(), Tag::Date),
+            ],
+            key: vec!["gene".to_owned()],
+        };
+        let cr = |column: &str, op: &str, tol: bool| {
+            let mut a = json!({"assert":1,"kind":"compare_rows",
+                "left":{"row":[{"t":"str","v":"A"}],"column":column},
+                "right":{"row":[{"t":"str","v":"B"}],"column":column},"op":op});
+            if tol {
+                a["tol"] = json!({"abs":"0","rel":"0"});
+            }
+            Assertion::from_json(&a)
+                .unwrap()
+                .check(&schema)
+                .map_err(|e| (e.code, e.field))
+        };
+        assert_eq!(
+            cr("gene", "lt", false),
+            Err((Code::E6004, Some("/op".to_owned())))
+        );
+        assert_eq!(
+            cr("gene", "eq", true),
+            Err((Code::E6004, Some("/tol".to_owned())))
+        );
+        // Both wrong: `op` is reported first.
+        assert_eq!(
+            cr("gene", "ge", true),
+            Err((Code::E6004, Some("/op".to_owned())))
+        );
+        assert_eq!(
+            cr("day", "lt", true),
+            Err((Code::E6004, Some("/tol".to_owned())))
+        );
+        assert_eq!(cr("gene", "ne", false), Ok(()));
+        assert_eq!(cr("day", "lt", false), Ok(()));
+        assert_eq!(cr("fc", "lt", true), Ok(()));
     }
 
     #[test]
