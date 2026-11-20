@@ -217,8 +217,11 @@ impl Table {
         out
     }
 
+    /// Item 92 names every table file `tables/<name>.csv`; the parse
+    /// spec's `format` and `delimiter` decide how it is read, so a
+    /// tab-separated table is still `<name>.csv` (checker-diffs D1).
     fn file_name(&self) -> String {
-        format!("{}.{}", self.name, if self.tsv { "tsv" } else { "csv" })
+        format!("{}.csv", self.name)
     }
 
     fn schema(&self) -> Schema {
