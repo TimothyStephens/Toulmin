@@ -210,3 +210,19 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: item 47 names RFC 4180, which has no blank lines; README reading 21 skips them; what `tm-files` does was not checked when the readings were written into the design.
 - **Ruling (2026-11-20).** A blank line is skipped: it can be a valid row in no table, and exports commonly end with one. Rust confirms or changes `tm-files`; 11.7 says so.
 - Applied 2026-11-20: confirmed by hand, no change: `tm-files` reads through DuckDB `read_csv`, which skips a blank line in the middle and at the end, as `tables.py` does; the `malformed` bucket writes one.
+
+## The CI differential (2026-11-20)
+
+The CI job runs `scripts/differential.sh 10000 <run id>` on `ubuntu-24.04` (x64) and `ubuntu-24.04-arm` (arm64) with the workflow run's id as the seed, after rulings D1 to D18 were applied on both sides.
+
+| Run | Seed | Cases | Differing cases | Differing fields | Distinct causes | Runner classes |
+| --- | --- | --- | --- | --- | --- | --- |
+| CI 44803194352 | 44803194352 | 10,000 | 1 | 2 | 1 (D19) | both, the same case with the same hashes |
+
+### D19. `coalesce` over an `int` and a `dec` column, multiplied: Rust rounds at 34 digits, Python multiplies the `int` cells exactly
+
+- Case: `c02857-derive`, the only differing case of the CI run, found on both runner classes with the same hashes on each side. Reproduced here with `gencases --seed 44803194352 --start 2857 --n 1`.
+- Fields: `final_rows` and `final_rows_hash`. Table `meta` (`gene_id` `str` key; `or` `int`; `n` `dec`, scale 0): `EGFR` has `or` `123456789012345678901234567` and `n` missing; `MDM2` has `or` missing and `n` `-10`. The first op is `derive d1 = (coalesce(`or`,`n`)) * coalesce(`or`, `or`)`. `EGFR`'s `d1`: Rust `{"t":"dec","v":"15241578753238836750495351342783110000000000000000000"}`, the exact square rounded to 34 significant digits; Python `{"t":"dec","v":"15241578753238836750495351342783114345526596755677489"}`, the exact 53-digit square. `final_rows_hash` Rust `sha256:592886985a52a33af9dd70b9695d88c828fa4d4c9d013184be61dc940a0932c3`, Python `sha256:95647c7f46318a2d8f8f2df0fcad6b1588303dc5246b24b5f39d631d186b6385`. `MDM2`'s `d1` is missing on both sides; the verdict (`fails`: 2 rows, `count` `lt` 2), `steps`, `columns`, `key_map_hash`, and `error` agree.
+- Sentences: 11.18.2 Types, "`int` combined with `dec` gives `dec`" and "`coalesce` gives its arguments' common type, `int` and `dec` widening to `dec`"; 11.18.2 Precision, "`dec` results round to 34 significant digits, half-even" and "`int` results are of arbitrary size and never overflow". Both sides give the column the static type `dec`; Python evaluated each row by the run-time tags of the values `coalesce` chose, two `int` cells here, and multiplied them as `int`.
+- **Ruling (2026-11-20).** Rust is right. Arithmetic runs in the expression's static type (11.18.2 Types). `coalesce(or, n)` is `dec` because `n` is a `dec` column, so `d1` is `dec` and rounds at 34 significant digits, whichever branch `coalesce` took at run time. Python multiplied two integral run-time values as ints, exact.
+- Applied 2026-11-20: the 11.18.2 Precision row says arithmetic is performed in the expression's static type. Python (`exprs.bind`, under a ruling-specified exception to its no-edit rule, logged in `docs/decisions.md`) marks every `coalesce` whose static type is `dec` so the value it chooses is a `Decimal` in the context from then on; `ops.py` binds a `filter` or `derive` expression once per step. On this case the two sides now agree on all seven fields. Conformance case `derive_coalesce_static_dec` (an 18-digit `int` cell squared through `coalesce`, its `expected.json` equal to the Rust output); the generator's `digit34` bucket draws `coalesce` over an `int` and a `dec` column with a product past 34 digits in one arm of six.
