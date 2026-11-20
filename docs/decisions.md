@@ -1400,3 +1400,10 @@ forbids, so each is an entry with a proposed sentence. The source is the
 README's list, kept there so the code and its assumptions stay together;
 the README itself was not edited beyond reading 11, which the D5 ruling
 changed.
+
+## 2026-11-20 P5: rulings D6 to D18 on the latent differences
+
+**What.** The owner ruled on the twelve latent differences the README readings exposed (`docs/decisions/checker-diffs.md` D6 to D17) and one more found while ruling (D18, blank lines). The design changed first: 11.7 (no trimming in any column type; blank lines skipped; `E3103` at `/columns/<i>/name`), 11.8 (the version handle form; a `tables` entry with no spec; repeated names in a column list; a `v` that is not a positive integer and an empty `as` as `E6004`; the finer `E6002` pointers for `group` and `join`; the within-op check order and `as` before `expr`), 11.9 (`/op` before `/tol`; `/expected/1` for `between` bounds; `list`, `nan`, and `inf` in `row` refused at the shape check), the 11.18.2 Precision row (unary minus and `abs` apply the context), and item 92 (the `observed.p1.json` mention, removed on 2026-11-18, is gone). Item 89 gains a generator bucket that draws malformed ops. Rust changes for D6, D8, D9, D11, D13, D14, and D17's order; Python for D7, D10, D12, D15, D16, and D17's codes, under the same ruling-specified exception as D2 and D5.
+
+**Why.** Each is a place the specification was silent and the two implementations chose differently; none showed in 30,000 generated cases because the generator does not draw the inputs. A fourth implementer should find each decided, and the differential should be able to reach them, which the new bucket gives it.
+
