@@ -116,6 +116,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.9, "An operator that the type of `expected` does not allow is `E6004` at `/op`, and a `tol` it does not allow is `E6004` at `/tol`", which gives no order. Rust `check_static` (`tm-formats` `assertion.rs`) tests `tol` first; Python `_expected` tests `op` first and `tol` after. The same holds for `between` with `str` bounds plus a `tol`.
 - Proposed sentence for 11.9: "when both fail, `/op` is reported before `/tol`". Under it Rust changes (two `if` blocks swap). The D3 code already uses that order for `compare_rows`.
 - **Ruling (2026-11-20).** `/op` before `/tol`. Rust changes (the two checks swap). 11.9 says so; the D3 code already uses that order for `compare_rows`.
+- Applied 2026-11-20: `check_static` in `tm-formats` tests the operator first. Unit test `rulings_of_2026_11_20_on_the_shape_check`.
 
 ### D7. The version handle form in `tables`: Rust `F<n>@v<m>` only, Python `<text without @ or whitespace>@v<n>`
 
@@ -123,6 +124,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.8 says "`E6004` for a member of the wrong JSON type or form (a string that is not a version handle)" and leaves the form to the handle grammar elsewhere in the design, which Rust's `VersionHandle::parse` (`id.rs`) follows: `F`, a positive integer, `@v`, a positive integer. Python (README reading 1) accepts `X7@v2` and `a.csv@v1`.
 - Proposed: 11.8 names the form, "a version handle is `F<n>@v<m>` with both positive integers (11.x)". Python changes. Item 92 already says the harness ignores the handle, so no case changes.
 - **Ruling (2026-11-20).** `F<n>@v<m>`, 11.16's form. Python changes. 11.8 names the form.
+- Applied 2026-11-20: `ops.py` `HANDLE_RE` is `F[1-9][0-9]*@v[1-9][0-9]*`; README reading 1 says so.
 
 ### D8. `derive` whose `as` is already a column and whose `expr` also fails: Rust types the expression first, Python checks `as` first
 
@@ -130,6 +132,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.8's order is "the steps against the cited specs, op by op" with no order inside an op. Rust (`steps.rs`, `Op::Derive`) raises the expression's `E6005`/`E6004` at `/ops/<i>/expr` before `E6002` at `/ops/<i>/as`; Python (reading 3) the reverse.
 - Proposed: inside one op, members are checked in the order 11.8's table lists them (`as` before `expr`), so `/ops/<i>/as` comes first. Under it Rust changes (one line moves). The opposite sentence is as cheap.
 - **Ruling (2026-11-20).** `as` before `expr`: members are checked in the order 11.8's op table lists them. Rust changes. 11.8 states the within-op order.
+- Applied 2026-11-20: `Steps::check` in `tm-formats` refuses a present `as` at `/ops/<i>/as` before typing `expr`. Unit test `rulings_of_2026_11_20_against_the_specs`.
 
 ### D9. Two `E6002` pointers for an added column already present: `group` `as` equal to `member_count` or `member_keys_hash`, and a `join` prefixed column
 
@@ -137,6 +140,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.8, "a step that would add a column whose name is already present" is `E6002` with `field` "the JSON Pointer of the offending member". Rust reports both at `/ops/<i>` (`steps.rs`: the two fixed columns are added after the aggregates; the join prefix clash is raised with the op's pointer); Python at `/ops/<i>/aggregates/<j>/as` and `/ops/<i>/right` (reading 4). The `rank` and the aggregate-repeats-`by` cases agree and are now in 11.8.
 - Proposed: the finer pointers, as 11.12 asks for the offending member: `/ops/<i>/aggregates/<j>/as` and `/ops/<i>/right`. Rust changes.
 - **Ruling (2026-11-20).** The finer pointers, `/ops/<i>/aggregates/<j>/as` and `/ops/<i>/right`, as 11.12 asks for the offending member. Rust changes. 11.8 lists both.
+- Applied 2026-11-20: `Steps::check` reports both at the finer pointer. Same unit test as D8.
 
 ### D10. Unary minus and `abs` on a `dec` with more than 34 significant digits: Rust rounds to 34, Python is exact
 
@@ -144,6 +148,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.18.2 Precision, "`dec` results round to 34 significant digits, half-even", and General Decimal Arithmetic, whose `minus` and `abs` apply the context. Rust `eval.rs` runs both through `fix` (rounds, may raise `E5002`); Python (reading 6) returns the operand's digits unchanged.
 - Decided: Python is wrong under the Precision row. One line in `exprs.py` after the owner confirms, since `reference/checker/` stays closed.
 - **Ruling (2026-11-20).** Python is wrong: General Decimal Arithmetic's `minus` and `abs` apply the context. Python changes. The 11.18.2 Precision row says so.
+- Applied 2026-11-20: `exprs.py` runs both through the shared context (`CONTEXT.minus`, `CONTEXT.abs`), Overflow being `E5002` as for the other arithmetic; README reading 6 says so.
 
 ### D11. A `float64` cell with surrounding whitespace: Rust reads it, Python refuses it
 
@@ -151,6 +156,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.7 gives the tokens and "any other text is read as an IEEE double (exponent forms included)"; it does not say whether whitespace is text. Rust `tm-files` `parse.rs` trims before `parse::<f64>()`; Python (reading 10) matches `[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?` exactly and gives `E3102`.
 - Proposed: a cell is read as written; 11.7 gains the regular expression above, and a padded cell is `E3102`. Rust changes (drop the `trim`). Whether other column types trim in either implementation is not checked.
 - **Ruling (2026-11-20).** A cell is read as written in every column type; a padded cell is `E3102`. Rust changes (drop the `trim`) and confirms no other column type trims. Item 47 already names RFC 4180, where a space is part of the field. 11.7 says so.
+- Applied 2026-11-20: `tm-files` `parse.rs` no longer trims a `float64` cell (nor the draft-scale read of a `dec` cell). Checked by hand that `int`, `dec`, `bool`, `date` padded cells were already `E3102` on both sides and that a padded `str` cell keeps its spaces on both.
 
 ### D12. `between` whose `lo` and `hi` do not compare: Rust `E6004` at `/expected/1`, Python at `/expected`
 
@@ -158,12 +164,14 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.9 says `expected` is `[lo, hi]` and gives no pointer for the pair. Rust `assertion.rs` points at `/expected/1`; Python (reading 16) at `/expected`.
 - Proposed: `/expected/1`, the member that does not compare with the one before it. Python changes.
 - **Ruling (2026-11-20).** `/expected/1`, the member that does not compare with the one before it. Python changes. 11.9 says so.
+- Applied 2026-11-20: `assertion.py` `_expected` points at `/expected/1`; README reading 16 says so.
 
 ### D13. A `list`, `nan`, or `inf` in `row`: Python refuses it at the shape check, Rust at the check against the schema
 
 - Cases: none run. Same code and pointer (`E6004` at `/row/<i>`, now in 11.9), different phase: Python (reading 17) refuses it while reading the assertion; Rust `row()` accepts any typed value and `Assertion::check` refuses it, after a row-arity error at `/row` if there is one, and never for an eval case, which has no schema.
 - Proposed: the shape check refuses it (11.9's shape list), so an eval case with `nan` in `row` is `E6004` on both sides. Rust changes.
 - **Ruling (2026-11-20).** The shape check refuses it, so an eval case refuses it too. Rust changes. 11.9 says so.
+- Applied 2026-11-20: `row()` in `tm-formats` `assertion.rs` refuses `list`, `nan`, and `inf` with `E6004` at `/row/<i>` while reading the assertion. Unit test `rulings_of_2026_11_20_on_the_shape_check`.
 
 ### D14. A `tables` entry with no spec that no op uses: Python `E6002` at `/tables/<name>`, Rust silent
 
@@ -171,6 +179,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.8 says `E6005`, operand types and the join cover are checked "against the cited tables' parse specs" and does not say whether an unused entry needs one. Rust `Steps::check` looks a spec up only for `from` and each `join` `right`; Python (reading 18) checks every entry first.
 - Proposed: every `tables` entry names a table with a spec, `E6002` at `/tables/<name>` otherwise, checked before the ops. Rust changes.
 - **Ruling (2026-11-20).** Every `tables` entry names a table with a spec, `E6002` at `/tables/<name>`, checked before the ops: a declared input nothing uses is a mistake the author should hear about. Rust changes. 11.8 lists it.
+- Applied 2026-11-20: `Steps::check` looks every `tables` entry up before the ops. Unit test `rulings_of_2026_11_20_against_the_specs`.
 
 ### D15. A header lacking a spec column: Rust `E3103` at `/columns/<i>/name`, Python at `/columns/<i>`
 
@@ -178,6 +187,7 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.7, "a column the file's header does not have, is `E3103`; `field` points at the offending member". Rust `ParseSpec::check_header` points at the name; Python (reading 21) at the column object.
 - Proposed: `/columns/<i>/name`, the member whose value is not in the header. Python changes.
 - **Ruling (2026-11-20).** `/columns/<i>/name`, the member whose value is not in the header. Python changes. 11.7 says so.
+- Applied 2026-11-20: `tables.py` `read_table` points at `/columns/<i>/name`; README reading 21 says so.
 
 ### D16. A key cell that is `missing`, `nan`, or `inf`: Rust `E3102`, Python accepts the row
 
@@ -185,15 +195,18 @@ None of these showed in the 30,000 cases run so far: each needs an input the gen
 - Sentence: 11.7 says only that "Key uniqueness is checked at `table.spec`"; 11.18.2 Initial order says "a key holds `missing` only after a `group` on a column with missing values", which Rust `tm-files` `parse.rs` enforces (`E3102`, message "a key value is missing") and Python does not (reading 20 even provides for matching `nan` and `inf` key components).
 - Proposed sentence for 11.7: "a key cell that is `missing`, or `nan` or `inf` under a `value` setting, is `E3102`, so a key holds `missing` only after a `group`". Python changes; reading 20 becomes moot.
 - **Ruling (2026-11-20).** Python is wrong under text already in the design (item 47 and 11.18.2 Initial order): a key cell that is `missing`, `nan`, or `inf` is `E3102`. Python changes; README reading 20 is withdrawn. No design edit.
+- Applied 2026-11-20: `tables.py` `read_table` refuses a key cell that is `missing`, `nan`, or `inf` with `E3102`, `field` null; README reading 20 is marked withdrawn.
 
 ### D17. Shape-phase order inside one op, the edge cases (not checked by hand)
 
 - From the side-by-side reading, not verified at the lines: a bad `scope` together with an undefined member (Python checks `scope` first, Rust lists undefined members first); a negative `v` (Rust `E6004`, Python `E6002`); duplicate names in a column list (Rust `E6002`, Python not checked); an empty `as` (Rust `E6004`); and the order undefined members are listed in (Rust sorted, Python as written). 11.8 gives the member order and no more.
 - Proposed: a ruling on each after a check at the lines, or a generator bucket that draws malformed ops so the differential finds them. Not ruled.
 - **Ruling (2026-11-20).** Within one op: `op`, `v`, required members in the op table's order, `rank`'s `scope` and `group_by` rule, undefined members in the order written, then member values. A `v` that is not a positive integer is `E6004` (form); a column list with a repeated name is `E6002`, the code 11.8 already uses for a step that adds a present name; an empty `as` is `E6004`. Rust changes the undefined-member order (written, not sorted) and the `scope`-before-undefined order; Python changes the negative `v` code and adds the repeated-name and empty-`as` checks. 11.8 states all of it. A generator bucket that draws malformed ops is added to item 89 so the differential reaches these.
+- Applied 2026-11-20: Rust `read_op` requires a positive `v` (`E6004`), checks `rank`'s `scope` after the required members and before the undefined ones, and reports undefined members in the order written (`schema::undefined`, canonical order kept for every other document); it also refuses a repeated column in `sort.by` at `/ops/<i>/by/<j>/column`, which Python now does too (neither side checked `sort.by` before; the other column lists were already `E6002` on the Rust side). Python's `v`, repeated-name, and empty-`as` checks are in `ops.py`. Unit test `rulings_of_2026_11_20_on_the_shape_phase`. The generator's `malformed` bucket (item 89) draws one of sixteen defects per case so the differential reaches every ruling of this section.
 
 ### D18. A blank line in a table file: Python skips it, Rust not established
 
 - Cases: none run; the generator writes none.
 - Sentence: item 47 names RFC 4180, which has no blank lines; README reading 21 skips them; what `tm-files` does was not checked when the readings were written into the design.
 - **Ruling (2026-11-20).** A blank line is skipped: it can be a valid row in no table, and exports commonly end with one. Rust confirms or changes `tm-files`; 11.7 says so.
+- Applied 2026-11-20: confirmed by hand, no change: `tm-files` reads through DuckDB `read_csv`, which skips a blank line in the middle and at the end, as `tables.py` does; the `malformed` bucket writes one.

@@ -5,7 +5,7 @@
 //!
 //! `cargo run -p tm-checker --example gencases -- --out DIR --n N [--seed SEED] [--start I]`
 //!
-//! Case `i` falls in bucket `i mod 16` (the list in `BUCKETS`, item 89's
+//! Case `i` falls in bucket `i mod 17` (the list in `BUCKETS`, item 89's
 //! order) and its random stream is `SplitMix64` seeded from `(SEED, i)`, so
 //! a case depends on the seed and its index alone. A bucket fixes the shape
 //! of its steps; everything else is drawn from the bucket's lists. Every
@@ -31,8 +31,8 @@ use tm_formats::parse_spec::ParseSpec;
 use tm_formats::steps::TableSchema;
 use tm_formats::typed_value::{SpecType, Tag, dec_from_f64_shortest, dec_text};
 
-/// Item 89's coverage buckets, in order; case `i` is in bucket `i mod 16`.
-const BUCKETS: [&str; 16] = [
+/// Item 89's coverage buckets, in order; case `i` is in bucket `i mod 17`.
+const BUCKETS: [&str; 17] = [
     "filter",
     "derive",
     "logexp",
@@ -49,10 +49,44 @@ const BUCKETS: [&str; 16] = [
     "missing-key-tie",
     "overflow",
     "pipeline",
+    "malformed",
 ];
 
 /// Buckets that produce an error verdict on purpose: no redraw.
-const ERROR_BUCKETS: [&str; 3] = ["exponent", "float64", "overflow"];
+const ERROR_BUCKETS: [&str; 4] = ["exponent", "float64", "overflow", "malformed"];
+
+/// The `malformed` bucket's defects (item 89; rulings D6 to D18 of
+/// 2026-11-20), one per case, each applied to a case of the bucket
+/// `malformed_base` names.
+const DEFECTS: [&str; 16] = [
+    "tables-no-spec",
+    "handle-form",
+    "v-not-positive",
+    "scope-and-undefined",
+    "repeated-name",
+    "empty-as",
+    "as-present-bad-expr",
+    "as-member-count",
+    "join-prefix-present",
+    "op-and-tol",
+    "between-classes",
+    "nan-in-row",
+    "padded-cell",
+    "blank-line",
+    "missing-key-cell",
+    "digits35-minus-abs",
+];
+
+fn malformed_base(defect: &str) -> &'static str {
+    match defect {
+        "scope-and-undefined" => "rank-all",
+        "repeated-name" => "select",
+        "empty-as" | "as-present-bad-expr" | "padded-cell" | "digits35-minus-abs" => "derive",
+        "as-member-count" => "group",
+        "join-prefix-present" => "join",
+        _ => "filter",
+    }
+}
 
 const REDRAWS: u64 = 20;
 
@@ -163,6 +197,8 @@ struct Table {
     nan_value: bool,
     inf_value: bool,
     missing_tokens: Vec<String>,
+    /// A blank line written after this 0-based row (`malformed`, D18).
+    blank_after: Option<usize>,
 }
 
 impl Table {
@@ -213,6 +249,9 @@ impl Table {
             let row: Vec<&str> = self.columns.iter().map(|c| c.tokens[r].as_str()).collect();
             out.push_str(&row.join(sep));
             out.push('\n');
+            if self.blank_after == Some(r) {
+                out.push('\n');
+            }
         }
         out
     }
@@ -864,6 +903,7 @@ impl Gen {
             nan_value: self.rng.chance(50),
             inf_value: self.rng.chance(50),
             missing_tokens,
+            blank_after: None,
         }
     }
 
@@ -1536,6 +1576,7 @@ impl Gen {
             nan_value: true,
             inf_value: true,
             missing_tokens: vec!["NA".into()],
+            blank_after: None,
         };
         let on: Vec<Value> = left_cols
             .iter()
@@ -1801,6 +1842,155 @@ impl Gen {
         }
     }
 
+    /// Apply one `malformed` defect to a well-formed case (item 89).
+    #[allow(clippy::too_many_lines, reason = "one arm per defect")]
+    fn malform(&mut self, c: &mut Case, defect: &str) {
+        let from = c.steps["from"].as_str().unwrap_or_default().to_owned();
+        let first_col = c
+            .tables
+            .first()
+            .and_then(|t| t.columns.first())
+            .map(|col| col.name.clone())
+            .unwrap_or_default();
+        let op_index = |steps: &Value, name: &str| {
+            steps["ops"]
+                .as_array()
+                .and_then(|ops| ops.iter().position(|o| o["op"] == name))
+        };
+        match defect {
+            "tables-no-spec" => c.steps["tables"]["ghost"] = json!("F9@v1"),
+            "handle-form" => {
+                let h = self
+                    .rng
+                    .pick_owned(&["X7@v2", "F01@v1", "a.csv@v1", "F1@v0"]);
+                c.steps["tables"][from.as_str()] = json!(h);
+            }
+            "v-not-positive" => c.steps["ops"][0]["v"] = json!(self.rng.pick_owned(&[0, -1])),
+            "scope-and-undefined" => {
+                if let Some(i) = op_index(&c.steps, "rank") {
+                    c.steps["ops"][i]["scope"] = json!("grp");
+                    c.steps["ops"][i]["zz"] = json!(1);
+                }
+            }
+            "repeated-name" => {
+                if let Some(i) = op_index(&c.steps, "select")
+                    && let Some(cols) = c.steps["ops"][i]["columns"].as_array_mut()
+                    && let Some(f) = cols.first().cloned()
+                {
+                    cols.push(f);
+                }
+            }
+            "empty-as" => {
+                if let Some(i) = op_index(&c.steps, "derive") {
+                    c.steps["ops"][i]["as"] = json!("");
+                }
+            }
+            "as-present-bad-expr" => {
+                if let Some(i) = op_index(&c.steps, "derive") {
+                    c.steps["ops"][i]["as"] = json!(first_col);
+                    c.steps["ops"][i]["expr"] = json!("\"a\" + 1");
+                }
+            }
+            "as-member-count" => {
+                if let Some(i) = op_index(&c.steps, "group") {
+                    c.steps["ops"][i]["aggregates"][0]["as"] =
+                        json!(self.rng.pick_owned(&["member_count", "member_keys_hash"]));
+                }
+            }
+            "join-prefix-present" => {
+                if let Some(i) = op_index(&c.steps, "join") {
+                    let again = c.steps["ops"][i].clone();
+                    if let Some(ops) = c.steps["ops"].as_array_mut() {
+                        ops.push(again);
+                    }
+                }
+            }
+            "op-and-tol" => {
+                c.assertion = json!({"assert": 1, "kind": "value", "row": [{"t": "int", "v": "1"}],
+                    "column": first_col, "op": "lt", "expected": {"t": "str", "v": "a"},
+                    "tol": {"abs": "0", "rel": "0"}});
+            }
+            "between-classes" => {
+                c.assertion = json!({"assert": 1, "kind": "value", "row": [{"t": "int", "v": "1"}],
+                    "column": first_col, "op": "between",
+                    "expected": [{"t": "int", "v": "1"}, {"t": "str", "v": "a"}]});
+            }
+            "nan-in-row" => {
+                let bad = self.rng.pick_owned(&[
+                    json!({"t": "nan"}),
+                    json!({"t": "inf", "s": "+"}),
+                    json!({"t": "list", "v": []}),
+                ]);
+                c.assertion = json!({"assert": 1, "kind": "exists", "row": [bad]});
+            }
+            "padded-cell" => {
+                if let Some(t) = c.tables.first_mut()
+                    && let Some(col) = t.columns.iter_mut().find(|col| {
+                        matches!(col.ty, SpecType::Int | SpecType::Dec | SpecType::Float64)
+                            && col.values.iter().any(Option::is_some)
+                    })
+                    && let Some(r) = col.values.iter().position(Option::is_some)
+                {
+                    col.tokens[r] = format!(" {}", col.tokens[r]);
+                }
+            }
+            "blank-line" => {
+                if let Some(t) = c.tables.first_mut() {
+                    let rows = t.rows();
+                    if rows > 0 {
+                        t.blank_after = Some(self.rng.below(rows));
+                    }
+                }
+            }
+            "missing-key-cell" => {
+                if let Some(t) = c.tables.first_mut() {
+                    let rows = t.rows();
+                    if rows > 0
+                        && let Some(&k) = t.key.first()
+                    {
+                        let tok = t
+                            .missing_tokens
+                            .first()
+                            .cloned()
+                            .unwrap_or_else(|| "NA".into());
+                        let r = self.rng.below(rows);
+                        t.columns[k].tokens[r] = tok;
+                        t.columns[k].values[r] = None;
+                    }
+                }
+            }
+            "digits35-minus-abs" => {
+                if let Some(t) = c.tables.first_mut() {
+                    let rows = t.rows();
+                    if rows > 0
+                        && let Some(col) = t.columns.iter_mut().find(|col| col.ty == SpecType::Dec)
+                    {
+                        let scale = usize::from(col.scale);
+                        let tok = if scale >= 35 {
+                            format!("0.{}", "1".repeat(scale))
+                        } else if scale == 0 {
+                            "1".repeat(36)
+                        } else {
+                            format!("{}.{}", "1".repeat(36 - scale), "1".repeat(scale))
+                        };
+                        col.values[0] = Some(json!({"t": "dec", "v": tok}));
+                        col.tokens[0] = tok;
+                        let name = col_text(&mut self.rng, &col.name);
+                        let expr = if self.rng.chance(50) {
+                            format!("-{name}")
+                        } else {
+                            format!("abs({name})")
+                        };
+                        c.steps["ops"] =
+                            json!([{"op": "derive", "v": 1, "as": "neg_or_abs", "expr": expr}]);
+                        c.assertion = json!({"assert": 1, "kind": "count", "op": "ge", "expected": {"t": "int", "v": "0"}});
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Columns of the start table that hold a special, as group candidates.
     fn special_columns(t: &Table) -> Vec<String> {
         t.columns
@@ -1822,6 +2012,15 @@ impl Gen {
                     self.op_filter(&mut p, ew);
                 }
                 self.finish(&t, &p, false)
+            }
+            "malformed" => {
+                let defect = DEFECTS[self.rng.below(DEFECTS.len())];
+                let saved = self.bucket;
+                self.bucket = malformed_base(defect);
+                let mut c = self.case();
+                self.bucket = saved;
+                self.malform(&mut c, defect);
+                c
             }
             "derive" => {
                 let wish = TableWish {
