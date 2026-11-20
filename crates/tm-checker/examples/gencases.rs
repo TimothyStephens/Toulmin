@@ -58,7 +58,7 @@ const ERROR_BUCKETS: [&str; 4] = ["exponent", "float64", "overflow", "malformed"
 /// The `malformed` bucket's defects (item 89; rulings D6 to D18 of
 /// 2026-11-20), one per case, each applied to a case of the bucket
 /// `malformed_base` names.
-const DEFECTS: [&str; 16] = [
+const DEFECTS: [&str; 17] = [
     "tables-no-spec",
     "handle-form",
     "v-not-positive",
@@ -69,6 +69,7 @@ const DEFECTS: [&str; 16] = [
     "as-member-count",
     "join-prefix-present",
     "op-and-tol",
+    "between-str",
     "between-classes",
     "nan-in-row",
     "padded-cell",
@@ -1909,6 +1910,11 @@ impl Gen {
                 c.assertion = json!({"assert": 1, "kind": "value", "row": [{"t": "int", "v": "1"}],
                     "column": first_col, "op": "lt", "expected": {"t": "str", "v": "a"},
                     "tol": {"abs": "0", "rel": "0"}});
+            }
+            "between-str" => {
+                c.assertion = json!({"assert": 1, "kind": "value", "row": [{"t": "int", "v": "1"}],
+                    "column": first_col, "op": "between",
+                    "expected": [{"t": "str", "v": "a"}, {"t": "str", "v": "b"}]});
             }
             "between-classes" => {
                 c.assertion = json!({"assert": 1, "kind": "value", "row": [{"t": "int", "v": "1"}],
