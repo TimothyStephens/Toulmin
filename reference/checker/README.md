@@ -93,12 +93,12 @@ is written positionally.
 The numbered list in the implementation report; kept here so the code and
 its assumptions stay together. Each item names the reading taken.
 
-1. Version handle form (E6004 "a string that is not a version handle"): `<text without @ or whitespace>@v<positive integer>`.
-2. Check order inside one op (shape phase): `op`, `v`, required members present in 11.8 order, rank's scope/group_by rule, undefined members, then member values.
+1. Version handle form (E6004 "a string that is not a version handle"): `F<n>@v<m>`, both positive integers (11.8; ruled 2026-11-20, checker-diffs D7).
+2. Check order inside one op (shape phase): `op`, `v`, required members present in 11.8 order, rank's scope/group_by rule, undefined members in the order written, then member values; a `v` that is not a positive integer is E6004, a column list with a repeated name is E6002 at the repeating member, an empty `as` is E6004 (11.8; ruled 2026-11-20, D17).
 3. Spec-phase order inside `derive`: `as` already present (E6002 `/ops/i/as`) before the expression's types.
 4. `rank` adding a `rank` column already present: E6002 at `/ops/i`. A `group` aggregate `as` that repeats a `by` column, another `as`, `member_count` or `member_keys_hash`: E6002 at `/ops/i/aggregates/j/as`. A `join` adding a prefixed column already present: E6002 at `/ops/i/right`.
 5. Static type of arithmetic with the `missing` literal on one side: the other operand's type (`/` always `dec`); `missing + missing`, `-missing`, `abs(missing)` and `coalesce(missing, missing)` have no type.
-6. Unary minus and `abs` on a `dec` are exact (no rounding at 34 digits).
+6. Unary minus and `abs` on a `dec` apply the context: rounded to 34 digits, E5002 on Overflow (11.18.2 Precision; ruled 2026-11-20, D10).
 7. `mean`: plain double summation in member input order, divided by the count; `median`: linear interpolation between the two middle doubles; both ignore missing, nan and inf members.
 8. `log` family on an int too large for a double: treated as infinity, result missing.
 9. `bool` cells: `true` and `false` only, lower case.
@@ -108,10 +108,10 @@ its assumptions stay together. Each item names the reading taken.
 13. `and`/`or` evaluate both operands, so an E5002 on either side is raised.
 14. `{expr}`: a right operand of equal precedence keeps its parentheses (`a - (b - c)`, `a and (b and c)`), the left drops them.
 15. `compare_rows` schema order: left row, left column, right row, right column, type comparability (`/right/column`), op for the class (`/op`), tol (`/tol`). At evaluation: type comparability (`/expected` or `/right`) before tol.
-16. `between` with `str` or `bool` bounds: E6004 at `/op`; `lo` and `hi` of different comparison classes: E6004 at `/expected`.
+16. `between` with `str` or `bool` bounds: E6004 at `/op`; `lo` and `hi` of different comparison classes: E6004 at `/expected/1` (11.9; ruled 2026-11-20, D12).
 17. A `list` typed value in `row` or `expected`: E6004 (wrong type), not E1004; nan or inf in `row`: E6004 at `/row/i`.
 18. A `tables` entry with no spec in the case: E6002 at `/tables/<name>`.
 19. `take` accepts any earlier `sort` or `rank`, not only the immediately preceding op.
-20. A `row` component `missing` matches a key component that is missing, nan or inf.
-21. CSV cells are located by header name; a header lacking a spec column is E3103 at `/columns/i`; blank lines are skipped; a datetime second is 00 to 59.
+20. Withdrawn (ruled 2026-11-20, D16): a key cell that is missing, nan, or inf is E3102 with `field` null, so a key never holds them before a `group`.
+21. CSV cells are located by header name; a header lacking a spec column is E3103 at `/columns/i/name` (11.7; ruled 2026-11-20, D15); blank lines are skipped; a datetime second is 00 to 59.
 22. Eval case `observed` shapes: `{"cell"}`, `{"position"}`, `{"count"}`, `{"left","right"}`, `{"present"}`, as the case files show.

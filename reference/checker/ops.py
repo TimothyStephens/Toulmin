@@ -42,7 +42,7 @@ REQUIRED = {
     "join": ["right", "on", "kind"],
 }
 AGGREGATES = ("count", "sum", "mean", "min", "max", "median")
-HANDLE_RE = re.compile(r"[^@\s]+@v[1-9][0-9]*")
+HANDLE_RE = re.compile(r"F[1-9][0-9]*@v[1-9][0-9]*")
 GROUP_EXTRA = ("member_count", "member_keys_hash")
 
 
@@ -79,6 +79,8 @@ def _name_list(value, field, allow_empty=False):
     for j, name in enumerate(value):
         if not isinstance(name, str):
             raise wrong_type(f"{field}/{j}", "a column name is a string")
+        if name in value[:j]:
+            raise CheckError("E6002", f"{name!r} appears twice", f"{field}/{j}")
     return value
 
 
@@ -95,6 +97,13 @@ def _string(obj, key, field):
     v = obj[key]
     if not isinstance(v, str):
         raise wrong_type(f"{field}/{key}", f"{key} is a string")
+    return v
+
+
+def _name(obj, key, field):
+    v = _string(obj, key, field)
+    if not v:
+        raise wrong_type(f"{field}/{key}", f"{key} is a non-empty string")
     return v
 
 
@@ -168,8 +177,8 @@ def validate_shape(steps):
             raise not_a_choice(f + "/op", name, list(OP_VERSIONS))
         if "v" not in op:
             raise absent(f + "/v")
-        if not _is_int(op["v"]):
-            raise wrong_type(f + "/v", "v is an integer")
+        if not _is_int(op["v"]) or op["v"] < 1:
+            raise wrong_type(f + "/v", "v is a positive integer")
         if op["v"] != OP_VERSIONS[name]:
             raise not_a_choice(f + "/v", op["v"], [str(OP_VERSIONS[name])])
         for key in REQUIRED[name]:
@@ -200,7 +209,9 @@ def validate_shape(steps):
             for j, entry in enumerate(by):
                 ef = f"{f}/by/{j}"
                 _object(entry, ef, ("column", "dir"))
-                _string(entry, "column", ef)
+                column = _string(entry, "column", ef)
+                if column in [e["column"] for e in by[:j]]:
+                    raise CheckError("E6002", f"{column!r} appears twice", ef + "/column")
                 _choice(entry, "dir", ef, ("asc", "desc"))
             _choice(op, "missing", f, ("first", "last"))
         elif name == "take":
@@ -219,7 +230,7 @@ def validate_shape(steps):
             if op["scope"] == "group":
                 _name_list(op["group_by"], f + "/group_by")
         elif name == "derive":
-            _string(op, "as", f)
+            _name(op, "as", f)
             parsed[i] = _expression(_string(op, "expr", f), f + "/expr")
         elif name == "group":
             _name_list(op["by"], f + "/by")
@@ -231,7 +242,7 @@ def validate_shape(steps):
             for j, a in enumerate(aggs):
                 af = f"{f}/aggregates/{j}"
                 _object(a, af, ("as", "fn", "column"))
-                _string(a, "as", af)
+                _name(a, "as", af)
                 _choice(a, "fn", af, AGGREGATES)
                 _string(a, "column", af)
         elif name == "join":

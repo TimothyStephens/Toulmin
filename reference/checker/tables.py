@@ -218,7 +218,7 @@ def read_table(data, spec):
         records = records[1:]
         for i, n in enumerate(names):
             if n not in header:
-                raise CheckError("E3103", f"column {n!r} is not in the file header", f"/columns/{i}")
+                raise CheckError("E3103", f"column {n!r} is not in the file header", f"/columns/{i}/name")
         index = {n: header.index(n) for n in names}
     else:
         index = {n: i for i, n in enumerate(names)}
@@ -232,6 +232,9 @@ def read_table(data, spec):
             if i >= len(record):
                 raise CheckError("E3102", f"row {r}: column {c['name']!r} has no cell", None)
             row[c["name"]] = parse_cell(record[i], c, spec, f"row {r}, column {c['name']!r}")
+        for k in spec["key"]:
+            if row[k].absent:
+                raise CheckError("E3102", f"row {r}: key column {k!r} is {row[k].t}", None)
         rows.append(row)
     table = Table(spec_columns(spec), list(spec["key"]), rows)
     check_key_unique(table)

@@ -154,7 +154,7 @@ def _expected(obj, op, kind):
         lo = _one_expected(obj[0], "/expected/0", kind)
         hi = _one_expected(obj[1], "/expected/1", kind)
         if not types_compare(lo.t, hi.t):
-            raise _wrong("/expected", "lo and hi are of one comparison class")
+            raise _wrong("/expected/1", "lo and hi are of one comparison class")
         if lo.t in ("str", "bool"):
             raise _wrong("/op", f"between does not apply to {lo.t}")
         return [lo, hi]

@@ -368,7 +368,7 @@ def _eval(node, row):
             return MISSING
         if v.t == "int":
             return Value("int", -v.v)
-        return Value("dec", v.v.copy_negate())
+        return Value("dec", _fix(CONTEXT.minus, v.v))
     if kind == "not":
         v = _eval(node[1], row)
         if v.absent:
@@ -427,6 +427,15 @@ def arith(op, a, b):
     return Value("dec", r)
 
 
+def _fix(operation, d):
+    """A one-operand context operation (minus, abs): rounds to 34 digits,
+    E5002 on Overflow like the other arithmetic."""
+    try:
+        return operation(d)
+    except decimal.Overflow:
+        raise CheckError("E5002", "arithmetic overflow") from None
+
+
 def _call(name, args, row):
     if name == "coalesce":
         for a in args:
@@ -440,7 +449,7 @@ def _call(name, args, row):
     if name == "abs":
         if v.t == "int":
             return Value("int", abs(v.v))
-        return Value("dec", v.v.copy_abs())
+        return Value("dec", _fix(CONTEXT.abs, v.v))
     return log_family(name, v)
 
 
