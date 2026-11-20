@@ -145,10 +145,16 @@ def dec_from_double(x):
 
 def dec_from_double_shortest(x):
     """A `float64` cell: the shortest round-trip decimal string of the IEEE
-    value, positional, either zero written `0` (11.6)."""
+    value, positional, either zero written `0` (11.6). `repr` gives the
+    shortest digits but writes an integral double as `7.0`; the trailing
+    zeros of the digit string are not part of the shortest form, so they
+    are dropped (`7`, not `7.0`; checker-diffs D2)."""
     if x == 0:
         return Decimal(0)
-    return to_positional(Decimal(repr(x)))
+    sign, digits, exp = Decimal(repr(x)).as_tuple()
+    while len(digits) > 1 and digits[-1] == 0:
+        digits, exp = digits[:-1], exp + 1
+    return to_positional(Decimal((sign, digits, exp)))
 
 
 def as_decimal(value):
