@@ -147,15 +147,23 @@ fn filter() -> impl Strategy<Value = Value> {
     ]
 }
 
+/// A two-column sort. The two columns are distinct: a repeated name in a
+/// column list is E6002 (11.8, ruling D17 of 2026-11-20), so the pair is a
+/// two-element subsequence of the columns, in either order.
 fn sort() -> impl Strategy<Value = Value> {
     (
-        prop::sample::select(vec!["x", "y", "g"]),
+        prop::sample::subsequence(vec!["x", "y", "g"], 2),
         prop::bool::ANY,
-        prop::sample::select(vec!["x", "y", "g"]),
+        prop::bool::ANY,
         prop::bool::ANY,
         prop::bool::ANY,
     )
-        .prop_map(|(c1, d1, c2, d2, first)| {
+        .prop_map(|(cols, swap, d1, d2, first)| {
+            let (c1, c2) = if swap {
+                (cols[1], cols[0])
+            } else {
+                (cols[0], cols[1])
+            };
             let dir = |d: bool| if d { "asc" } else { "desc" };
             json!({"op":"sort","v":1,"by":[{"column":c1,"dir":dir(d1)},{"column":c2,"dir":dir(d2)}],
                    "missing": if first {"first"} else {"last"}})
