@@ -1345,3 +1345,58 @@ x64 generation. It still meets the purpose, which is to run DuckDB's
 runtime-selected code paths on two different CPUs, and it is the only
 second CPU GitHub offers for Linux. The design text names both classes and
 says why.
+
+## 2026-11-20 P5: rulings D3, D4, D5 and two clarifications edit 11.6, 11.9, 11.18.2, 11.18.3, and item 92
+
+**What.** After the first two 10,000-case differential runs
+(`docs/decisions/checker-diffs.md`, entries D1 to D5), the owner ruled and
+the design changed first: 11.9 and the 11.18.3 `compare_rows` row make the
+operator and `tol` check static against the left column's type (D3); 11.6
+says a subnormal double is a value and is never flushed to zero and that
+an integral double is written `7`, not `7.0` (D4, D2); the 11.18.2 Where
+and `group` rows move `median` from DuckDB to Rust over the member doubles,
+with the formula stated (D4); item 92 says every table file is
+`tables/<name>.csv` whatever its format (D1) and that a harness parses
+every table before validating the steps and the assertion (D5). The
+Python reference checker changed twice under ruling-specified exceptions
+to its no-edit rule: the `7.0` form (D2) and the parse-first order (D5).
+
+**Why.** D3: whether a claim is well-formed cannot depend on which rows a
+version of the data contains, and the M5 ruling already made the check
+static for `value`. D4: DuckDB's `median` interpolates between the two
+middle doubles in a way that loses a subnormal result (`5e-324` twice gives
+`0`, `1e-310` twice loses low bits), while `avg` over the same members and
+`median` over an odd count are right, so the loss is inside the
+interpolation and the member rows DuckDB already lists for `sum` are the
+clean source; a 324-digit positional `dec` is accepted because the
+no-exponent rule stands for every value (changing it would change every
+hash) and the static view may display it in scientific notation (ruling
+32). D5: the product parses a table at `table.spec`, before any claim
+exists, so a claim is never validated against a table that did not parse.
+
+## 2026-11-20 P5: the reference checker's README readings become design rules
+
+**What.** `reference/checker/README.md` lists 22 readings the Python
+session took where `checker.md` was silent. Readings 11 and 15 are the D5
+and D3 rulings above. Of the other 20, the ones both implementations
+already follow are now one sentence each in the section they concern:
+reading 4's agreeing half and 19 in 11.8; 9, 12, and 21's header and
+datetime parts in 11.7; 16's `/op` half and 17's codes in 11.9; 5, 7, 8,
+and 13 in the 11.18.2 Types, `group`, Domain, and Missing rows; 14 in
+11.18.4; 22 in item 92, inline, replacing the pointer to
+`crates/tm-formats/README.md`. The readings the two implementations do
+not share went to `docs/decisions/checker-diffs.md` as entries D6 to D17
+instead of into the design: 1, 2, 3, 4's other half, 6, 10, 16's pointer,
+17's phase, 18, 21's pointer, and 20 (moot once D16 is ruled). Reading
+21's blank-line rule is in neither, since what Rust does with a blank
+line in a CSV was not established.
+
+**Why.** A fourth implementer should not rediscover a reading that both
+implementations already share, and the design is where it is found. A
+reading only one side follows is not yet a rule: writing it into the
+design would put one implementation out of conformance before the owner
+chose a side, which the P5 brief ("fix nothing until the owner rules")
+forbids, so each is an entry with a proposed sentence. The source is the
+README's list, kept there so the code and its assumptions stay together;
+the README itself was not edited beyond reading 11, which the D5 ruling
+changed.
