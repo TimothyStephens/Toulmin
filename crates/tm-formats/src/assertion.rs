@@ -191,7 +191,23 @@ fn row(m: &Map<String, Value>, key: &str, at: &str) -> Result<Vec<TypedValue>, E
     }
     a.iter()
         .enumerate()
-        .map(|(i, v)| typed(v, &ptr(&base, i)))
+        .map(|(i, v)| {
+            let at = ptr(&base, i);
+            let t = typed(v, &at)?;
+            // Refused at the shape check, schema or not (11.9, ruling D13
+            // of 2026-11-20).
+            if matches!(
+                t,
+                TypedValue::List(_) | TypedValue::Nan | TypedValue::Inf(_)
+            ) {
+                return Err(Error::at(
+                    Code::E6004,
+                    at,
+                    "a row value is a value or missing",
+                ));
+            }
+            Ok(t)
+        })
         .collect()
 }
 
@@ -279,18 +295,19 @@ fn check_static(op: Cmp, exp: &Expected, tol: Option<&Tol>) -> Result<(), Error>
     let t = match exp {
         Expected::One(v) | Expected::Range(v, _) => v.tag(),
     };
-    if !is_numeric(t) && tol.is_some() {
-        return Err(Error::at(
-            Code::E6004,
-            "/tol",
-            format!("`tol` does not apply to {t:?}"),
-        ));
-    }
+    // `/op` before `/tol` when both fail (11.9, ruling D6 of 2026-11-20).
     if matches!(t, Tag::Str | Tag::Bool) && !matches!(op, Cmp::Eq | Cmp::Ne) {
         return Err(Error::at(
             Code::E6004,
             "/op",
             format!("{t:?} values take only eq and ne"),
+        ));
+    }
+    if !is_numeric(t) && tol.is_some() {
+        return Err(Error::at(
+            Code::E6004,
+            "/tol",
+            format!("`tol` does not apply to {t:?}"),
         ));
     }
     Ok(())
@@ -749,6 +766,37 @@ mod tests {
         assert_eq!(cr("gene", "ne", false), Ok(()));
         assert_eq!(cr("day", "lt", false), Ok(()));
         assert_eq!(cr("fc", "lt", true), Ok(()));
+    }
+
+    #[test]
+    fn rulings_of_2026_11_20_on_the_shape_check() {
+        let code = |v: Value| {
+            Assertion::from_json(&v)
+                .map(|_| ())
+                .map_err(|e| (e.code, e.field))
+        };
+        // D6: `/op` before `/tol` when both fail.
+        assert_eq!(
+            code(
+                json!({"assert":1,"kind":"value","row":[{"t":"str","v":"A"}],"column":"g","op":"lt","expected":{"t":"str","v":"B"},"tol":{"abs":"0","rel":"0"}})
+            ),
+            Err((Code::E6004, Some("/op".to_owned())))
+        );
+        // D13: `nan`, `inf`, or a `list` in `row` is refused at the shape check.
+        for bad in [
+            json!({"t":"nan"}),
+            json!({"t":"inf","s":"+"}),
+            json!({"t":"list","v":[]}),
+        ] {
+            assert_eq!(
+                code(json!({"assert":1,"kind":"exists","row":[bad]})),
+                Err((Code::E6004, Some("/row/0".to_owned())))
+            );
+        }
+        assert_eq!(
+            code(json!({"assert":1,"kind":"exists","row":[{"t":"missing"}]})),
+            Ok(())
+        );
     }
 
     #[test]

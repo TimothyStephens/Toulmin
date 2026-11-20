@@ -33,6 +33,17 @@ pub(crate) fn keys(
     optional: &[&str],
     c: Codes,
 ) -> Result<(), Error> {
+    present(m, at, required, c)?;
+    undefined(m, at, required, optional, c, true)
+}
+
+/// Every key of `required` is present, checked in the order listed.
+pub(crate) fn present(
+    m: &Map<String, Value>,
+    at: &str,
+    required: &[&str],
+    c: Codes,
+) -> Result<(), Error> {
     for k in required {
         if !m.contains_key(*k) {
             return Err(Error::at(
@@ -42,11 +53,27 @@ pub(crate) fn keys(
             ));
         }
     }
+    Ok(())
+}
+
+/// No key outside `required` and `optional`; the first unknown key is
+/// reported in canonical order, or in the order written when `canonical`
+/// is false (11.8's within-op order, ruling D17 of 2026-11-20).
+pub(crate) fn undefined(
+    m: &Map<String, Value>,
+    at: &str,
+    required: &[&str],
+    optional: &[&str],
+    c: Codes,
+    canonical: bool,
+) -> Result<(), Error> {
     let mut extra: Vec<&String> = m
         .keys()
         .filter(|k| !required.contains(&k.as_str()) && !optional.contains(&k.as_str()))
         .collect();
-    extra.sort_by(|a, b| crate::canonical::utf16_cmp(a, b));
+    if canonical {
+        extra.sort_by(|a, b| crate::canonical::utf16_cmp(a, b));
+    }
     if let Some(k) = extra.first() {
         return Err(Error::at(
             c.missing,

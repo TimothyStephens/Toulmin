@@ -242,8 +242,15 @@ fn read_op(
             "an op carries its version `v`",
         ));
     }
-    let Some(ver) = m["v"].as_u64() else {
-        return Err(Error::at(Code::E6004, ptr(at, "v"), "`v` is an integer"));
+    let ver = match m["v"].as_u64() {
+        Some(n) if n > 0 => n,
+        _ => {
+            return Err(Error::at(
+                Code::E6004,
+                ptr(at, "v"),
+                "`v` is a positive integer",
+            ));
+        }
     };
     if ver != OP_VERSION {
         return Err(Error::at(
@@ -252,7 +259,14 @@ fn read_op(
             format!("unknown version {ver} of {name}"),
         ));
     }
-    schema::keys(m, at, keys, &[], CODES)?;
+    // 11.8's within-op order (ruling D17 of 2026-11-20): required members
+    // in the op table's order, `rank`'s `scope` rule, undefined members
+    // in the order written, then member values.
+    schema::present(m, at, keys, CODES)?;
+    if name == "rank" {
+        schema::choice(m, "scope", at, &["all", "group"], CODES)?;
+    }
+    schema::undefined(m, at, keys, &[], CODES, false)?;
     Ok(match name {
         "filter" => Op::Filter {
             where_: expr_at(m, "where", at)?,
@@ -271,10 +285,17 @@ fn read_op(
                 let eat = ptr(&base, i);
                 let em = schema::object(e, &eat, CODES, "a sort key")?;
                 schema::keys(em, &eat, &["column", "dir"], &[], CODES)?;
-                by.push((
-                    schema::string(em, "column", &eat, CODES)?.to_owned(),
-                    dir(em, &eat)?,
-                ));
+                let column = schema::string(em, "column", &eat, CODES)?.to_owned();
+                // A repeated name in a column list is `E6002` (11.8, ruling
+                // D17 of 2026-11-20), here at the member holding it.
+                if by.iter().any(|(c, _)| *c == column) {
+                    return Err(Error::at(
+                        Code::E6002,
+                        ptr(&eat, "column"),
+                        format!("{column:?} appears twice"),
+                    ));
+                }
+                by.push((column, dir(em, &eat)?));
             }
             let missing = if schema::choice(m, "missing", at, &["first", "last"], CODES)? == "first"
             {
@@ -482,6 +503,11 @@ impl Steps {
                 )
             })
         };
+        // Every `tables` entry names a table with a spec, before any op
+        // (11.8, ruling D14 of 2026-11-20).
+        for name in self.tables.keys() {
+            schema_of(name)?;
+        }
         let mut cur = schema_of(&self.from)?.clone();
         for (i, op) in self.ops.iter().enumerate() {
             let at = ptr("/ops", i);
@@ -588,6 +614,14 @@ fn check_op<'s>(
             cur.add("rank", Tag::Int, at)?;
         }
         Op::Derive { as_, expr } => {
+            // `as` before `expr` (11.8, ruling D8 of 2026-11-20).
+            if cur.tag(as_).is_some() {
+                return Err(Error::at(
+                    Code::E6002,
+                    ptr(at, "as"),
+                    format!("column {as_:?} is already present"),
+                ));
+            }
             let eat = ptr(at, "expr");
             let t = expr.type_of(&|c| cur.tag(c), &eat)?;
             let Some(t) = t else {
@@ -627,6 +661,16 @@ fn check_op<'s>(
                         ));
                     }
                 };
+                // The two fixed columns come after the aggregates; an `as`
+                // that takes their name is reported at the `as` (11.8,
+                // ruling D9 of 2026-11-20).
+                if a.as_ == "member_count" || a.as_ == "member_keys_hash" {
+                    return Err(Error::at(
+                        Code::E6002,
+                        ptr(&aat, "as"),
+                        format!("column {:?} is already present", a.as_),
+                    ));
+                }
                 out.add(&a.as_, out_t, &ptr(&aat, "as"))?;
             }
             out.add("member_count", Tag::Int, at)?;
@@ -657,8 +701,10 @@ fn check_op<'s>(
                     ));
                 }
             }
+            // A prefixed column already present: `/ops/<i>/right` (11.8,
+            // ruling D9 of 2026-11-20).
             for (c, t) in &rs.columns {
-                cur.add(&format!("{right}.{c}"), *t, at)?;
+                cur.add(&format!("{right}.{c}"), *t, &ptr(at, "right"))?;
             }
         }
     }
@@ -698,6 +744,86 @@ mod tests {
         let schemas = BTreeMap::from([("de".to_owned(), de())]);
         let out = s.check(&schemas).unwrap();
         assert_eq!(out.tag("abs_lfc"), Some(Tag::Dec));
+    }
+
+    #[test]
+    fn rulings_of_2026_11_20_on_the_shape_phase() {
+        // D17: `v` is a positive integer (E6004), `scope` is checked before
+        // undefined members, and undefined members are reported as written.
+        let base = |ops: Value| json!({"steps":1,"tables":{"de":"F7@v2"},"from":"de","ops":ops});
+        for v in [json!(0), json!(-1), json!(1.5)] {
+            assert_eq!(
+                err(&base(json!([{"op":"take","v":v,"n":1}]))),
+                (Code::E6004, "/ops/0/v".into())
+            );
+        }
+        assert_eq!(
+            err(&base(
+                json!([{"op":"rank","v":1,"by":"padj","dir":"asc","ties":"min","missing":"last","scope":"grp","zz":1}])
+            )),
+            (Code::E6002, "/ops/0/scope".into())
+        );
+        assert_eq!(
+            err(&base(json!([
+                {"op":"sort","v":1,"by":[{"column":"padj","dir":"asc"}],"missing":"last"},
+                {"op":"take","v":1,"n":1,"zz":1,"aa":1}
+            ]))),
+            (Code::E6002, "/ops/1/zz".into())
+        );
+    }
+
+    #[test]
+    fn rulings_of_2026_11_20_against_the_specs() {
+        let check = |v: Value, extra: Option<(&str, TableSchema)>| {
+            let s = Steps::from_json(&v).unwrap();
+            let mut schemas = BTreeMap::from([("de".to_owned(), de())]);
+            if let Some((n, t)) = extra {
+                schemas.insert(n.to_owned(), t);
+            }
+            let e = s.check(&schemas).unwrap_err();
+            (e.code, e.field.unwrap_or_default())
+        };
+        // D14: every `tables` entry names a table with a spec, before any op.
+        assert_eq!(
+            check(
+                json!({"steps":1,"tables":{"de":"F7@v2","unused":"F8@v1"},"from":"de","ops":[]}),
+                None
+            ),
+            (Code::E6002, "/tables/unused".into())
+        );
+        // D8: a `derive` `as` already present is reported before its `expr`.
+        assert_eq!(
+            check(
+                json!({"steps":1,"tables":{"de":"F7@v2"},"from":"de","ops":[
+                {"op":"derive","v":1,"as":"padj","expr":"padj + \"x\""}]}),
+                None
+            ),
+            (Code::E6002, "/ops/0/as".into())
+        );
+        // D9: a `group` `as` of `member_count` at the `as`; a `join` whose
+        // prefixed column is present at `/right`.
+        assert_eq!(
+            check(
+                json!({"steps":1,"tables":{"de":"F7@v2"},"from":"de","ops":[
+                {"op":"group","v":1,"by":["gene_id"],"aggregates":[{"as":"member_count","fn":"count","column":"padj"}]}]}),
+                None
+            ),
+            (Code::E6002, "/ops/0/aggregates/0/as".into())
+        );
+        let right = TableSchema {
+            columns: vec![("gene_id".into(), Tag::Str), ("padj".into(), Tag::Dec)],
+            key: vec!["gene_id".into()],
+        };
+        let mut left = de();
+        left.columns.push(("r.padj".into(), Tag::Dec));
+        let s = Steps::from_json(&json!({"steps":1,"tables":{"de":"F7@v2","r":"F8@v1"},"from":"de","ops":[
+            {"op":"join","v":1,"right":"r","on":[{"left":"gene_id","right":"gene_id"}],"kind":"inner"}]})).unwrap();
+        let schemas = BTreeMap::from([("de".to_owned(), left), ("r".to_owned(), right)]);
+        let e = s.check(&schemas).unwrap_err();
+        assert_eq!(
+            (e.code, e.field.unwrap_or_default()),
+            (Code::E6002, "/ops/0/right".into())
+        );
     }
 
     #[test]
