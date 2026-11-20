@@ -938,6 +938,19 @@ impl Gen {
                 }
                 (scale, d)
             }
+            SpecType::Int if wish.digit34 => {
+                // Eighteen-digit integers, so the product of two is past 34
+                // significant digits and rounds under the static type
+                // (ruling D19).
+                let mut d = vec![
+                    100_000_000_000_000_001i128,
+                    100_000_000_000_000_003,
+                    999_999_999_999_999_999,
+                    123_456_789_012_345_678,
+                ];
+                d.truncate(self.rng.range(2, 4) as usize);
+                (0, d)
+            }
             SpecType::Int => {
                 let size = self.rng.range(2, 6) as usize;
                 let mut d: Vec<i128> = (0..size)
@@ -2196,8 +2209,13 @@ impl Gen {
                 self.finish(&t, &p, false)
             }
             "digit34" => {
+                let arm = self.rng.below(6);
                 let wish = TableWish {
-                    types: vec![SpecType::Dec],
+                    types: if arm == 5 {
+                        vec![SpecType::Dec, SpecType::Int]
+                    } else {
+                        vec![SpecType::Dec]
+                    },
                     digit34: true,
                     missing_rate: 10,
                     ..plain
@@ -2205,7 +2223,7 @@ impl Gen {
                 let (t, mut p) = self.start(&wish);
                 let x = t.first_of(SpecType::Dec);
                 let xt = col_text(&mut self.rng, &x);
-                match self.rng.below(5) {
+                match arm {
                     0 => {
                         let lit = *self.rng.pick(&[
                             "1.000000000000000000000000000000001",
@@ -2236,6 +2254,33 @@ impl Gen {
                     3 => {
                         let by = vec![x.clone()];
                         self.op_group(&mut p, &by, None);
+                    }
+                    5 => {
+                        // `coalesce` over an `int` and a `dec` column, multiplied
+                        // past 34 significant digits: the static type is `dec`,
+                        // so the product rounds whichever branch the row took
+                        // (11.18.2 Precision, ruling D19 of 2026-11-20).
+                        let i = t.first_of(SpecType::Int);
+                        let it = col_text(&mut self.rng, &i);
+                        let (a, b) = if self.rng.chance(50) {
+                            (it.as_str(), xt.as_str())
+                        } else {
+                            (xt.as_str(), it.as_str())
+                        };
+                        let e = *self.rng.pick(&[
+                            "coalesce({a}, {b}) * coalesce({a}, {b})",
+                            "coalesce({a}, {b}) * {i}",
+                            "{i} * coalesce({a}, {b})",
+                            "coalesce({a}, {b}) * {x}",
+                        ]);
+                        let text = e
+                            .replace("{a}", a)
+                            .replace("{b}", b)
+                            .replace("{i}", &it)
+                            .replace("{x}", &xt);
+                        p.ops
+                            .push(json!({"op": "derive", "v": 1, "as": "d1", "expr": text}));
+                        p.schema.columns.push(("d1".into(), Tag::Dec));
                     }
                     _ => {
                         let names = p.schema.names();
