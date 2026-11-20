@@ -53,6 +53,22 @@ def check_case(case_dir):
     except (FormatError, CheckError) as e:
         return error_result(e.code, e.field)
     try:
+        # Item 92 (checker-diffs D5, ruling 2026-11-20): every table in
+        # tables/ is parsed before the steps and the assertion are validated,
+        # as the product parses a table at table.spec before any claim
+        # exists; a cell error is the case's error whatever they hold.
+        loaded = {}
+        tables_dir = os.path.join(case_dir, "tables")
+        for file_name in sorted(os.listdir(tables_dir)):
+            if not file_name.endswith(".csv"):
+                continue
+            name = file_name[:-4]
+            if name not in specs:
+                raise SystemExit(f"refcheck: no spec for table file {file_name}")
+            with open(os.path.join(tables_dir, file_name), "rb") as f:
+                data = f.read()
+            loaded[name] = tables.in_key_order(tables.read_table(data, specs[name]))
+
         parsed = ops.validate_shape(steps)
         for name in steps["tables"]:
             if name not in specs:
@@ -61,14 +77,7 @@ def check_case(case_dir):
         parsed_assertion = assertion.validate_shape(assertion_doc)
         assertion.validate_against_schema(parsed_assertion, schema.types, schema.key)
 
-        loaded = {}
-
         def load_table(name):
-            if name not in loaded:
-                path = os.path.join(case_dir, "tables", name + ".csv")
-                with open(path, "rb") as f:
-                    data = f.read()
-                loaded[name] = tables.in_key_order(tables.read_table(data, specs[name]))
             return loaded[name]
 
         step_results, final = ops.run(steps, parsed, load_table)

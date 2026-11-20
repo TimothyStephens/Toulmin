@@ -103,7 +103,7 @@ its assumptions stay together. Each item names the reading taken.
 8. `log` family on an int too large for a double: treated as infinity, result missing.
 9. `bool` cells: `true` and `false` only, lower case.
 10. `float64` cell text: `[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?`; nan/inf tokens matched in any letter case.
-11. Run order: steps shape, steps against specs, assertion shape, assertion against schema, then table files are parsed (E3102, E3101, E3103), ops run, assertion evaluated.
+11. Run order: table files are parsed first (E3102, E3101, E3103; item 92, ruled 2026-11-20, checker-diffs D5), then steps shape, steps against specs, assertion shape, assertion against schema, ops run, assertion evaluated.
 12. Duplicate key in a table file: E3101, `field` null.
 13. `and`/`or` evaluate both operands, so an E5002 on either side is raised.
 14. `{expr}`: a right operand of equal precedence keeps its parentheses (`a - (b - c)`, `a and (b and c)`), the left drops them.
