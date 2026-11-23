@@ -1,0 +1,9 @@
+---
+source: crates/tm-checker/tests/snapshot_sql.rs
+---
+-- input.uf: c0 = "id" (str), c1 = "x" (dec); key "id"
+SELECT "row" FROM "input.uf" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
+
+-- ops/0 derive: column "y" computed in Rust over step0 (11.18.2 Where); step1 is step0 with it as column c2
+
+-- ops/1 derive: column "z" computed in Rust over step1 (11.18.2 Where); step2 is step1 with it as column c3
