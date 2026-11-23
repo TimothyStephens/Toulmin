@@ -1442,3 +1442,9 @@ scope, so an unmaintained crate is reported only when a workspace crate
 depends on it directly, and chrono no longer matches. Under cargo-deny
 0.21 and earlier the chrono advisory fails the check again; anyone running
 an older cargo-deny locally sees it.
+
+## 2026-11-23 P5: ruling D20, an `int` cell is at most 38 digits
+
+**What.** The independent case writer's `log_of_int_beyond_double` (b48e8be) holds a 401-digit `int` cell. Rust refuses it with `E3102` under item 47 (`int` is `Decimal128(38,0)`); the Python reference checker read it at full width. The owner ruled Rust right (`docs/decisions/checker-diffs.md` D20) and the design changed first: 11.7 says an `int` cell wider than 38 digits is `E3102` and that 11.6's arbitrary size applies to computed `int` values, and the 11.18.2 Domain row says only a computed `int` can be too large for a double. The Python reference checker changed under a ruling-specified exception to its no-edit rule, as for D2 and D5: `tables.py` refuses an `int` cell wider than 38 digits with `E3102`, field null, the message naming the row and column. `conformance/checker/` is not touched; the case writer rewrites the case.
+
+**Why.** The limit was a fact of the Rust parser's Arrow mapping in item 47, which `docs/spec/checker.md` does not copy, so the two independent readers of that file could not know it; a fourth implementer reading only `checker.md` would make the same mistake. Writing it into 11.7 puts it where both readers look, as ruling 12 did for the NaN tokens.

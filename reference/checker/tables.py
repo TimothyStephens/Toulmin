@@ -152,7 +152,12 @@ def parse_cell(text, column, spec, where):
     if t == "int":
         if not INT_RE.fullmatch(text):
             raise fail(f"{text!r} is not an int")
-        return Value("int", int(text))
+        v = int(text)
+        if len(str(abs(v))) > 38:
+            # 11.7: an int cell is Decimal128(38,0) (item 47); only a
+            # computed int is of arbitrary size (ruling D20).
+            raise fail(f"{text!r} is wider than 38 digits")
+        return Value("int", v)
     if t == "dec":
         if not CELL_DEC_RE.fullmatch(text):
             raise fail(f"{text!r} is not a dec")
