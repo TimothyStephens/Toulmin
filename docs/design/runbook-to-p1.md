@@ -140,6 +140,7 @@ Recorded so they are not lost, with where each surfaces. Do not fix them now.
 | 11.10's `COLLATE BINARY` spelling was rejected by DuckDB's parser in a P2 test | P4, writing the translator | State the spelling DuckDB accepts, or state that no `COLLATE` clause is the binary default and 11.10 means that |
 | tm-core's unit tests need an `OwnerCap` and the crate-private route of P3 decision 1 does not reach a crate that only calls the Core | P7, first test in tm-core | Decide whether tm-core tests get a test-only constructor behind a `cfg(test)` feature the CI grep ignores, or go through a tm-cli integration test |
 | A dec column cannot hold values beyond DECIMAL(38, s), and one small value sets the whole column's scale | P8, writing docs/user/getting-started.md | Say that p-values, fold changes, and any column spanning many orders of magnitude belong in float64 columns, and dec is for exact quantities; use the fixture's padj column as the example |
+| The decimal context (Emax 999999, Emin -999999) and positional writing let one derive store a value of a million digits; the underflow conformance case's expected.json is 2 MB | P7, before the first claim.checked is written | Decide whether to narrow the context (decimal128's 6143 would reopen rulings 35 and 36 and regenerate their cases) or cap a value's written length with an error code; after P7 writes a record, either change breaks stored events |
 
 ---
 
