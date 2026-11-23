@@ -61,3 +61,7 @@ Four rulings in 11.7 and 11.18.2. New items:
 42. 11.18.2 `group` and Initial order: a group key, and so a final key, can now hold `missing`, but 11.9 says each `row` value is "of its column's type" and "`expected` is never `missing`". Whether an assertion `row` may contain `{"t":"missing"}` to locate such a group is not stated. Avoided: group_missing_values_one_group and sort_missing_key_component_first assert on rows with no missing component.
 
 Items 41 and 42 were ruled on: an E3102 about a data-file cell has `field` null (11.7), and a `row` component may be `missing`, matched by grouping identity (11.9, 11.18.3). float64_overflow_cell already matched the first ruling; assert_names_missing_group covers the second.
+
+## Underflow and the log family (2026-11-23)
+
+43. 11.6 and 11.18.2 Precision: underflow "follows the specification (subnormal, then zero)", but the scale of such a result is not stated. The multiplication rule says the scale is the sum of the operands' scales. General Decimal Arithmetic rounds a subnormal result to exponent Etiny = Emin - (precision - 1) = -1000032 and gives an underflowed zero that exponent too. "Negative zero is written without its sign, scale kept" then makes the zero `0.` followed by 1,000,032 zeros, and the subnormal 1,000,034 characters. Readings: the scale is the General Decimal Arithmetic exponent, as Python `decimal` gives, or a zero is written `0`. Taken: the first, as in item 35 (rounding wins over the sum rule). derive_underflow_subnormal_then_zero; its expected.json carries both long strings.

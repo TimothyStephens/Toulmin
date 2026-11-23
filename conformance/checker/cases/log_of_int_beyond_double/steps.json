@@ -1,0 +1,20 @@
+{
+  "steps": 1,
+  "tables": {
+    "hx": "F1@v1"
+  },
+  "from": "hx",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "l",
+      "expr": "log(x)"
+    },
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "l >= 0"
+    }
+  ]
+}

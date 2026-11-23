@@ -1630,6 +1630,77 @@ case("rank_group_by_missing_partition", ["gp"], "gp",
            "last: holds. The rank column follows member_keys_hash as the last column.")
 
 
+# -- underflow below Emin, int beyond a double in the log family (11.18.2 Precision, Domain) -----------
+table(
+    "uf",
+    "id,x\na,1.234567\n",
+    spec([col("id", "str"), col("x", "dec", 6)], ["id"]),
+    ["id", "x"], ["id"],
+    {"a": [S("a"), D("1.234567")]},
+)
+
+# Etiny = Emin - (precision - 1) = -999999 - 33 = -1000032; both values sit at that exponent.
+UF_SUBNORMAL = "0." + "0" * 1000028 + "1235"   # 1235E-1000032 = 1.235E-1000029
+UF_ZERO = "0." + "0" * 1000032                 # 0E-1000032, scale kept
+
+case("derive_underflow_subnormal_then_zero", ["uf"], "uf",
+     [derive("y", "x * 1e-999999 * 1e-30"), derive("z", "y * 1e-5")],
+     a_value([S("a")], "z", "eq", I(0)), "holds",
+     [(1, "Add column y = x * 1e-999999 * 1e-30; 1 rows."),
+      (1, "Add column z = y * 1e-5; 1 rows.")],
+     cols_of("uf", add=["y", "z"]),
+     rows("uf", ["a"], add={"a": {"y": D(UF_SUBNORMAL), "z": D(UF_ZERO)}}), ["id"],
+     notes="Context: precision 34, Emin -999999, so Etiny = Emin - (34 - 1) = -1000032, the smallest exponent "
+           "a subnormal may have. Literals: 1e-999999 has adjusted exponent -999999, not below Emin, so it is "
+           "accepted (11.18.1); 1e-30 and 1e-5 are ordinary. Each is made positional exactly first (scales "
+           "999999, 30, 5). Step 1, left-associative (x * 1e-999999) * 1e-30. x = 1.234567 = 1234567E-6. "
+           "1234567E-6 * 1E-999999 = 1234567E-1000005, adjusted exponent -1000005 + 6 = -999999: normal, "
+           "7 digits, exact. * 1E-30 = 1234567E-1000035 exactly, adjusted -1000029 < Emin: subnormal. Its "
+           "exponent -1000035 is below Etiny, so General Decimal Arithmetic rounds the coefficient to exponent "
+           "-1000032: 1234567 / 10^3 = 1234.567, half-even -> 1235 (0.567 > 0.5). y = 1235E-1000032 = "
+           "1.235E-1000029 (Subnormal, Underflow, Inexact, Rounded: none is an error; 'Underflow below Emin "
+           "-999999 gives a subnormal result, then zero, and is not an error'). Only 4 significant digits "
+           "survive; an unbounded exponent would give 1.234567E-1000029 and flushing would give 0. Written "
+           "positionally at scale 1000032: '0.' then 1000028 zeros then 1235 (1,000,034 characters). Step 2: "
+           "y * 1E-5 = 1235E-1000037 exactly, adjusted -1000034; rounded to exponent Etiny -1000032: "
+           "1235 / 10^5 = 0.01235 -> 0. z = 0E-1000032 (Clamped as well), positive. 'scale kept': written "
+           "'0.' then 1000032 zeros (AMBIGUITIES.md 43). The multiplication sum-of-scales rule would give "
+           "scales 1000035 and 1000037; the subnormal rounding reduces both to 1000032, as rounding at 34 "
+           "digits does in derive_rounds_at_34_digits. No E5002: no adjusted exponent exceeds Emax. "
+           "a.z = 0 against int 0 as decimals, |0 - 0| = 0 <= 0: holds. Cross-checked with Python decimal "
+           "in the stated context.")
+
+table(
+    "hx",
+    "id,x\na,1\nb,1" + "0" * 400 + "\nc,1" + "0" * 308 + "\n",
+    spec([col("id", "str"), col("x", "int")], ["id"]),
+    ["id", "x"], ["id"],
+    {
+        "a": [S("a"), I(1)],
+        "b": [S("b"), I(10 ** 400)],
+        "c": [S("c"), I(10 ** 308)],
+    },
+)
+
+case("log_of_int_beyond_double", ["hx"], "hx", [derive("l", "log(x)"), filt("l >= 0")],
+     a_exists([S("b")]), "fails",
+     [(3, "Add column l = log(x); 3 rows."),
+      (2, "Keep rows where l >= 0 (missing values excluded); 2 of 3 rows remain.")],
+     cols_of("hx", add=["l"]),
+     rows("hx", ["a", "c"], add={"a": {"l": D("0")}, "c": {"l": D("709.196208642166")}}), ["id"],
+     notes="int column x: a 1, b 10^400 (401 digits), c 10^308 (309 digits). An int has arbitrary size, so all "
+           "three parse. 11.18.2 Domain: 'An int too large for a double is infinity to the log family, so its "
+           "logarithm is missing.' The largest double is about 1.797e308. a: log(1.0) = 0.0, an integral double, "
+           "written '0' (11.6). b: 10^400 exceeds it, so it is infinity, and log gives missing, not an error "
+           "and not a value. c: 10^308 is below it and converts to the nearest double; ln(10^308) = 308 * "
+           "ln 10 = 308 * 2.302585092994045684 = 709.19620864216607...; the double is 709.1962086421661; to "
+           "15 significant digits 709.196208642166 (16th digit 0, far from a rounding boundary, so libm last-bit "
+           "differences cannot move it). Filter l >= 0: a 0 >= 0 true; b missing, dropped; c true. 2 of 3. "
+           "exists b: the row whose logarithm is missing is absent: fails. An implementation that took a "
+           "logarithm of 10^400 (921.03...) would keep b and hold; one that raised on the conversion would give "
+           "error.")
+
+
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------
 
 EVAL = {
