@@ -152,12 +152,14 @@ def parse_cell(text, column, spec, where):
     if t == "int":
         if not INT_RE.fullmatch(text):
             raise fail(f"{text!r} is not an int")
-        v = int(text)
-        if len(str(abs(v))) > 38:
-            # 11.7: an int cell is Decimal128(38,0) (item 47); only a
-            # computed int is of arbitrary size (ruling D20).
+        # 11.7: an int cell is Decimal128(38,0) (item 47); only a computed
+        # int is of arbitrary size (ruling D20). The width is tested on the
+        # text, which INT_RE keeps free of leading zeros, before int(): a
+        # cell over CPython's 4,300-digit int-string limit would otherwise
+        # raise ValueError instead of E3102.
+        if len(text.lstrip("-")) > 38:
             raise fail(f"{text!r} is wider than 38 digits")
-        return Value("int", v)
+        return Value("int", int(text))
     if t == "dec":
         if not CELL_DEC_RE.fullmatch(text):
             raise fail(f"{text!r} is not a dec")
