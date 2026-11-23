@@ -1883,7 +1883,11 @@ impl Gen {
             "scope-and-undefined" => {
                 if let Some(i) = op_index(&c.steps, "rank") {
                     c.steps["ops"][i]["scope"] = json!("grp");
+                    // Two undefined members, written out of sorted order, so
+                    // D17's written order is compared (the first reported is
+                    // `zz`, not `aa`).
                     c.steps["ops"][i]["zz"] = json!(1);
+                    c.steps["ops"][i]["aa"] = json!(2);
                 }
             }
             "repeated-name" => {
@@ -2067,8 +2071,20 @@ impl Gen {
                     ..ew
                 };
                 let name = p.schema.fresh("l");
-                let f = *self.rng.pick(&["log", "log2", "log10", "exp"]);
-                let arg = self.num_expr(&p.schema, 1, lw);
+                let huge = self.rng.chance(15);
+                let f = if huge {
+                    *self.rng.pick(&["log", "log2", "log10"])
+                } else {
+                    *self.rng.pick(&["log", "log2", "log10", "exp"])
+                };
+                let arg = if huge {
+                    // A 310-digit int: infinity to the double, so the
+                    // logarithm is `missing` (11.18.2 Domain row).
+                    let digits = self.rng.range(1, 9).to_string() + &"0".repeat(309);
+                    E::Int(digits)
+                } else {
+                    self.num_expr(&p.schema, 1, lw)
+                };
                 let text = render(&E::Call(f, vec![arg]), &mut self.rng);
                 p.ops
                     .push(json!({"op": "derive", "v": 1, "as": name, "expr": text}));
@@ -2363,16 +2379,32 @@ impl Gen {
                     ..plain
                 };
                 let (t, mut p) = self.start(&wish);
-                let int_col = t.first_of(SpecType::Int);
-                let col_ref = col_text(&mut self.rng, &int_col);
-                let shape = *self.rng.pick(&[
-                    "{x} * 9.9e999999 * 10",
-                    "({x} + 1) * 1e999999 * 100",
-                    "{x} * 1E999999 * {x} * 1e999999",
-                    "abs({x}) * 9e999999 * -100",
-                    "coalesce({x}, 1) * 5e999999 * 2",
-                ]);
-                let text = shape.replace("{x}", &col_ref);
+                let text = if self.rng.below(6) == 5 {
+                    // Underflow, not an error: a `dec` times `1e-999999` is
+                    // subnormal, and below `Emin` far enough it rounds to
+                    // zero (11.18.2 Domain row).
+                    let dec_col = t.first_of(SpecType::Dec);
+                    let col_ref = col_text(&mut self.rng, &dec_col);
+                    let shape = *self.rng.pick(&[
+                        "{d} * 1e-999999",
+                        "{d} * 1e-999999 / 7",
+                        "({d} + 1) * 1e-999999",
+                        "{d} * 1e-999999 * 1e-999999",
+                        "{d} / 1e999999 / 1e999999",
+                    ]);
+                    shape.replace("{d}", &col_ref)
+                } else {
+                    let int_col = t.first_of(SpecType::Int);
+                    let col_ref = col_text(&mut self.rng, &int_col);
+                    let shape = *self.rng.pick(&[
+                        "{x} * 9.9e999999 * 10",
+                        "({x} + 1) * 1e999999 * 100",
+                        "{x} * 1E999999 * {x} * 1e999999",
+                        "abs({x}) * 9e999999 * -100",
+                        "coalesce({x}, 1) * 5e999999 * 2",
+                    ]);
+                    shape.replace("{x}", &col_ref)
+                };
                 p.ops
                     .push(json!({"op": "derive", "v": 1, "as": "big", "expr": text}));
                 p.schema.columns.push(("big".into(), Tag::Dec));
