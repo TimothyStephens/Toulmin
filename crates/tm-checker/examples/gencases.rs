@@ -2260,23 +2260,23 @@ impl Gen {
                         // past 34 significant digits: the static type is `dec`,
                         // so the product rounds whichever branch the row took
                         // (11.18.2 Precision, ruling D19 of 2026-11-20).
-                        let i = t.first_of(SpecType::Int);
-                        let it = col_text(&mut self.rng, &i);
-                        let (a, b) = if self.rng.chance(50) {
-                            (it.as_str(), xt.as_str())
+                        let int_col = t.first_of(SpecType::Int);
+                        let int_text = col_text(&mut self.rng, &int_col);
+                        let (left, right) = if self.rng.chance(50) {
+                            (int_text.as_str(), xt.as_str())
                         } else {
-                            (xt.as_str(), it.as_str())
+                            (xt.as_str(), int_text.as_str())
                         };
-                        let e = *self.rng.pick(&[
+                        let shape = *self.rng.pick(&[
                             "coalesce({a}, {b}) * coalesce({a}, {b})",
                             "coalesce({a}, {b}) * {i}",
                             "{i} * coalesce({a}, {b})",
                             "coalesce({a}, {b}) * {x}",
                         ]);
-                        let text = e
-                            .replace("{a}", a)
-                            .replace("{b}", b)
-                            .replace("{i}", &it)
+                        let text = shape
+                            .replace("{a}", left)
+                            .replace("{b}", right)
+                            .replace("{i}", &int_text)
                             .replace("{x}", &xt);
                         p.ops
                             .push(json!({"op": "derive", "v": 1, "as": "d1", "expr": text}));
