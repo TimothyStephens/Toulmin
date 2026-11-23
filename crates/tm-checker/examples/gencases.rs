@@ -1882,16 +1882,31 @@ impl Gen {
             "v-not-positive" => c.steps["ops"][0]["v"] = json!(self.rng.pick_owned(&[0, -1])),
             "scope-and-undefined" => {
                 if let Some(i) = op_index(&c.steps, "rank") {
-                    c.steps["ops"][i]["scope"] = json!("grp");
-                    // Two undefined members, written out of sorted order, so
-                    // D17's written order is compared (the first reported is
-                    // `zz`, not `aa`).
-                    c.steps["ops"][i]["zz"] = json!(1);
-                    c.steps["ops"][i]["aa"] = json!(2);
+                    if self.rng.chance(50) {
+                        // An undefined member beside a bad `scope`: 11.8
+                        // checks `rank`'s `scope` first, so `/ops/<i>/scope`
+                        // is reported.
+                        c.steps["ops"][i]["scope"] = json!("grp");
+                        c.steps["ops"][i]["zz"] = json!(1);
+                    } else {
+                        // `scope` valid and two undefined members written out
+                        // of sorted order, so D17's written order is compared
+                        // (the first reported is `zz`, not `aa`).
+                        c.steps["ops"][i]["zz"] = json!(1);
+                        c.steps["ops"][i]["aa"] = json!(2);
+                    }
                 }
             }
             "repeated-name" => {
-                if let Some(i) = op_index(&c.steps, "select")
+                // A `sort` `by` column when the case has a `sort` and the
+                // coin says so; a `select` column otherwise.
+                let sort = op_index(&c.steps, "sort").filter(|_| self.rng.chance(50));
+                if let Some(i) = sort
+                    && let Some(by) = c.steps["ops"][i]["by"].as_array_mut()
+                    && let Some(f) = by.first().cloned()
+                {
+                    by.push(f);
+                } else if let Some(i) = op_index(&c.steps, "select")
                     && let Some(cols) = c.steps["ops"][i]["columns"].as_array_mut()
                     && let Some(f) = cols.first().cloned()
                 {
