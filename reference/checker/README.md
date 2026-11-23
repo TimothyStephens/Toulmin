@@ -3,9 +3,9 @@
 An independent Python implementation of the Toulmin Checker written from
 `checker.md` alone, for differential testing against the Rust checker.
 Plain Python 3 (3.11 or later), standard library only, plus the two
-reference format modules in `reference-formats/` (`canonical_json.py`,
+reference format modules in `reference/formats/` (`canonical_json.py`,
 `ids.py`), which it imports and does not reimplement. Both scripts run
-under `python3 -I`: they put their own directory and `reference-formats/`
+under `python3 -I`: they put their own directory and `reference/formats/`
 on `sys.path` themselves.
 
 ## Running a case
@@ -36,8 +36,8 @@ done
 ## Validating steps and assertion documents
 
 ```
-python3 -I reference/checker/validate.py conformance/formats-steps/invalid/*.json
-python3 -I reference/checker/validate.py --check conformance/formats-assertions/schema/*.json
+python3 -I reference/checker/validate.py conformance/formats/steps/invalid/*.json
+python3 -I reference/checker/validate.py --check conformance/formats/assertions/schema/*.json
 ```
 
 Each file is a schema case (`{"description", "input", ..., "expect"}`).
