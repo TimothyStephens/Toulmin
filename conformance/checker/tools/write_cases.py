@@ -1672,33 +1672,57 @@ case("derive_underflow_subnormal_then_zero", ["uf"], "uf",
 
 table(
     "hx",
-    "id,x\na,1\nb,1" + "0" * 400 + "\nc,1" + "0" * 308 + "\n",
+    "id,x\na,1\nb,1" + "0" * 37 + "\nc,1" + "0" * 34 + "\n",
     spec([col("id", "str"), col("x", "int")], ["id"]),
     ["id", "x"], ["id"],
     {
         "a": [S("a"), I(1)],
-        "b": [S("b"), I(10 ** 400)],
-        "c": [S("c"), I(10 ** 308)],
+        "b": [S("b"), I(10 ** 37)],
+        "c": [S("c"), I(10 ** 34)],
     },
 )
 
-case("log_of_int_beyond_double", ["hx"], "hx", [derive("l", "log(x)"), filt("l >= 0")],
+case("log_of_int_beyond_double", ["hx"], "hx",
+     [derive("p", "x * x * x * x * x * x * x * x * x"), derive("l", "log(p)"), filt("l >= 0")],
      a_exists([S("b")]), "fails",
-     [(3, "Add column l = log(x); 3 rows."),
+     [(3, "Add column p = x * x * x * x * x * x * x * x * x; 3 rows."),
+      (3, "Add column l = log(p); 3 rows."),
       (2, "Keep rows where l >= 0 (missing values excluded); 2 of 3 rows remain.")],
-     cols_of("hx", add=["l"]),
-     rows("hx", ["a", "c"], add={"a": {"l": D("0")}, "c": {"l": D("709.196208642166")}}), ["id"],
-     notes="int column x: a 1, b 10^400 (401 digits), c 10^308 (309 digits). An int has arbitrary size, so all "
-           "three parse. 11.18.2 Domain: 'An int too large for a double is infinity to the log family, so its "
-           "logarithm is missing.' The largest double is about 1.797e308. a: log(1.0) = 0.0, an integral double, "
-           "written '0' (11.6). b: 10^400 exceeds it, so it is infinity, and log gives missing, not an error "
-           "and not a value. c: 10^308 is below it and converts to the nearest double; ln(10^308) = 308 * "
-           "ln 10 = 308 * 2.302585092994045684 = 709.19620864216607...; the double is 709.1962086421661; to "
-           "15 significant digits 709.196208642166 (16th digit 0, far from a rounding boundary, so libm last-bit "
-           "differences cannot move it). Filter l >= 0: a 0 >= 0 true; b missing, dropped; c true. 2 of 3. "
-           "exists b: the row whose logarithm is missing is absent: fails. An implementation that took a "
-           "logarithm of 10^400 (921.03...) would keep b and hold; one that raised on the conversion would give "
-           "error.")
+     cols_of("hx", add=["p", "l"]),
+     rows("hx", ["a", "c"], add={"a": {"p": I(1), "l": D("0")},
+                                 "c": {"p": I(10 ** 306), "l": D("704.591038456178")}}), ["id"],
+     notes="Revised 11.7: an int cell is at most 38 digits, so the huge int is computed. int column x: a 1, "
+           "b 10^37 (38 digits, the widest a cell may be), c 10^34 (35 digits); all three parse. Step 1: "
+           "p = x^9 as nine factors, int * int giving int, exact and unbounded (11.18.2 Precision): a 1; b "
+           "10^333 (334 digits); c 10^306 (307 digits). Step 2, 11.18.2 Domain: 'An int too large for a double "
+           "(only a computed int can be ...) is infinity to the log family, so its logarithm is missing.' The "
+           "largest double is about 1.797e308. a: log(1.0) = 0.0, an integral double, written '0' (11.6). b: "
+           "10^333 exceeds it, so it is infinity and log gives missing, not an error and not a value. c: "
+           "10^306 is below it and converts to the nearest double; ln(10^306) = 306 * ln 10 = 306 * "
+           "2.302585092994045684 = 690.7755278982137052 + 13.815510557964274104 = 704.591038456177979...; to "
+           "15 significant digits 704.591038456178 (the dropped digits 979... lie about 4 units of the "
+           "double's last place from the rounding boundary, so libm last-bit differences cannot move it). "
+           "Step 3, filter l >= 0: a 0 >= 0 true; b missing, dropped; c true. 2 of 3. p stays in the final "
+           "rows as an int. exists b: the row whose logarithm is missing is absent: fails. An implementation "
+           "that took a logarithm of 10^333 (766.76...) would keep b and hold; one that raised on the "
+           "conversion would give error.")
+
+table(
+    "w39",
+    "id,x\na,1\nb,1" + "0" * 38 + "\n",
+    spec([col("id", "str"), col("x", "int")], ["id"]),
+    ["id", "x"], ["id"],
+    {"a": [S("a"), I(1)], "b": [S("b"), I(10 ** 38)]},
+)
+
+case("int_cell_wider_than_38_digits", ["w39"], "w39", [],
+     a_count("eq", I(2)), "error", error=("E3102", None),
+     notes="11.7: 'An int cell wider than 38 digits is E3102 (item 47 maps int to Decimal128(38,0))'. Row b holds "
+           "10^38, written as 1 followed by 38 zeros: 39 digits, one more than 38 (the largest Decimal128(38,0) "
+           "value is 10^38 - 1, 38 nines). The cell fails at parse: E3102, and 'An E3102 about a data file cell "
+           "has field null'. Item 92: the harness parses every table before the steps and the assertion, so this "
+           "is the case's error whatever they hold; verdict error, row-level fields null. A 38-digit cell parses "
+           "(log_of_int_beyond_double holds 10^37).")
 
 
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------

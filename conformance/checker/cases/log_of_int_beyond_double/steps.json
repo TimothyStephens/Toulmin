@@ -8,8 +8,14 @@
     {
       "op": "derive",
       "v": 1,
+      "as": "p",
+      "expr": "x * x * x * x * x * x * x * x * x"
+    },
+    {
+      "op": "derive",
+      "v": 1,
       "as": "l",
-      "expr": "log(x)"
+      "expr": "log(p)"
     },
     {
       "op": "filter",
