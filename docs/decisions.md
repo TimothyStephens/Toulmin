@@ -1307,6 +1307,9 @@ already cover; the three error buckets stay because rulings 36, 53, and
 No `rand` dependency: SplitMix64 is a dozen lines, and D24 fixes the
 dependency list.
 
+Seventeen buckets since 2026-11-20 (`malformed` added), so N = 10,000
+gives 588 or 589 cases per bucket.
+
 ## 2026-11-18 P5: both refcheck implementations print to standard output (item 59)
 
 **What.** Item 59 said the example binary "writes `observed.json`" beside
@@ -1449,8 +1452,16 @@ an older cargo-deny locally sees it.
 
 **Why.** The limit was a fact of the Rust parser's Arrow mapping in item 47, which `docs/spec/checker.md` does not copy, so the two independent readers of that file could not know it; a fourth implementer reading only `checker.md` would make the same mistake. Writing it into 11.7 puts it where both readers look, as ruling 12 did for the NaN tokens.
 
+**Completed 2026-11-23.** The re-audit found that `tables.py` called `int(text)` before the 38-digit test, so a cell over CPython's 4,300-digit int-string limit raised `ValueError` (exit 1) instead of giving `E3102`. `tables.py` now tests the width on the text, `len(text.lstrip("-")) > 38` (`INT_RE` admits no leading zeros, so this is the digit count), before calling `int(text)`. The owner ruled this part of D20's own text, under the same ruling-specified exception.
+
 ## 2026-11-23 P5: ruling on AMBIGUITIES 43, the scale of an underflowed result; the million-digit value deferred
 
 **What.** The independent case writer's `conformance/checker/cases/AMBIGUITIES.md` item 43 asked what scale an underflowed result has, and took the General Decimal Arithmetic exponent for `derive_underflow_subnormal_then_zero`. The owner ruled it decided by existing text, and the 11.18.2 Precision row now says so: "An underflowed result keeps the exponent General Decimal Arithmetic gives it, so its scale is the negative of that exponent; a result that underflows to zero is written at that scale." `docs/spec/checker.md` is regenerated from the design. No code and no case changes. `docs/design/runbook-to-p1.md` section 6 gains a row: the context (`Emax` 999999, `Emin` -999999) with positional writing lets one `derive` store a value of a million digits, and the underflow case's `expected.json` is 2 MB; the choice between narrowing the context and capping a value's written length with an error code surfaces at P7, before the first `claim.checked` is written.
 
 **Why.** Ruling 35 says underflow follows the General Decimal Arithmetic specification, which fixes the exponent (Etiny, -1000032, for a subnormal or an underflowed zero), and decision 3's clarification keeps a zero's scale, so the case writer's reading is the only one the text allows; the sentence states it where a fourth implementer looks, without changing what either implementation does. The size is a real cost but not a P5 one: narrowing the context to decimal128's 6143 would reopen rulings 35 and 36 and regenerate their cases, and a length cap needs an error code, so it is deferred to the point after which it cannot be made freely: once P7 writes a record, either change breaks stored events.
+
+## 2026-11-23 P5: re-audit follow-ups (reviews/2026-11-23-p5-reference-reaudit.md)
+
+**What.** The P5 re-audit's verdict was merge, with three small follow-ups. First (m3), D17's written order: the `malformed` bucket's undefined-member defect set `rank`'s `scope` to `grp` and added `zz` then `aa`, but 11.8 checks `rank`'s `scope` before undefined members, so both checkers reported `/ops/<i>/scope` and the members' order was never compared. Item 89 now names two shapes, design first (570a4cf): an undefined member beside a bad `scope` (the `scope` is reported first), and, with `scope` valid, two undefined members written out of sorted order (the first written is reported); the repeated-name defect sometimes repeats a `sort` `by` column. `gencases.rs` draws one shape or the other per case with even odds, keeping seventeen defects (0d8ef93); a `sort` `by` column is repeated in half the repeated-name cases that have a `sort`, a `select` column otherwise. `docs/spec/` does not copy item 89, and spec-drift passes. Second, `tables.py` tested an `int` cell's width after `int(text)`; it now tests the text first (661f33f), recorded under the D20 entry above. Third, the 2026-11-18 buckets entry now states the seventeen buckets and 588 or 589 cases per bucket at N = 10,000.
+
+**Why.** A defect whose second check is never reached tests nothing about that check: the order in which undefined members are reported is a ruling (D17) that the differential could not see. Splitting the shapes keeps the scope-first rule covered and makes the written order observable. The `int` width belongs to the text because an `int` cell is at most 38 digits (11.7), and converting first lets an interpreter limit decide the outcome. The buckets entry predated the `malformed` bucket, and its "sixteen" and "625" were stale.
