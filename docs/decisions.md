@@ -1419,3 +1419,26 @@ changed.
 **What.** The P5 design-decisions review's verdict was merge, with four minors and three nits, each applied as follows. m1: the D19 entry above now records who wrote `derive_coalesce_static_dec`'s `expected.json` and how it was checked; the case is unchanged. m2: `docs/decisions/checker-diffs.md`'s CI differential section records the three host runs of the `malformed` bucket (seeds 1795118323, 2, and 3; 459, 444, and 436 of 588 refused by `tm_checker::rules::validate`; no `error` or `run` row). m3: item 89 gains, design first, an underflow arm of the `overflow` bucket, a `log` of a 310-digit `int` in `logexp`, and a second undefined member in the `malformed` bucket's bad-`scope` defect, and `gencases.rs` draws them; no conformance case is written here, since the independent case writer adds one for each of the two semantic rules (Domain row: underflow is subnormal then zero and not an error; an `int` too large for a double gives `missing` under `log`) after this lands. m4: the `[ ! -f reference/checker/refcheck.py ]` guards in the python-crosscheck and differential CI jobs are deleted, since item 87 landed; `scripts/differential.sh` keeps its own exit-1 check. Nits: the P5 checkpoint row of the phase table states the one-case-directory `refcheck` contract and the schema-file arguments of `validate.py`; `reference/checker/README.md` names `reference/formats/`, `conformance/formats/steps/`, and `conformance/formats/assertions/` as the repository has them; "sixteen" becomes seventeen in checker-diffs D17's Applied line.
 
 **Why.** The README's `reference-formats/`, `formats-steps`, and `formats-assertions` names were the Python session's working layout, as the import path 5f0eb4e corrected was; 5f0eb4e and this README edit are path-only and change no behaviour. A guard that makes a job a no-op when a file is absent hides the job's failure once the file is expected, so it goes when the phase that adds the file lands. The m1 note matters because item 87 makes the independence of `expected.json` from both implementations the thing that makes a conformance failure informative, and this one case does not have that independence: it is a regression case for a ruled difference, checked against both sides, and the record should say so.
+
+## 2026-11-23 cargo-deny ignores RUSTSEC-2026-0595 (parquet bloom filters in encrypted files); the RUSTSEC-2026-0543 ignore is removed
+
+**What.** `deny.toml` `[advisories] ignore` lists RUSTSEC-2026-0595 by ID,
+with its reason, and no longer lists RUSTSEC-2026-0543. Every other
+advisory still fails the check. Owner's decision, 2026-11-23.
+
+**Why.** RUSTSEC-2026-0595, published 2026-11-23, reports that parquet
+writes bloom filters in plaintext when it writes an encrypted file;
+patched versions start at 60.2.0, and item 1 pins parquet with arrow at
+exactly 60.1.0. Toulmin writes Parquet only for the parse cache (item 48),
+in `crates/tm-files/src/parse_cache.rs`, through `ArrowWriter` with
+default properties: no encryption and no bloom filters, so the vulnerable
+path is unreachable. Revisit at the next arrow upgrade: drop the entry
+once parquet is 60.2.0 or later. The chrono ignore is dead, not because
+the advisory was withdrawn or chrono moved: RUSTSEC-2026-0543 is unchanged
+in the advisory database and chrono is still 0.4.45, reached only through
+arrow. cargo-deny 0.22.0 (2026-11-19, the version `cargo-deny-action@v2`
+installs) changed `advisories.unmaintained` to default to `workspace`
+scope, so an unmaintained crate is reported only when a workspace crate
+depends on it directly, and chrono no longer matches. Under cargo-deny
+0.21 and earlier the chrono advisory fails the check again; anyone running
+an older cargo-deny locally sees it.

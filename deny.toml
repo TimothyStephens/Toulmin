@@ -24,8 +24,8 @@ db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
 ignore = [
-    # Owner decision 2026-11-17 (docs/decisions.md).
-    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; reached only through arrow 60.1 (pinned); no safe upgrade exists; revisit at the next arrow upgrade" },
+    # Owner decision 2026-11-23 (docs/decisions.md).
+    { id = "RUSTSEC-2026-0595", reason = "parquet writes only the unencrypted parse cache (item 48) and never bloom filters; the vulnerable path (encrypted write with bloom filters) is unreachable; parquet is pinned with arrow by item 1; revisit at the next arrow upgrade" },
 ]
 
 [licenses]
