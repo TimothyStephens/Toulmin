@@ -124,7 +124,6 @@ jobs:
           python3 -I reference/formats/test_formats.py
       - name: checker
         run: |
-          if [ ! -f reference/checker/refcheck.py ]; then echo "::notice::no-op until P5: reference/checker absent"; exit 0; fi
           # refcheck.py takes one case directory; validate.py takes schema
           # case files (reference/checker/README.md).
           for d in conformance/checker/cases/*/ conformance/checker/assertions/eval/*/; do
@@ -157,7 +156,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: |
-          if [ ! -f reference/checker/refcheck.py ]; then echo "::notice::no-op until P5: reference/checker absent (item 87)"; exit 0; fi
           scripts/differential.sh 10000 "$GITHUB_RUN_ID"
       - uses: actions/upload-artifact@v4
         if: failure()
