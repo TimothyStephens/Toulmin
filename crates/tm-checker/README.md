@@ -9,7 +9,7 @@ it returns a `RunResult`.
 
 | Module | Item | What |
 | --- | --- | --- |
-| `eval` | 53 | `filter.where` and `derive.expr` over the rows, `bigdecimal` under the 11.6 context (precision 34, `Emax` 999999, `Emin` -999999, half-even): exact arithmetic, then `fix`, the General Decimal Arithmetic rounding and range step; `E5002` on Overflow; the `log` family through IEEE double, 15 significant digits |
+| `eval` | 53 | `filter.where` and `derive.expr` over the rows, `bigdecimal` under the 11.6 context, decimal128 (precision 34, `Emax` 6144, `Emin` -6143, half-even): exact arithmetic, then `fix`, the General Decimal Arithmetic rounding and range step; `E5002` on Overflow; the `log` family through IEEE double, 15 significant digits |
 | `translate` | 53 | One explicit `DuckDB` statement per relational op (`sort`, `take`, `rank`, `group`, `join`, `select`), binary collation, `NULLS FIRST`/`LAST`, key tie-breaker, the `ties` mapping, group order, `member_count`, `member_keys_hash` |
 | `table` | 53 | The working table (typed values, columns, key) and its encoding for `DuckDB`: text as itself, `bool` as `BOOLEAN`, every other value as an order key whose binary order and equality are the 11.18.2 ones, `missing`/`nan`/`inf` as `NULL` |
 | `engine` | 54 | One `tm-duckdb` connection per check, tables registered by name, version and extension facts |

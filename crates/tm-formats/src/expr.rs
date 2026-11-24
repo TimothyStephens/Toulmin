@@ -199,10 +199,11 @@ enum Tok {
     Op(&'static str),
 }
 
-/// The decimal context's exponent range (11.6, 11.18.2; ruling 35).
-pub const EMAX: i64 = 999_999;
+/// The decimal context's exponent range, IEEE 754-2008 decimal128's
+/// (11.6, 11.18.2; rulings 35 and 56).
+pub const EMAX: i64 = 6144;
 /// See [`EMAX`].
-pub const EMIN: i64 = -999_999;
+pub const EMIN: i64 = -6143;
 
 /// The adjusted exponent of a numeric literal as written (`INT`, `DEC`,
 /// or `EXPNUM`): its exponent plus its number of significant digits,
@@ -223,7 +224,7 @@ pub fn adjusted_exponent(literal: &str) -> Option<i128> {
 }
 
 /// `E6004` for a literal whose adjusted exponent is outside
-/// [`EMIN`, `EMAX`] (11.18.1; ruling 36), at the expression's pointer.
+/// [`EMIN`, `EMAX`] (11.18.1; rulings 36 and 56), at the expression's pointer.
 fn check_literal_range(literal: &str, at: &str) -> Result<(), Error> {
     match adjusted_exponent(literal) {
         Some(a) if (i128::from(EMIN)..=i128::from(EMAX)).contains(&a) => Ok(()),
@@ -949,13 +950,18 @@ mod tests {
         );
         assert_eq!(ty("i + 1e3").unwrap(), Some(Tag::Dec));
         assert_eq!(ty("-1e-10").unwrap(), Some(Tag::Dec));
-        // Ruling 36: a literal outside the context range is E6004.
-        assert_eq!(ty("1e999999").unwrap(), Some(Tag::Dec));
-        assert_eq!(ty("1e-999999").unwrap(), Some(Tag::Dec));
-        assert_eq!(ty("10e999999").unwrap_err().code, Code::E6004);
+        // Rulings 36 and 56: a literal outside decimal128's range
+        // (adjusted exponent -6143 to 6144) is E6004.
+        assert_eq!(ty("1e6144").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("9.9e6144").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("1e-6143").unwrap(), Some(Tag::Dec));
+        assert_eq!(ty("1e6145").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("10e6144").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("1e-6144").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("0.1e-6143").unwrap_err().code, Code::E6004);
+        assert_eq!(ty("1e999999").unwrap_err().code, Code::E6004);
         assert_eq!(ty("i + 1e1000000").unwrap_err().code, Code::E6004);
         assert_eq!(ty("1e-1000000").unwrap_err().code, Code::E6004);
-        assert_eq!(ty("0.1e-999999").unwrap_err().code, Code::E6004);
         assert_eq!(ty("1e99999999999999999999").unwrap_err().code, Code::E6004);
         assert_eq!(adjusted_exponent("0.000"), Some(-3));
         assert_eq!(adjusted_exponent("007.50e2"), Some(2));

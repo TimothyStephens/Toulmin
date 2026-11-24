@@ -1,7 +1,8 @@
 //! Expression evaluation (design 11.18.2, item 53): `filter.where` and
 //! `derive.expr` over the rows of the current table, decimals under the one
-//! General Decimal Arithmetic context of 11.6 (precision 34, `Emax` 999999,
-//! `Emin` -999999, half-even) with `bigdecimal`.
+//! General Decimal Arithmetic context of 11.6, IEEE 754-2008 decimal128
+//! (precision 34, `Emax` 6144, `Emin` -6143, half-even; ruling 56), with
+//! `bigdecimal`.
 //!
 //! `bigdecimal` applies no context of its own, so every `dec` result is
 //! computed exactly and then passed through [`fix`], which is the
@@ -298,7 +299,7 @@ fn overflow(at: &str) -> Error {
     Error::at(
         Code::E5002,
         at,
-        "arithmetic overflow: the result's adjusted exponent exceeds Emax 999999",
+        "arithmetic overflow: the result's adjusted exponent exceeds Emax 6144",
     )
 }
 
@@ -635,16 +636,40 @@ mod tests {
             "100000000000000010000000000000000.2"
         );
         assert_eq!(t(dec_mul(&d("1.10"), &d("2"))), "2.20");
-        let big = BigDecimal::new(BigInt::from(99), -999_998);
+        let big = BigDecimal::new(BigInt::from(99), -6143);
         assert!(dec_mul(&big, &d("10")).is_err());
         assert!(dec_mul(&big, &d("1")).is_ok());
         // Underflow: subnormal, then zero, not an error.
-        let tiny = BigDecimal::new(BigInt::from(1), 999_999);
+        let tiny = BigDecimal::new(BigInt::from(1), 6143);
         let r = dec_mul(&tiny, &d("0.1")).unwrap();
-        assert_eq!(parts(&r), (BigInt::from(1), -1_000_000));
-        let z = dec_mul(&BigDecimal::new(BigInt::from(1), 1_000_032), &d("0.1")).unwrap();
+        assert_eq!(parts(&r), (BigInt::from(1), -6144));
+        let z = dec_mul(&BigDecimal::new(BigInt::from(1), 6176), &d("0.1")).unwrap();
         assert!(z.is_zero());
         assert_eq!(parts(&z).1, ETINY);
+    }
+
+    /// Ruling 56: the context is decimal128, `Emax` 6144, `Emin` -6143,
+    /// so `Etiny` is -6176. The operands are literals as the evaluator
+    /// reads them (11.18.1).
+    #[test]
+    fn decimal128_limits() {
+        assert_eq!(ETINY, -6176);
+        let lit = |s: &str| Lit::Dec(s.into()).value().unwrap();
+        let mul = |a: &str, b: &str| arith(BinOp::Mul, &lit(a), &lit(b), "/x");
+        // Overflow: 9.9e6145 has adjusted exponent 6145.
+        assert_eq!(mul("9.9e6144", "10").unwrap_err().code, Code::E5002);
+        assert!(mul("9.9e6144", "1.0").is_ok());
+        // Subnormal: 1e-6173 is below Emin and above Etiny, kept exactly.
+        let TypedValue::Dec(sub) = mul("1e-6143", "1e-30").unwrap() else {
+            panic!("a dec")
+        };
+        assert_eq!(parts(&sub), (BigInt::from(1), -6173));
+        // Below Etiny: zero at exponent Etiny, not an error.
+        let TypedValue::Dec(zero) = mul("1e-6143", "1e-40").unwrap() else {
+            panic!("a dec")
+        };
+        assert!(zero.is_zero());
+        assert_eq!(parts(&zero).1, ETINY);
     }
 
     #[test]
