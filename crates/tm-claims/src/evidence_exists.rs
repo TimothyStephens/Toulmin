@@ -186,17 +186,17 @@ pub fn cell(t: CitationType, s: Situation, retired: bool) -> Rule {
         (WholeFile, MissingNotKept) => rule(NotCheckable, false, false),
         (WholeFile, RemovableDeletedNotKept) => rule(NotCheckable, false, true),
         (WholeFile, FingerprintOnlyMissing) => rule(NotCheckable, false, false),
-        // Page: disk differs "as cells"; the removable column carries no
-        // label in 7.3's page row.
+        // Page: disk differs "as cells".
         (Page, KeptOrMatches) => rule(Check, false, false),
         (Page, DiskDiffers { kept: true }) => rule(Check, true, false),
         (Page, DiskDiffers { kept: false }) => rule(NotCheckable, true, false),
         (Page, MissingNotKept) => rule(NotCheckable, false, false),
-        (Page, RemovableDeletedNotKept) => rule(NotCheckable, false, false),
+        (Page, RemovableDeletedNotKept) => rule(NotCheckable, false, true),
         (Page, FingerprintOnlyMissing) => rule(NotCheckable, false, false),
-        // Panel: disk differs "Holds (labels are metadata); flag".
+        // Panel: disk differs, the registered-label test without the file
+        // (labels are recorded metadata), plus the flag; kept or not.
         (Panel, KeptOrMatches) => rule(Check, false, false),
-        (Panel, DiskDiffers { .. }) => rule(Holds, true, false),
+        (Panel, DiskDiffers { .. }) => rule(Check, true, false),
         (Panel, MissingNotKept) => rule(NotCheckable, false, false),
         (Panel, RemovableDeletedNotKept) => rule(NotCheckable, false, true),
         (Panel, FingerprintOnlyMissing) => rule(NotCheckable, false, false),
