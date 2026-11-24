@@ -1511,3 +1511,9 @@ an older cargo-deny locally sees it.
 **What.** 7.3: `evidence.detail` is `null` for `holds` and for a claim with no citations (nit 1); the `evidence moved: disk differs` flag goes with every outcome in the "disk differs" column of every row that names a version (nit 2). 11.17: `against` joins the list of JSON-valued columns (nit 3). `docs/spec/claims.md` and `docs/spec/formats.md` are regenerated. No code changes: `Evidence::combine` already writes `null` for no citations, `cell` gives the reserved row no flag, and the fold already stores `verdicts.against` as canonical JSON.
 
 **Why.** The review's nits 1 to 3, accepted by the owner: as written, 7.3 gave a second reader `""` for zero citations (a different hashed body from the code's `null`), its flag sentence covered the reserved row that `cell` and the tests leave unflagged, and 11.17's list omitted a column the fold writes as JSON.
+
+## 2026-11-24 P6 review nits 4 to 6: recorded as runbook rows, not fixed
+
+**What.** Runbook section 6 gains three rows: for P7, `promoted, not reviewed` on retracted and superseded claims (`read/flags.rs` hides it, or the fold clears it on retract and supersede), and `claims.citing_rows` for a claim whose final table comes from a `group` (its key map holds `by` tuples under the `from` version); for gate B, item 70's "(the glossary's claim ID)" is wrong for a promoted agent claim.
+
+**Why.** The review's nits 4 to 6, which the owner placed as rows rather than fixes: each is a choice for the phase that meets it, and none changes what P6 stores for gate A owner claims.
