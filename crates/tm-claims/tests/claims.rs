@@ -779,6 +779,61 @@ fn the_fold_writes_its_tables() {
 }
 
 #[test]
+fn an_error_verdict_clears_the_from_version_of_a_two_table_claim() {
+    // 11.16 (P6 review M1): `against` is ordered by the revision, so the
+    // `from` version leads even when it sorts second and the verdict is
+    // `error`; the null `key_map` then clears that pair's rows.
+    let mut index = index();
+    let mut tx = index.begin().unwrap();
+    let mut chain = Chain::new();
+    let mut c4 = c2("G01 has lower mean control counts than G11");
+    c4.claim_ref = ClaimRef::Owner(4);
+    c4.content.cited = vec![v("F3@v1"), v("F1@v1")];
+    c4.content.citations = vec![
+        Citation::WholeFile {
+            version: v("F3@v1"),
+        },
+        Citation::WholeFile {
+            version: v("F1@v1"),
+        },
+    ];
+    c4.content.steps = Some(json!({"steps": 1,
+        "tables": {"counts": "F3@v1", "de": "F1@v1"}, "from": "counts",
+        "ops": [{"op": "join", "v": 1, "right": "de",
+            "on": [{"left": "gene_id", "right": "gene_id"}], "kind": "inner"}]}));
+    let added = chain.line(&c4.added_event().unwrap());
+    apply(&mut tx, &added);
+    let against = claim::against(Some(v("F3@v1")), &[v("F1@v1"), v("F3@v1")]);
+    assert_eq!(against, ["F3@v1", "F1@v1"]);
+    let holds = chain.line(&checked(
+        ClaimRef::Owner(4),
+        &added.id,
+        &against,
+        "holds",
+        Some(&["G01", "G11"]),
+    ));
+    apply(&mut tx, &holds);
+    let keys = |tx: &mut IndexTx<'_>| {
+        rows(
+            tx,
+            "SELECT version, COUNT(*) FROM claim_keys WHERE ref = 'C4' GROUP BY version",
+        )
+    };
+    assert_eq!(keys(&mut tx), vec![vec![t("F3@v1"), Param::Int(2)]]);
+    let error = chain.line(&checked(
+        ClaimRef::Owner(4),
+        &added.id,
+        &against,
+        "error",
+        None,
+    ));
+    assert_eq!(error.envelope["body"]["key_map"], Value::Null);
+    assert_eq!(error.envelope["body"]["against"], json!(["F3@v1", "F1@v1"]));
+    apply(&mut tx, &error);
+    assert_eq!(keys(&mut tx).len(), 0);
+}
+
+#[test]
 fn the_fold_is_idempotent_and_ignores_other_types() {
     let mut index = index();
     let mut tx = index.begin().unwrap();

@@ -324,9 +324,12 @@ pub fn superseded_event(claim_ref: ClaimRef, replacement: ClaimRef) -> Result<Kn
     )?)
 }
 
-/// `against` in 11.16's order: the version the key map's tuples come
-/// from first, when the check has a final table, then the others in 11.10
-/// order, each once.
+/// `against` in 11.16's order, set by the checked revision and not by the
+/// verdict: `key_map_version` first, which is the revision's `from`
+/// table's version when it has `steps`, or its `cells` citation's version
+/// when `steps` is null and it has one, for every verdict (`error`
+/// included); then the others in 11.10 order, each once. With neither,
+/// pass `None` and every handle is in 11.10 order.
 #[must_use]
 pub fn against(key_map_version: Option<VersionHandle>, others: &[VersionHandle]) -> Vec<String> {
     let mut rest: Vec<String> = others
