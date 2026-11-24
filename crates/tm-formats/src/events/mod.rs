@@ -224,6 +224,9 @@ impl KnownEvent {
                 ));
             }
         }
+        if ty == EventType::ClaimChecked {
+            check_against(&m["against"])?;
+        }
         Ok(KnownEvent {
             ty,
             tv,
@@ -280,6 +283,32 @@ pub enum Event {
 
 fn e(at: &str, msg: impl Into<String>) -> Error {
     Error::at(Code::E1002, at, msg)
+}
+
+/// `claim.checked.against` (11.16): distinct handles, the entries after
+/// the first in 11.10 order. Which entry comes first is the revision's
+/// and is not checkable here. The list form was checked before.
+fn check_against(v: &Value) -> Result<(), Error> {
+    let handles: Vec<&str> = v
+        .as_array()
+        .map(|a| a.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    for (i, h) in handles.iter().enumerate().skip(1) {
+        let at = ptr("/body/against", i);
+        if handles[..i].contains(h) {
+            return Err(e(&at, format!("{h} appears twice in `against`")));
+        }
+        if i >= 2 && crate::sort_order::cmp_text(h, handles[i - 1]).is_lt() {
+            return Err(e(
+                &at,
+                format!(
+                    "`against` after its first entry is in 11.10 order; {h} sorts before {}",
+                    handles[i - 1]
+                ),
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn check_object(
@@ -584,4 +613,31 @@ fn check_manifest(v: &Value, at: &str) -> Result<(), Error> {
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn against_is_distinct_and_sorted_after_its_first_entry() {
+        let ok = |a: Value| check_against(&a).map_err(|e| e.field);
+        assert_eq!(ok(json!([])), Ok(()));
+        assert_eq!(ok(json!(["F7@v2"])), Ok(()));
+        assert_eq!(ok(json!(["F7@v2", "F1@v1", "F2@v1"])), Ok(()));
+        assert_eq!(ok(json!(["F3@v1", "F1@v1"])), Ok(()));
+        assert_eq!(
+            ok(json!(["F7@v2", "F2@v1", "F1@v1"])),
+            Err(Some("/body/against/2".into()))
+        );
+        assert_eq!(
+            ok(json!(["F1@v1", "F2@v1", "F1@v1"])),
+            Err(Some("/body/against/2".into()))
+        );
+        assert_eq!(
+            ok(json!(["F1@v1", "F1@v1"])),
+            Err(Some("/body/against/1".into()))
+        );
+    }
 }
