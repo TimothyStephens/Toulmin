@@ -1104,9 +1104,14 @@ impl Gen {
     fn num_literal(&mut self, wish: ExprWish) -> E {
         if wish.out_of_range {
             return E::Exp(
-                (*self
-                    .rng
-                    .pick(&["1e1000000", "1e-1000000", "9e1000001", "1.5E+1000000"]))
+                (*self.rng.pick(&[
+                    "1e6145",
+                    "1e-6144",
+                    "9.9e6145",
+                    "1.5E+6145",
+                    "0.1e-6143",
+                    "1e1000000",
+                ]))
                 .to_owned(),
             );
         }
@@ -2395,28 +2400,28 @@ impl Gen {
                 };
                 let (t, mut p) = self.start(&wish);
                 let text = if self.rng.below(6) == 5 {
-                    // Underflow, not an error: a `dec` times `1e-999999` is
-                    // subnormal, and below `Emin` far enough it rounds to
-                    // zero (11.18.2 Domain row).
+                    // Underflow, not an error: a `dec` times `1e-6143` is
+                    // subnormal, and below `Emin` -6143 far enough it rounds
+                    // to zero (11.18.2 Domain row; ruling 56).
                     let dec_col = t.first_of(SpecType::Dec);
                     let col_ref = col_text(&mut self.rng, &dec_col);
                     let shape = *self.rng.pick(&[
-                        "{d} * 1e-999999",
-                        "{d} * 1e-999999 / 7",
-                        "({d} + 1) * 1e-999999",
-                        "{d} * 1e-999999 * 1e-999999",
-                        "{d} / 1e999999 / 1e999999",
+                        "{d} * 1e-6143",
+                        "{d} * 1e-6143 / 7",
+                        "({d} + 1) * 1e-6143",
+                        "{d} * 1e-6143 * 1e-6143",
+                        "{d} / 1e6144 / 1e6144",
                     ]);
                     shape.replace("{d}", &col_ref)
                 } else {
                     let int_col = t.first_of(SpecType::Int);
                     let col_ref = col_text(&mut self.rng, &int_col);
                     let shape = *self.rng.pick(&[
-                        "{x} * 9.9e999999 * 10",
-                        "({x} + 1) * 1e999999 * 100",
-                        "{x} * 1E999999 * {x} * 1e999999",
-                        "abs({x}) * 9e999999 * -100",
-                        "coalesce({x}, 1) * 5e999999 * 2",
+                        "{x} * 9.9e6144 * 10",
+                        "({x} + 1) * 1e6144 * 100",
+                        "{x} * 1E6144 * {x} * 1e6144",
+                        "abs({x}) * 9e6144 * -100",
+                        "coalesce({x}, 1) * 5e6144 * 2",
                     ]);
                     shape.replace("{x}", &col_ref)
                 };
