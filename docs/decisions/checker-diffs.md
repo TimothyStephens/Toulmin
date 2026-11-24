@@ -238,3 +238,29 @@ Host runs of the `malformed` bucket alone, before the CI run: `gencases` at seed
 - Sentences: item 47, "an integer wider than 38 digits is `E3102`" (`int` maps to `Decimal128(38,0)`); 11.6, `int` values are of arbitrary size; 11.18.2 Domain, as above. Item 47 is not among the sections `docs/spec/checker.md` copies, so the case writer and the Python checker never saw the limit, and the Domain sentence read as if a cell could hold such an `int`.
 - **Ruling (2026-11-23).** Rust is right. Item 47 is not among the sections `docs/spec/checker.md` copies, so the case writer and the Python checker never saw the limit. 11.7 gains: an `int` cell wider than 38 digits is `E3102` (item 47 maps `int` to `Decimal128(38,0)`); 11.6's arbitrary size applies to computed `int` values, which never leave Rust or Python as Arrow, copied into 11.7 so `checker.md` carries it, as ruling 12 did for the NaN tokens. The Domain sentence gains "(only a computed `int` can be: a cell is at most 38 digits)". Python's `tables.py` refuses an `int` cell wider than 38 digits with `E3102`, field null, the message naming the row and column. The independent case writer rewrites the case so the huge `int` comes from a `derive`.
 - Applied 2026-11-23: the design and both spec copies carry the two sentences (89f54a5). `tables.py` refuses an `int` cell whose absolute value has more than 38 digits; 38 nines in either sign is read, `±10^38` is `E3102` with `field` null and `row <r>, column '<name>'` in the message. On `log_of_int_beyond_double` the Python checker now gives `E3102` like Rust, so the case fails `--check` on both sides until the case writer rewrites it; every other conformance directory passes. The item 89 `logexp` arm from f2055ae draws its 310-digit `int` as a literal inside the `derive` expression, not as a cell, so it is a computed `int` and agreed on both sides in the 3,400-case run; it is unchanged.
+
+## Review of p7-context (2026-11-24)
+
+From `reviews/2026-11-24-p7-context.md`, findings A and B: two differences that predate the branch the review covered, found while probing ruling 56's literal-range check.
+
+### D21. A literal outside the context's range beside a second fault: Python `E6004` at the expression, Rust the second fault
+
+- Cases: the review's four, run as steps schema cases (`reference/checker/validate.py`, and `Steps::from_json` then `Steps::check` in `tm-formats`, which needs no DuckDB) over one table `t` (`k` `str` key, `x` `dec` scale 2):
+
+  | Case | Python | Rust |
+  | --- | --- | --- |
+  | a. `filter` `x < 1e6145 +` | `E6004` `/ops/0/where` | `E6006` `/ops/0/where` |
+  | b. `filter` `x < 1e6145`, then a `sort` with no `by` | `E6004` `/ops/0/where` | `E6002` `/ops/1/by` |
+  | c. `filter` `nope < 1e6145` | `E6004` `/ops/0/where` | `E6005` `/ops/0/where` |
+  | d. `derive` `as` `x` (already present), `expr` `x * 1e6145` | `E6004` `/ops/0/expr` | `E6002` `/ops/0/as` |
+
+- Field: `error`. Python checks a numeric literal's range as `exprs.parse` reads it, in the steps' shape pass (`ops._expression`); Rust parses in the shape pass without the check (`steps.rs`, `expr::parse`) and makes it in `Expr::type_of`, in the pass against the cited specs, where a `derive` checks its `as` before its `expr`. The difference dates from ruling 36.
+- Sentences: 11.8, "Checks that need no parse spec are made wherever steps are read; `E6005`, the operand types, and the join cover are checked against the cited tables' parse specs before anything runs", and its order "the steps' shape, op by op; the steps against the cited specs, op by op". 11.18.1's range check needs no parse spec. D13 settled a shape check against a schema check the same way.
+- **Ruling (2026-11-24).** The literal range check is a shape check (11.8: "checks that need no parse spec are made wherever steps are read"; precedent D13). Rust changes; Python already does this.
+
+### D22. A literal whose exponent has more than 18 digits: Python crashes, Rust `E6004`
+
+- Case: `filter` `x < 1e99999999999999999999` (a 20-digit exponent) on the table of D21. Python: `refcheck.py` and `validate.py` exit 1 with `decimal.InvalidOperation` from `Decimal(text)` in `exprs.number_literal`, the exponent being past libmpdec's `MAX_EMAX` (999999999999999999, 18 digits). Rust: `E6004` `/ops/0/where` (`adjusted_exponent` gives `None` when the exponent does not fit an `i64`).
+- Field: `run` (Python gives no output).
+- Sentence: 11.18.1, "A numeric literal whose adjusted exponent ... is above `Emax` 6144 or below `Emin` -6143 is `E6004` at validation". The literal is out of range; only the reference implementation's way of computing the adjusted exponent fails.
+- **Ruling (2026-11-24).** Python checks an exponent's digit count on the text before calling `Decimal`, so `x < 1e99999999999999999999` is `E6004`, not a crash. A ruling-specified exception to the `reference/checker/` no-edit rule.
