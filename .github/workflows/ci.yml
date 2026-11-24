@@ -124,16 +124,27 @@ jobs:
           python3 -I reference/formats/test_formats.py
       - name: checker
         run: |
-          if [ ! -f reference/checker/refcheck.py ]; then echo "::notice::no-op until P5: reference/checker absent"; exit 0; fi
-          python3 -I reference/checker/refcheck.py conformance/checker
-          python3 -I reference/checker/validate.py conformance/formats/steps/invalid conformance/formats/assertions
+          # refcheck.py takes one case directory; validate.py takes schema
+          # case files (reference/checker/README.md).
+          for d in conformance/checker/cases/*/ conformance/checker/assertions/eval/*/; do
+            python3 -I reference/checker/refcheck.py "$d" --check
+          done
+          python3 -I reference/checker/validate.py --check conformance/formats/steps/invalid/*.json conformance/formats/steps/valid/*.json
+          python3 -I reference/checker/validate.py --check conformance/formats/assertions/schema/*.json
 
   differential:
     name: differential (${{ matrix.runner }})
-    # Two runner classes of different CPU generations (item 89).
+    # Two GitHub-hosted runner classes with different CPUs (item 89):
+    # ubuntu-24.04 is x64 and ubuntu-24.04-arm is arm64, so DuckDB's
+    # runtime-selected code paths differ between the two. GitHub does not
+    # let a workflow choose an x64 CPU generation (docs/decisions.md,
+    # 2026-11-18). Both legs take the run id as the seed, so both see the
+    # same 10,000 cases; a differing case is kept under target/differential/
+    # and uploaded.
     strategy:
+      fail-fast: false
       matrix:
-        runner: [ubuntu-22.04, ubuntu-24.04]
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -145,8 +156,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: |
-          if [ ! -x scripts/differential.sh ]; then echo "::notice::no-op until P5: scripts/differential.sh absent"; exit 0; fi
-          scripts/differential.sh 10000
+          scripts/differential.sh 10000 "$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: differential-${{ matrix.runner }}
+          path: target/differential/
+          if-no-files-found: ignore
 
   deny-audit:
     name: cargo deny and cargo audit

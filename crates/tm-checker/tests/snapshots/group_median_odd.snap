@@ -5,5 +5,5 @@ source: crates/tm-checker/tests/snapshot_sql.rs
 SELECT "row" FROM "input.sc" ORDER BY "c0" COLLATE "binary" ASC NULLS FIRST;
 
 -- step0: c0 = "id" (str), c1 = "score" (int), c2 = "grp" (str); key "id"
--- step0 also: key = the row's key tuple as canonical JSON (str), d1 = "score" as DOUBLE (mean, median)
-SELECT first("row" ORDER BY "row") AS "rep", list("row" ORDER BY "row") AS "members", count(*) AS "member_count", 'sha256:' || sha256('[' || string_agg("key", ',' ORDER BY "key" COLLATE "binary") || ']') AS "member_keys_hash", median("d1") AS "a0" FROM "step0" GROUP BY "c2" ORDER BY "c2" COLLATE "binary" ASC NULLS FIRST;
+-- step0 also: key = the row's key tuple as canonical JSON (str)
+SELECT first("row" ORDER BY "row") AS "rep", list("row" ORDER BY "row") AS "members", count(*) AS "member_count", 'sha256:' || sha256('[' || string_agg("key", ',' ORDER BY "key" COLLATE "binary") || ']') AS "member_keys_hash", NULL AS "a0" FROM "step0" GROUP BY "c2" ORDER BY "c2" COLLATE "binary" ASC NULLS FIRST;

@@ -1,0 +1,21 @@
+{
+  "steps": 1,
+  "tables": {
+    "uf": "F1@v1"
+  },
+  "from": "uf",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "y",
+      "expr": "x * 1e-999999 * 1e-30"
+    },
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "z",
+      "expr": "y * 1e-5"
+    }
+  ]
+}

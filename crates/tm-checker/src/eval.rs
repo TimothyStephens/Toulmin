@@ -543,10 +543,33 @@ pub fn sum<'a>(
     Ok(acc.unwrap_or(TypedValue::Missing))
 }
 
-/// The double of a value for `mean` and `median` in `DuckDB`.
+/// The double of a value for `mean` in `DuckDB` and `median` here.
 #[must_use]
 pub fn double_or_none(v: &TypedValue) -> Option<f64> {
     if is_missing(v) { None } else { to_double(v) }
+}
+
+/// `median` over a group's members (11.18.2 `group`): the present
+/// members' doubles sorted, the middle one for an odd count and
+/// `lo + (hi - lo) * 0.5` of the two middle ones for an even count,
+/// rounded to 15 significant digits; `missing` when no member is present.
+/// Computed here and not in `DuckDB`, whose `median` loses a subnormal
+/// result (checker-diffs D4, ruling 2026-11-20).
+#[must_use]
+pub fn median<'a>(values: impl Iterator<Item = &'a TypedValue>) -> TypedValue {
+    let mut xs: Vec<f64> = values.filter_map(double_or_none).collect();
+    if xs.is_empty() {
+        return TypedValue::Missing;
+    }
+    xs.sort_by(f64::total_cmp);
+    let n = xs.len();
+    let r = if n % 2 == 1 {
+        xs[n / 2]
+    } else {
+        let (lo, hi) = (xs[n / 2 - 1], xs[n / 2]);
+        lo + (hi - lo) * 0.5
+    };
+    from_double(r)
 }
 
 #[cfg(test)]
@@ -560,6 +583,28 @@ mod tests {
 
     fn t(r: Result<BigDecimal, Overflow>) -> String {
         dec_text(&r.unwrap())
+    }
+
+    #[test]
+    fn median_keeps_a_subnormal_and_interpolates_the_even_case() {
+        // Checker-diffs D4: 5e-324 twice, three and four times is
+        // 4.94065645841247e-324, written positionally.
+        let sub = format!("0.{}494065645841247", "0".repeat(323));
+        let v = TypedValue::Dec(d(&format!("0.{}5", "0".repeat(323))));
+        let text = |m: TypedValue| dec_text(&m.as_decimal().unwrap());
+        for n in [2, 3, 4] {
+            let m = median(std::iter::repeat_n(&v, n));
+            assert_eq!(text(m), sub, "count {n}");
+        }
+        let one = TypedValue::Int(1.into());
+        let two = TypedValue::Dec(d("2.0"));
+        let four = TypedValue::Int(4.into());
+        assert_eq!(text(median([&one, &four].into_iter())), "2.5");
+        assert_eq!(text(median([&four, &one, &two].into_iter())), "2");
+        assert_eq!(
+            median([&TypedValue::Missing, &TypedValue::Nan].into_iter()),
+            TypedValue::Missing
+        );
     }
 
     #[test]

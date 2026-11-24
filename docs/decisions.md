@@ -1279,3 +1279,189 @@ the cell `E3102` field null, so nothing in tm-files changed for ruling 54.
 **What.** The 28 `observed.p1.json` files under `conformance/checker/assertions/eval/` are deleted.
 
 **Why.** They held the P1 Rust author's answers, kept so the P4 independent case writer could not mistake them for the spec-derived answers. That session wrote `expected.json` beside each from `checker.md` alone, and all 28 pairs agreed (P4 builder's rule 3d diff, confirmed by the P4 review). The agreement is recorded; the files are now a second answer per case and a trap for P5.
+
+## 2026-11-18 P5: the case generator's buckets, seeding, and `gen.json` (item 89)
+
+**What.** Item 89 now fixes what the design left open for
+`examples/gencases.rs`: its invocation (`--out DIR --n N [--seed SEED]
+[--start I]`); sixteen named coverage buckets assigned round-robin by case
+index, so N = 10,000 gives 625 cases per bucket; a per-case SplitMix64
+stream seeded from `(SEED, index)`, so a case does not depend on N and one
+case can be regenerated alone; a `gen.json` file in each case directory
+holding `{"seed","index","bucket"}`; how values are drawn (small domains
+for ties, every spec type, NFC and NFD spellings, backticked names,
+exponent cells, NaN and Inf tokens under both settings); three buckets
+that produce errors on purpose (`E6004`, `E3102`, `E5002`); and a redraw
+loop against `tm-formats`' validation for every other bucket, so nearly
+every case runs.
+
+**Why.** The design said what the generator must cover and nothing about
+how, and the P5 brief's design-first rule makes each of those choices a
+design edit before code. Round-robin buckets make the count per bucket a
+property of N alone, which the P5 report can state. The per-case seed
+makes a differing case reproducible from its `gen.json` without rerunning
+the whole suite. Validation-with-redraw keeps the suite about semantics
+rather than about validation refusals, which the conformance suites
+already cover; the three error buckets stay because rulings 36, 53, and
+16 make those errors Checker behaviour the two implementations must share.
+No `rand` dependency: SplitMix64 is a dozen lines, and D24 fixes the
+dependency list.
+
+Seventeen buckets since 2026-11-20 (`malformed` added), so N = 10,000
+gives 588 or 589 cases per bucket.
+
+## 2026-11-18 P5: both refcheck implementations print to standard output (item 59)
+
+**What.** Item 59 said the example binary "writes `observed.json`" beside
+the case; the P4 binary did that and printed nothing. Item 59 and item 89
+now state one contract for both implementations: one case directory as the
+only argument, the item 92 `expected.json` object on standard output, exit
+0 whatever the verdict, non-zero with a message on standard error only when
+the case cannot be run at all. `examples/refcheck.rs` is changed to match.
+
+**Why.** The Python side was given `python3 refcheck.py CASE_DIR` with the
+object on standard output, and a differential script that reads one side
+from a file and the other from a pipe is two code paths for one
+comparison. Writing into the case directory also puts a file item 92 does
+not name next to the inputs the other implementation is about to read.
+
+## 2026-11-18 P5: the differential script's seed, retention path, and runner classes (item 89, Verification Plan)
+
+**What.** `scripts/differential.sh N [SEED]` takes its seed from the
+command line, defaulting to the current Unix time, and prints it first;
+differing cases are kept under `target/differential/<SEED>/<case>/` with
+both outputs and both standard errors; the CI job passes the workflow
+run's id as the seed and uploads that directory as an artifact. The two
+runner classes are `ubuntu-24.04` (x64) and `ubuntu-24.04-arm` (arm64).
+
+**Why.** 11.6 asks for "the same cases on two CPU generations"; one seed
+shared by both matrix legs is what makes them the same cases, and the run
+id is the one value both legs have and a reader can find later. A fresh
+seed per run explores more of the space; any difference is a defect and
+its case is kept, so the suite is no less reproducible for it. The
+retention path is under `target/` because it is build output in the
+git-ignored place for build output, and it is named by seed so two runs
+do not overwrite each other. **Deviation:** GitHub-hosted runners do not
+let a workflow choose an x64 CPU generation (the x64 pool is one class
+whatever the image), so the second class is arm64 rather than an older
+x64 generation. It still meets the purpose, which is to run DuckDB's
+runtime-selected code paths on two different CPUs, and it is the only
+second CPU GitHub offers for Linux. The design text names both classes and
+says why.
+
+## 2026-11-20 P5: rulings D3, D4, D5 and two clarifications edit 11.6, 11.9, 11.18.2, 11.18.3, and item 92
+
+**What.** After the first two 10,000-case differential runs
+(`docs/decisions/checker-diffs.md`, entries D1 to D5), the owner ruled and
+the design changed first: 11.9 and the 11.18.3 `compare_rows` row make the
+operator and `tol` check static against the left column's type (D3); 11.6
+says a subnormal double is a value and is never flushed to zero and that
+an integral double is written `7`, not `7.0` (D4, D2); the 11.18.2 Where
+and `group` rows move `median` from DuckDB to Rust over the member doubles,
+with the formula stated (D4); item 92 says every table file is
+`tables/<name>.csv` whatever its format (D1) and that a harness parses
+every table before validating the steps and the assertion (D5). The
+Python reference checker changed twice under ruling-specified exceptions
+to its no-edit rule: the `7.0` form (D2) and the parse-first order (D5).
+
+**Why.** D3: whether a claim is well-formed cannot depend on which rows a
+version of the data contains, and the M5 ruling already made the check
+static for `value`. D4: DuckDB's `median` interpolates between the two
+middle doubles in a way that loses a subnormal result (`5e-324` twice gives
+`0`, `1e-310` twice loses low bits), while `avg` over the same members and
+`median` over an odd count are right, so the loss is inside the
+interpolation and the member rows DuckDB already lists for `sum` are the
+clean source; a 324-digit positional `dec` is accepted because the
+no-exponent rule stands for every value (changing it would change every
+hash) and the static view may display it in scientific notation (ruling
+32). D5: the product parses a table at `table.spec`, before any claim
+exists, so a claim is never validated against a table that did not parse.
+
+## 2026-11-20 P5: the reference checker's README readings become design rules
+
+**What.** `reference/checker/README.md` lists 22 readings the Python
+session took where `checker.md` was silent. Readings 11 and 15 are the D5
+and D3 rulings above. Of the other 20, the ones both implementations
+already follow are now one sentence each in the section they concern:
+reading 4's agreeing half and 19 in 11.8; 9, 12, and 21's header and
+datetime parts in 11.7; 16's `/op` half and 17's codes in 11.9; 5, 7, 8,
+and 13 in the 11.18.2 Types, `group`, Domain, and Missing rows; 14 in
+11.18.4; 22 in item 92, inline, replacing the pointer to
+`crates/tm-formats/README.md`. The readings the two implementations do
+not share went to `docs/decisions/checker-diffs.md` as entries D6 to D17
+instead of into the design: 1, 2, 3, 4's other half, 6, 10, 16's pointer,
+17's phase, 18, 21's pointer, and 20 (moot once D16 is ruled). Reading
+21's blank-line rule is in neither, since what Rust does with a blank
+line in a CSV was not established.
+
+**Why.** A fourth implementer should not rediscover a reading that both
+implementations already share, and the design is where it is found. A
+reading only one side follows is not yet a rule: writing it into the
+design would put one implementation out of conformance before the owner
+chose a side, which the P5 brief ("fix nothing until the owner rules")
+forbids, so each is an entry with a proposed sentence. The source is the
+README's list, kept there so the code and its assumptions stay together;
+the README itself was not edited beyond reading 11, which the D5 ruling
+changed.
+
+## 2026-11-20 P5: rulings D6 to D18 on the latent differences
+
+**What.** The owner ruled on the twelve latent differences the README readings exposed (`docs/decisions/checker-diffs.md` D6 to D17) and one more found while ruling (D18, blank lines). The design changed first: 11.7 (no trimming in any column type; blank lines skipped; `E3103` at `/columns/<i>/name`), 11.8 (the version handle form; a `tables` entry with no spec; repeated names in a column list; a `v` that is not a positive integer and an empty `as` as `E6004`; the finer `E6002` pointers for `group` and `join`; the within-op check order and `as` before `expr`), 11.9 (`/op` before `/tol`; `/expected/1` for `between` bounds; `list`, `nan`, and `inf` in `row` refused at the shape check), the 11.18.2 Precision row (unary minus and `abs` apply the context), and item 92 (the `observed.p1.json` mention, removed on 2026-11-18, is gone). Item 89 gains a generator bucket that draws malformed ops. Rust changes for D6, D8, D9, D11, D13, D14, and D17's order; Python for D7, D10, D12, D15, D16, and D17's codes, under the same ruling-specified exception as D2 and D5.
+
+**Why.** Each is a place the specification was silent and the two implementations chose differently; none showed in 30,000 generated cases because the generator does not draw the inputs. A fourth implementer should find each decided, and the differential should be able to reach them, which the new bucket gives it.
+
+
+## 2026-11-20 P5: ruling D19, arithmetic runs in the expression's static type
+
+**What.** The CI differential (workflow run 44803194352, seed 44803194352) found one differing case, `c02857-derive`, with the same hashes on the x64 and the arm64 runner: a `derive` whose expression multiplies `coalesce` over an `int` and a `dec` column, where Rust rounded the product at 34 significant digits and the Python reference multiplied two integral run-time values as `int`, exactly. The owner ruled Rust right (`docs/decisions/checker-diffs.md` D19) and the design changed first: the 11.18.2 Precision row says arithmetic is performed in the expression's static type, so a `dec`-typed operand is a `dec` at run time whatever branch `coalesce` took, and only an expression whose static type is `int` is exact and unbounded. The Python reference checker changed under a ruling-specified exception to its no-edit rule, as for D2 and D5: `exprs.bind` marks every `coalesce` whose static type is `dec`, and the value it chooses is a `Decimal` in the context from then on; `ops.py` binds a `filter` or `derive` expression once per step before evaluating it. The conformance case `derive_coalesce_static_dec` holds an 18-digit `int` cell squared through `coalesce`. Its `expected.json` was written by this session through `conformance/checker/tools/write_cases.py`, not by the independent case writer item 87 names; its rows are hand-derived in `conformance/checker/cases/NOTES.md` from the Precision row, and the file was then checked equal to both implementations, the Rust `refcheck` example field for field and the Python checker with `--check`. The generator's `digit34` bucket draws the shape in one arm of six.
+
+**Why.** The static type is what 11.18.2's Types row assigns and what the `derive` column is declared as; the value a row's `coalesce` happens to choose cannot change the type of the arithmetic around it, or two rows of one column would be computed under different rules and a reader could not tell from the steps which rule applied. Rust binds the expression once with the static type, which is the simpler model; the Python side evaluated by run-time tag, which agreed everywhere except where an `int` chosen under a `dec` type met a product past 34 digits.
+
+## 2026-11-23 P5: review follow-ups (reviews/2026-11-23-p5-reference-design-decisions.md)
+
+**What.** The P5 design-decisions review's verdict was merge, with four minors and three nits, each applied as follows. m1: the D19 entry above now records who wrote `derive_coalesce_static_dec`'s `expected.json` and how it was checked; the case is unchanged. m2: `docs/decisions/checker-diffs.md`'s CI differential section records the three host runs of the `malformed` bucket (seeds 1795118323, 2, and 3; 459, 444, and 436 of 588 refused by `tm_checker::rules::validate`; no `error` or `run` row). m3: item 89 gains, design first, an underflow arm of the `overflow` bucket, a `log` of a 310-digit `int` in `logexp`, and a second undefined member in the `malformed` bucket's bad-`scope` defect, and `gencases.rs` draws them; no conformance case is written here, since the independent case writer adds one for each of the two semantic rules (Domain row: underflow is subnormal then zero and not an error; an `int` too large for a double gives `missing` under `log`) after this lands. m4: the `[ ! -f reference/checker/refcheck.py ]` guards in the python-crosscheck and differential CI jobs are deleted, since item 87 landed; `scripts/differential.sh` keeps its own exit-1 check. Nits: the P5 checkpoint row of the phase table states the one-case-directory `refcheck` contract and the schema-file arguments of `validate.py`; `reference/checker/README.md` names `reference/formats/`, `conformance/formats/steps/`, and `conformance/formats/assertions/` as the repository has them; "sixteen" becomes seventeen in checker-diffs D17's Applied line.
+
+**Why.** The README's `reference-formats/`, `formats-steps`, and `formats-assertions` names were the Python session's working layout, as the import path 5f0eb4e corrected was; 5f0eb4e and this README edit are path-only and change no behaviour. A guard that makes a job a no-op when a file is absent hides the job's failure once the file is expected, so it goes when the phase that adds the file lands. The m1 note matters because item 87 makes the independence of `expected.json` from both implementations the thing that makes a conformance failure informative, and this one case does not have that independence: it is a regression case for a ruled difference, checked against both sides, and the record should say so.
+
+## 2026-11-23 cargo-deny ignores RUSTSEC-2026-0595 (parquet bloom filters in encrypted files); the RUSTSEC-2026-0543 ignore is removed
+
+**What.** `deny.toml` `[advisories] ignore` lists RUSTSEC-2026-0595 by ID,
+with its reason, and no longer lists RUSTSEC-2026-0543. Every other
+advisory still fails the check. Owner's decision, 2026-11-23.
+
+**Why.** RUSTSEC-2026-0595, published 2026-11-23, reports that parquet
+writes bloom filters in plaintext when it writes an encrypted file;
+patched versions start at 60.2.0, and item 1 pins parquet with arrow at
+exactly 60.1.0. Toulmin writes Parquet only for the parse cache (item 48),
+in `crates/tm-files/src/parse_cache.rs`, through `ArrowWriter` with
+default properties: no encryption and no bloom filters, so the vulnerable
+path is unreachable. Revisit at the next arrow upgrade: drop the entry
+once parquet is 60.2.0 or later. The chrono ignore is dead, not because
+the advisory was withdrawn or chrono moved: RUSTSEC-2026-0543 is unchanged
+in the advisory database and chrono is still 0.4.45, reached only through
+arrow. cargo-deny 0.22.0 (2026-11-19, the version `cargo-deny-action@v2`
+installs) changed `advisories.unmaintained` to default to `workspace`
+scope, so an unmaintained crate is reported only when a workspace crate
+depends on it directly, and chrono no longer matches. Under cargo-deny
+0.21 and earlier the chrono advisory fails the check again; anyone running
+an older cargo-deny locally sees it.
+
+## 2026-11-23 P5: ruling D20, an `int` cell is at most 38 digits
+
+**What.** The independent case writer's `log_of_int_beyond_double` (b48e8be) holds a 401-digit `int` cell. Rust refuses it with `E3102` under item 47 (`int` is `Decimal128(38,0)`); the Python reference checker read it at full width. The owner ruled Rust right (`docs/decisions/checker-diffs.md` D20) and the design changed first: 11.7 says an `int` cell wider than 38 digits is `E3102` and that 11.6's arbitrary size applies to computed `int` values, and the 11.18.2 Domain row says only a computed `int` can be too large for a double. The Python reference checker changed under a ruling-specified exception to its no-edit rule, as for D2 and D5: `tables.py` refuses an `int` cell wider than 38 digits with `E3102`, field null, the message naming the row and column. `conformance/checker/` is not touched; the case writer rewrites the case.
+
+**Why.** The limit was a fact of the Rust parser's Arrow mapping in item 47, which `docs/spec/checker.md` does not copy, so the two independent readers of that file could not know it; a fourth implementer reading only `checker.md` would make the same mistake. Writing it into 11.7 puts it where both readers look, as ruling 12 did for the NaN tokens.
+
+**Completed 2026-11-23.** The re-audit found that `tables.py` called `int(text)` before the 38-digit test, so a cell over CPython's 4,300-digit int-string limit raised `ValueError` (exit 1) instead of giving `E3102`. `tables.py` now tests the width on the text, `len(text.lstrip("-")) > 38` (`INT_RE` admits no leading zeros, so this is the digit count), before calling `int(text)`. The owner ruled this part of D20's own text, under the same ruling-specified exception.
+
+## 2026-11-23 P5: ruling on AMBIGUITIES 43, the scale of an underflowed result; the million-digit value deferred
+
+**What.** The independent case writer's `conformance/checker/cases/AMBIGUITIES.md` item 43 asked what scale an underflowed result has, and took the General Decimal Arithmetic exponent for `derive_underflow_subnormal_then_zero`. The owner ruled it decided by existing text, and the 11.18.2 Precision row now says so: "An underflowed result keeps the exponent General Decimal Arithmetic gives it, so its scale is the negative of that exponent; a result that underflows to zero is written at that scale." `docs/spec/checker.md` is regenerated from the design. No code and no case changes. `docs/design/runbook-to-p1.md` section 6 gains a row: the context (`Emax` 999999, `Emin` -999999) with positional writing lets one `derive` store a value of a million digits, and the underflow case's `expected.json` is 2 MB; the choice between narrowing the context and capping a value's written length with an error code surfaces at P7, before the first `claim.checked` is written.
+
+**Why.** Ruling 35 says underflow follows the General Decimal Arithmetic specification, which fixes the exponent (Etiny, -1000032, for a subnormal or an underflowed zero), and decision 3's clarification keeps a zero's scale, so the case writer's reading is the only one the text allows; the sentence states it where a fourth implementer looks, without changing what either implementation does. The size is a real cost but not a P5 one: narrowing the context to decimal128's 6143 would reopen rulings 35 and 36 and regenerate their cases, and a length cap needs an error code, so it is deferred to the point after which it cannot be made freely: once P7 writes a record, either change breaks stored events.
+
+## 2026-11-23 P5: re-audit follow-ups (reviews/2026-11-23-p5-reference-reaudit.md)
+
+**What.** The P5 re-audit's verdict was merge, with three small follow-ups. First (m3), D17's written order: the `malformed` bucket's undefined-member defect set `rank`'s `scope` to `grp` and added `zz` then `aa`, but 11.8 checks `rank`'s `scope` before undefined members, so both checkers reported `/ops/<i>/scope` and the members' order was never compared. Item 89 now names two shapes, design first (570a4cf): an undefined member beside a bad `scope` (the `scope` is reported first), and, with `scope` valid, two undefined members written out of sorted order (the first written is reported); the repeated-name defect sometimes repeats a `sort` `by` column. `gencases.rs` draws one shape or the other per case with even odds, keeping seventeen defects (0d8ef93); a `sort` `by` column is repeated in half the repeated-name cases that have a `sort`, a `select` column otherwise. `docs/spec/` does not copy item 89, and spec-drift passes. Second, `tables.py` tested an `int` cell's width after `int(text)`; it now tests the text first (661f33f), recorded under the D20 entry above. Third, the 2026-11-18 buckets entry now states the seventeen buckets and 588 or 589 cases per bucket at N = 10,000.
+
+**Why.** A defect whose second check is never reached tests nothing about that check: the order in which undefined members are reported is a ruling (D17) that the differential could not see. Splitting the shapes keeps the scope-first rule covered and makes the written order observable. The `int` width belongs to the text because an `int` cell is at most 38 digits (11.7), and converting first lets an interpreter limit decide the outcome. The buckets entry predated the `malformed` bucket, and its "sixteen" and "625" were stale.

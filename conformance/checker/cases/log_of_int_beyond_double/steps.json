@@ -1,0 +1,26 @@
+{
+  "steps": 1,
+  "tables": {
+    "hx": "F1@v1"
+  },
+  "from": "hx",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "p",
+      "expr": "x * x * x * x * x * x * x * x * x"
+    },
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "l",
+      "expr": "log(p)"
+    },
+    {
+      "op": "filter",
+      "v": 1,
+      "where": "l >= 0"
+    }
+  ]
+}

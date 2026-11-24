@@ -1,0 +1,15 @@
+{
+  "steps": 1,
+  "tables": {
+    "cw": "F1@v1"
+  },
+  "from": "cw",
+  "ops": [
+    {
+      "op": "derive",
+      "v": 1,
+      "as": "d1",
+      "expr": "coalesce(i, x) * coalesce(i, x)"
+    }
+  ]
+}

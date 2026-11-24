@@ -232,6 +232,19 @@ table(
 )
 
 table(
+    "cw",
+    "id,i,x\na,100000000000000001,NA\nb,NA,2.5\nc,3,4.0\nd,NA,NA\n",
+    spec([col("id", "str"), col("i", "int"), col("x", "dec", 1)], ["id"]),
+    ["id", "i", "x"], ["id"],
+    {
+        "a": [S("a"), I(100000000000000001), M],
+        "b": [S("b"), M, D("2.5")],
+        "c": [S("c"), I(3), D("4.0")],
+        "d": [S("d"), M, M],
+    },
+)
+
+table(
     "ev",
     "id,d,d2,ts,k\n"
     "a,2026-01-05,2026-01-01,2026-01-05T10:00:00Z,g1\n"
@@ -1029,6 +1042,22 @@ case("derive_rounds_at_34_digits", ["big"], "big", [derive("sq", "x * x")],
            "scale 1 (rounding overrides the sum-of-scales rule). Adjusted exponent 32, far below Emax "
            "999999, so no Overflow. a.sq equals the rounded value: holds.")
 
+case("derive_coalesce_static_dec", ["cw"], "cw", [derive("d1", "coalesce(i, x) * coalesce(i, x)")],
+     a_value([S("a")], "d1", "eq", D("10000000000000000200000000000000000")), "holds",
+     [(4, "Add column d1 = coalesce(i, x) * coalesce(i, x); 4 rows.")],
+     cols_of("cw", add=["d1"]),
+     rows("cw", ["a", "b", "c", "d"], add={"a": {"d1": D("10000000000000000200000000000000000")},
+                                           "b": {"d1": D("6.25")}, "c": {"d1": D("9")},
+                                           "d": {"d1": M}}), ["id"],
+     notes="Ruling D19 (2026-11-20): arithmetic is performed in the expression's static type. "
+           "coalesce(i, x) is dec because x is a dec column, so the product is dec and rounds at 34 "
+           "significant digits whichever branch coalesce took at run time. a: both operands are the "
+           "int cell 100000000000000001 (18 digits), chosen by coalesce and widened to dec; the exact "
+           "square 10000000000000000200000000000000001 has 35 significant digits and rounds half-even "
+           "to 34, dropping the final 1: 10000000000000000200000000000000000 (an int product would "
+           "have kept it). b: i is missing, so 2.5 * 2.5 = 6.25. c: 3 * 3 = 9, written as the integer. "
+           "d: both missing, so missing. a.d1 equals the rounded value: holds.")
+
 case("derive_date_arith_error", ["ev"], "ev", [derive("d3", "d + 1")],
      a_count("eq", I(4)), "error", error=("E6004", "/ops/0/expr"),
      notes="Arithmetic on a date is E6004 (Dates row), checked before anything runs.")
@@ -1599,6 +1628,101 @@ case("rank_group_by_missing_partition", ["gp"], "gp",
            "(1.5, p). Final order (missing,q), (1.5,q), (missing,p), (1.5,p). The row [missing, p] is located by "
            "grouping identity (11.18.3) and is at position 3; it would be 4 if the missing component sorted "
            "last: holds. The rank column follows member_keys_hash as the last column.")
+
+
+# -- underflow below Emin, int beyond a double in the log family (11.18.2 Precision, Domain) -----------
+table(
+    "uf",
+    "id,x\na,1.234567\n",
+    spec([col("id", "str"), col("x", "dec", 6)], ["id"]),
+    ["id", "x"], ["id"],
+    {"a": [S("a"), D("1.234567")]},
+)
+
+# Etiny = Emin - (precision - 1) = -999999 - 33 = -1000032; both values sit at that exponent.
+UF_SUBNORMAL = "0." + "0" * 1000028 + "1235"   # 1235E-1000032 = 1.235E-1000029
+UF_ZERO = "0." + "0" * 1000032                 # 0E-1000032, scale kept
+
+case("derive_underflow_subnormal_then_zero", ["uf"], "uf",
+     [derive("y", "x * 1e-999999 * 1e-30"), derive("z", "y * 1e-5")],
+     a_value([S("a")], "z", "eq", I(0)), "holds",
+     [(1, "Add column y = x * 1e-999999 * 1e-30; 1 rows."),
+      (1, "Add column z = y * 1e-5; 1 rows.")],
+     cols_of("uf", add=["y", "z"]),
+     rows("uf", ["a"], add={"a": {"y": D(UF_SUBNORMAL), "z": D(UF_ZERO)}}), ["id"],
+     notes="Context: precision 34, Emin -999999, so Etiny = Emin - (34 - 1) = -1000032, the smallest exponent "
+           "a subnormal may have. Literals: 1e-999999 has adjusted exponent -999999, not below Emin, so it is "
+           "accepted (11.18.1); 1e-30 and 1e-5 are ordinary. Each is made positional exactly first (scales "
+           "999999, 30, 5). Step 1, left-associative (x * 1e-999999) * 1e-30. x = 1.234567 = 1234567E-6. "
+           "1234567E-6 * 1E-999999 = 1234567E-1000005, adjusted exponent -1000005 + 6 = -999999: normal, "
+           "7 digits, exact. * 1E-30 = 1234567E-1000035 exactly, adjusted -1000029 < Emin: subnormal. Its "
+           "exponent -1000035 is below Etiny, so General Decimal Arithmetic rounds the coefficient to exponent "
+           "-1000032: 1234567 / 10^3 = 1234.567, half-even -> 1235 (0.567 > 0.5). y = 1235E-1000032 = "
+           "1.235E-1000029 (Subnormal, Underflow, Inexact, Rounded: none is an error; 'Underflow below Emin "
+           "-999999 gives a subnormal result, then zero, and is not an error'). Only 4 significant digits "
+           "survive; an unbounded exponent would give 1.234567E-1000029 and flushing would give 0. Written "
+           "positionally at scale 1000032: '0.' then 1000028 zeros then 1235 (1,000,034 characters). Step 2: "
+           "y * 1E-5 = 1235E-1000037 exactly, adjusted -1000034; rounded to exponent Etiny -1000032: "
+           "1235 / 10^5 = 0.01235 -> 0. z = 0E-1000032 (Clamped as well), positive. 'scale kept': written "
+           "'0.' then 1000032 zeros (AMBIGUITIES.md 43). The multiplication sum-of-scales rule would give "
+           "scales 1000035 and 1000037; the subnormal rounding reduces both to 1000032, as rounding at 34 "
+           "digits does in derive_rounds_at_34_digits. No E5002: no adjusted exponent exceeds Emax. "
+           "a.z = 0 against int 0 as decimals, |0 - 0| = 0 <= 0: holds. Cross-checked with Python decimal "
+           "in the stated context.")
+
+table(
+    "hx",
+    "id,x\na,1\nb,1" + "0" * 37 + "\nc,1" + "0" * 34 + "\n",
+    spec([col("id", "str"), col("x", "int")], ["id"]),
+    ["id", "x"], ["id"],
+    {
+        "a": [S("a"), I(1)],
+        "b": [S("b"), I(10 ** 37)],
+        "c": [S("c"), I(10 ** 34)],
+    },
+)
+
+case("log_of_int_beyond_double", ["hx"], "hx",
+     [derive("p", "x * x * x * x * x * x * x * x * x"), derive("l", "log(p)"), filt("l >= 0")],
+     a_exists([S("b")]), "fails",
+     [(3, "Add column p = x * x * x * x * x * x * x * x * x; 3 rows."),
+      (3, "Add column l = log(p); 3 rows."),
+      (2, "Keep rows where l >= 0 (missing values excluded); 2 of 3 rows remain.")],
+     cols_of("hx", add=["p", "l"]),
+     rows("hx", ["a", "c"], add={"a": {"p": I(1), "l": D("0")},
+                                 "c": {"p": I(10 ** 306), "l": D("704.591038456178")}}), ["id"],
+     notes="Revised 11.7: an int cell is at most 38 digits, so the huge int is computed. int column x: a 1, "
+           "b 10^37 (38 digits, the widest a cell may be), c 10^34 (35 digits); all three parse. Step 1: "
+           "p = x^9 as nine factors, int * int giving int, exact and unbounded (11.18.2 Precision): a 1; b "
+           "10^333 (334 digits); c 10^306 (307 digits). Step 2, 11.18.2 Domain: 'An int too large for a double "
+           "(only a computed int can be ...) is infinity to the log family, so its logarithm is missing.' The "
+           "largest double is about 1.797e308. a: log(1.0) = 0.0, an integral double, written '0' (11.6). b: "
+           "10^333 exceeds it, so it is infinity and log gives missing, not an error and not a value. c: "
+           "10^306 is below it and converts to the nearest double; ln(10^306) = 306 * ln 10 = 306 * "
+           "2.302585092994045684 = 690.7755278982137052 + 13.815510557964274104 = 704.591038456177979...; to "
+           "15 significant digits 704.591038456178 (the dropped digits 979... lie about 4 units of the "
+           "double's last place from the rounding boundary, so libm last-bit differences cannot move it). "
+           "Step 3, filter l >= 0: a 0 >= 0 true; b missing, dropped; c true. 2 of 3. p stays in the final "
+           "rows as an int. exists b: the row whose logarithm is missing is absent: fails. An implementation "
+           "that took a logarithm of 10^333 (766.76...) would keep b and hold; one that raised on the "
+           "conversion would give error.")
+
+table(
+    "w39",
+    "id,x\na,1\nb,1" + "0" * 38 + "\n",
+    spec([col("id", "str"), col("x", "int")], ["id"]),
+    ["id", "x"], ["id"],
+    {"a": [S("a"), I(1)], "b": [S("b"), I(10 ** 38)]},
+)
+
+case("int_cell_wider_than_38_digits", ["w39"], "w39", [],
+     a_count("eq", I(2)), "error", error=("E3102", None),
+     notes="11.7: 'An int cell wider than 38 digits is E3102 (item 47 maps int to Decimal128(38,0))'. Row b holds "
+           "10^38, written as 1 followed by 38 zeros: 39 digits, one more than 38 (the largest Decimal128(38,0) "
+           "value is 10^38 - 1, 38 nines). The cell fails at parse: E3102, and 'An E3102 about a data file cell "
+           "has field null'. Item 92: the harness parses every table before the steps and the assertion, so this "
+           "is the case's error whatever they hold; verdict error, row-level fields null. A 38-digit cell parses "
+           "(log_of_int_beyond_double holds 10^37).")
 
 
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------

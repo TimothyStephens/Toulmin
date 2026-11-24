@@ -179,7 +179,7 @@ pub fn col(j: usize) -> String {
     format!("c{j}")
 }
 
-/// The SQL name of the double carrying column `j` for `mean` and `median`.
+/// The SQL name of the double carrying column `j` for `mean`.
 #[must_use]
 pub fn dbl(j: usize) -> String {
     format!("d{j}")
