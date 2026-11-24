@@ -1493,3 +1493,9 @@ an older cargo-deny locally sees it.
 **What.** Item 76's `src/index/apply.rs` writes the Core-owned tables `head`, `events`, `opaque_events`, `settings`, and `audits`; `claim_events` is gone from that list, as it went from 11.17's in 24438db.
 
 **Why.** The review (m1), accepted by the owner: the runbook section 6 row was done in 11.17 and item 70 only, so the design still named two writers, and an `apply.rs` inserting after the Claims fold's `INSERT OR IGNORE` would hit the `(ref, event_id)` key.
+
+## 2026-11-24 P6 review m2: the body check confirms `against` is distinct and sorted after its first entry
+
+**What.** 11.16 now says what the `claim.checked` body check confirms of `against`: the handles are distinct, and the entries after the first are in 11.10 order; a violation is `E1002` at `/body/against/<i>` for the first entry that repeats an earlier entry or, from the third entry on, sorts before the entry before it. Which entry comes first cannot be confirmed from the body (the revision decides it), and 11.16 says so. `tm-formats` implements the check in the next commit, with one valid and one invalid envelope case added; `docs/spec/formats.md` is regenerated.
+
+**Why.** The review (m2), option (a) chosen by the owner: 24438db gave `against` a form the P1 body check did not follow, so a list with a repeated handle validated, and 11.16 makes a value not of its stated form `E1002`. No `claim.checked` line exists in any record yet (P7 writes the first), so tightening at `tv` 1 now breaks nothing stored; after P7 it could turn a stored line invalid. Every frozen `claim.checked` case has a one-entry `against`, so none changes validity or ID.
