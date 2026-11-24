@@ -1475,3 +1475,9 @@ an older cargo-deny locally sees it.
 **Also.** `deny.toml`'s allow list gains `tm-claims` (the 2026-11-10 rule: every lock name). 7.3 is followed as written where it is irregular: the page row's "removable and deleted" cell carries no `expected-missing` label, and the panel row's "disk differs" cell is `Holds` without the registered-label test the first column applies; both are frozen in `tests/claims.rs` as the table states them and are reported to the owner rather than changed.
 
 **Why.** Rule 2 of the P6 brief: a decision the design does not make is a design edit. The `against` order lets the fold find the key map's version without reading the checked revision, which the 11.17 fold contract forbids; the rest are what the scanner, the 7.3 match, and the fold cannot be written without.
+
+## 2026-11-24 P6: owner rulings on two 7.3 cells
+
+**What.** The P6 entry above reported two 7.3 cells that `tm-claims` followed as written. The owner ruled on both, 2026-11-24, and the design changed first (1898aa2), then the code and tests (0734f11). Ruling 1: the page row's "Removable and deleted, not kept" cell is `not checkable`, labeled `expected-missing`, as the cells, whole-file, and panel rows have it. Ruling 2: the panel row's "On disk, disk differs" cell is "Holds if the label is registered on the pinned image version; fails otherwise; flag `evidence moved`". `docs/spec/claims.md` is regenerated. This replaces the P6 entry's "Also" sentence on the two cells.
+
+**Why.** Ruling 1: the label records the owner's deletion, which does not depend on the citation type. Ruling 2: labels are recorded metadata (`file.panels_set` on the version), so the first column's test applies without the file, and a disk change cannot turn a label that is not registered into a holding citation.
