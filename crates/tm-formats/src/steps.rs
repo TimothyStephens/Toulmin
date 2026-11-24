@@ -826,6 +826,43 @@ mod tests {
         );
     }
 
+    /// Checker-diffs D21 (2026-11-24): the literal range check is a shape
+    /// check, so an out-of-range literal is reported before a second fault
+    /// found later in the shape pass or in the pass against the specs.
+    #[test]
+    fn literal_range_is_a_shape_check() {
+        let base = |ops: Value| json!({"steps":1,"tables":{"de":"F7@v2"},"from":"de","ops":ops});
+        let filter = |w: &str| base(json!([{"op":"filter","v":1,"where":w}]));
+        let at_where = (Code::E6004, "/ops/0/where".to_owned());
+        // a. A syntax error after the literal.
+        assert_eq!(err(&filter("padj < 1e6145 +")), at_where);
+        // b. A later op that fails the shape check.
+        assert_eq!(
+            err(&base(json!([
+                {"op":"filter","v":1,"where":"padj < 1e6145"},
+                {"op":"sort","v":1,"missing":"last"}
+            ]))),
+            at_where
+        );
+        // c. An unknown column, a check against the specs.
+        assert_eq!(err(&filter("nope < 1e6145")), at_where);
+        // d. A `derive` whose `as` is present: the `as` is checked against
+        // the specs, after the shape pass.
+        assert_eq!(
+            err(&base(
+                json!([{"op":"derive","v":1,"as":"padj","expr":"padj * 1e6145"}])
+            )),
+            (Code::E6004, "/ops/0/expr".into())
+        );
+        // Within one expression (11.18.1): a syntax error before the
+        // literal, or a token error anywhere, is E6006.
+        let syntax = (Code::E6006, "/ops/0/where".to_owned());
+        assert_eq!(err(&filter("padj < * 1e6145")), syntax);
+        assert_eq!(err(&filter("padj < 1e6145 + \"x")), syntax);
+        // An exponent that does not fit an i64 (checker-diffs D22).
+        assert_eq!(err(&filter("padj < 1e99999999999999999999")), at_where);
+    }
+
     #[test]
     fn refusals() {
         let base = |ops: Value| json!({"steps":1,"tables":{"de":"F7@v2"},"from":"de","ops":ops});
