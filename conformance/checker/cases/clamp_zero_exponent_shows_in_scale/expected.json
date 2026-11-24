@@ -1,0 +1,33 @@
+{
+  "verdict": "holds",
+  "steps": [
+    {
+      "rows": 1,
+      "description": "Add column y = (1.000000000000000000000000000000001e6133 * 1 - 1e6133 * 1) * (1.000000000000000000000000000000001e53 * 1 - 1e53 * 1) * 1e-6130; 1 rows."
+    }
+  ],
+  "columns": [
+    "id",
+    "x",
+    "y"
+  ],
+  "final_rows": [
+    {
+      "id": {
+        "t": "str",
+        "v": "a"
+      },
+      "x": {
+        "t": "int",
+        "v": "1"
+      },
+      "y": {
+        "t": "dec",
+        "v": "0.0000000001"
+      }
+    }
+  ],
+  "final_rows_hash": "sha256:4ffdce0ab5e55a7fffeea925830e16a87d22fab50fd4239fb79c628f741f9e11",
+  "key_map_hash": "sha256:62e824ccecefbcebcdf890fe6f1de04f307fb11b45eb47bf627710791227db11",
+  "error": null
+}

@@ -71,3 +71,4 @@ Superseded by the decimal128 context (Emax 6144, Emin -6143).
 ## decimal128 context (2026-11-24)
 
 44. 11.6 and 11.18.2 Precision: the context is "IEEE 754-2008 decimal128", whose format clamps (a result whose exponent is above Emax - (precision - 1) = 6111 has its coefficient padded with zeros down to exponent 6111; Python `clamp=1`), but the Python parameters the text lists are `prec=34`, `Emax=6144`, `Emin=-6143`, and `ROUND_HALF_EVEN`, which leave `clamp` at its default 0. Readings: clamp 0, as listed, or clamp 1, as decimal128 implies. Taken: clamp 0. No case depends on it: clamping changes only the exponent of an integral value, never the value, so the positional form (scale 0) and the Overflow threshold are the same under both; derive_overflow_emax gives E5002 and derive_underflow_subnormal_then_zero gives the same y and z under either reading.
+Superseded: the Precision row now states clamp 0, with an example where the difference is visible.

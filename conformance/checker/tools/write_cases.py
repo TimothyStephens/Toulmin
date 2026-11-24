@@ -1678,6 +1678,41 @@ case("derive_underflow_subnormal_then_zero", ["uf"], "uf",
            "Emax. a.z = 0 against int 0 as decimals, |0 - 0| = 0 <= 0: holds. Cross-checked with Python "
            "decimal in the stated context.")
 
+# -- clamp 0: an exponent above Emax - 33 shows in a later scale (11.18.2 Precision, 2026-11-24) ------
+CLAMP_EXPR = ("(1.000000000000000000000000000000001e6133 * 1 - 1e6133 * 1) * "
+              "(1.000000000000000000000000000000001e53 * 1 - 1e53 * 1) * 1e-6130")
+
+case("clamp_zero_exponent_shows_in_scale", ["one"], "one", [derive("y", CLAMP_EXPR)],
+     a_value([S("a")], "y", "eq", D("0.0000000001")), "holds",
+     [(1, "Add column y = " + CLAMP_EXPR + "; 1 rows.")],
+     cols_of("one", add=["y"]),
+     rows("one", ["a"], add={"a": {"y": D("0.0000000001")}}), ["id"],
+     notes="The example of the 11.18.2 Precision row, which states clamp 0: 'a result keeps any exponent up "
+           "to Emax, never padded down to Emax - 33 = 6111'. Context: precision 34, Emax 6144, Emin -6143, "
+           "half-even, clamp 0. Literals (11.18.1), all in range: A = 1.000000000000000000000000000000001e6133 "
+           "(34 significant digits, adjusted 6133), 1e6133 (adjusted 6133), B = "
+           "1.000000000000000000000000000000001e53 (adjusted 53), 1e53, 1e-6130 (adjusted -6130). Each is made "
+           "positional exactly first: A is an integer of 6,134 digits, (10^33 + 1) * 10^6100, scale 0; 1e6133 "
+           "is 10^6133, scale 0; B is (10^33 + 1) * 10^20, 54 digits, scale 0; 1e53 scale 0; 1e-6130 is "
+           "1E-6130, scale 6130. The literal 1 is int; int * dec is dec, so every product applies the context. "
+           "First factor: A * 1 exact is A with exponent 0 and 6,134 digits; rounding to 34 significant digits "
+           "drops only zeros: coefficient 10^33 + 1, exponent 6100 (Rounded, not Inexact). 1e6133 * 1 likewise "
+           "gives coefficient 10^33, exponent 6100. Their difference is exact: 1E6100 (coefficient 1, exponent "
+           "6100, the smaller of the two exponents). Second factor: B * 1 rounds to coefficient 10^33 + 1, "
+           "exponent 20; 1e53 * 1 to 10^33, exponent 20; difference 1E20. Left-associative: (1E6100 * 1E20) * "
+           "1E-6130. 1E6100 * 1E20 = 1E6120: one digit, adjusted 6120, not above Emax, so no Overflow; its "
+           "exponent 6120 is above Emax - 33 = 6111, and under clamp 0 it is kept, so the value stays 1E6120. "
+           "* 1E-6130 = 1E-10, exact, adjusted -10, normal. Scale is the negative of the exponent: 10. Written "
+           "'0.0000000001' (0. then 9 zeros then 1). Under clamp 1, 1E6120 would be padded to 1000000000E6111 "
+           "and the final product would be 1000000000E-19, written '0.0000000001000000000' (scale 19): the "
+           "same number with a different scale, so final_rows_hash differs between the readings. "
+           "The assertion cannot tell the two apart: 11.9 compares numbers as decimals, and |a - b| = 0 under "
+           "either reading. The written form is pinned by final_rows and final_rows_hash. a.y eq "
+           "0.0000000001: holds. Description: both subtractions bind looser than *, so their parentheses are "
+           "required; the outer (P * Q) * 1e-6130 is a left operand of equal precedence and drops its "
+           "parentheses; literals as written, so the sentence repeats the expression. Cross-checked with "
+           "Python decimal in the stated context, clamp 0 and clamp 1.")
+
 table(
     "hx",
     "id,x\na,1\nb,1" + "0" * 37 + "\nc,1" + "0" * 34 + "\n",
