@@ -230,6 +230,7 @@ allow = [
     "tiny-keccak",
     "tinyvec",
     "tm-checker",
+    "tm-claims",
     "tm-duckdb",
     "tm-files",
     "tm-formats",

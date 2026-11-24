@@ -1648,6 +1648,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tm-claims"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "tm-formats",
+ "tm-index",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "tm-duckdb"
 version = "0.1.0"
 dependencies = [
