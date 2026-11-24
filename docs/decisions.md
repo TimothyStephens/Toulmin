@@ -1505,3 +1505,9 @@ an older cargo-deny locally sees it.
 **What.** Item 70 says a `claim.checked` is folded after its claim's `claim.added`, and a batch puts them in that order. Runbook section 6 gains a gate B row: section 9's `draft.promote` row lists `claim.checked` before `claim.added`.
 
 **Why.** The review (m3), accepted by the owner: the fold raises `assertion fails` only when the claim's row exists and is not final, so a `claim.checked` folded first raises nothing. Gate A's `claim.add` and `claim.supersede` rows already list `claim.added` first; nothing required it, and gate B's promote row has the other order.
+
+## 2026-11-24 P6 review nits 1 to 3: three design sentences made exact
+
+**What.** 7.3: `evidence.detail` is `null` for `holds` and for a claim with no citations (nit 1); the `evidence moved: disk differs` flag goes with every outcome in the "disk differs" column of every row that names a version (nit 2). 11.17: `against` joins the list of JSON-valued columns (nit 3). `docs/spec/claims.md` and `docs/spec/formats.md` are regenerated. No code changes: `Evidence::combine` already writes `null` for no citations, `cell` gives the reserved row no flag, and the fold already stores `verdicts.against` as canonical JSON.
+
+**Why.** The review's nits 1 to 3, accepted by the owner: as written, 7.3 gave a second reader `""` for zero citations (a different hashed body from the code's `null`), its flag sentence covered the reserved row that `cell` and the tests leave unflagged, and 11.17's list omitted a column the fold writes as JSON.
