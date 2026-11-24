@@ -233,7 +233,9 @@ def parse_typed(obj, field, allow_list=True):
             raise _bad(vf, f"int v {v!r} is not -?(0|[1-9][0-9]*)")
         if v.startswith("-") and set(v[1:]) == {"0"}:
             raise _bad(vf, "minus sign before zero")
-        return Value("int", int(v))
+        # int(Decimal) is exact and not bound by CPython's 4,300-digit
+        # int-string limit, which an `expected` or `row` int may exceed.
+        return Value("int", int(Decimal(v)))
     if t == "dec":
         if not DEC_RE.fullmatch(v):
             raise _bad(vf, f"dec v {v!r} is not positional")
