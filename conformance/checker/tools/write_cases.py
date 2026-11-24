@@ -1040,7 +1040,7 @@ case("derive_rounds_at_34_digits", ["big"], "big", [derive("sq", "x * x")],
            "overflow: the result rounds and the check goes on'. Dropping the last digit 5 exactly "
            "half-way, the kept digit 2 is even, so it stays: 100000000000000010000000000000000.2, "
            "scale 1 (rounding overrides the sum-of-scales rule). Adjusted exponent 32, far below Emax "
-           "999999, so no Overflow. a.sq equals the rounded value: holds.")
+           "6144, so no Overflow. a.sq equals the rounded value: holds.")
 
 case("derive_coalesce_static_dec", ["cw"], "cw", [derive("d1", "coalesce(i, x) * coalesce(i, x)")],
      a_value([S("a")], "d1", "eq", D("10000000000000000200000000000000000")), "holds",
@@ -1512,20 +1512,26 @@ case("exp_scale3_trailing_zero", ["s3"], "s3", [filt("v = 0.001")],
            "(trailing zeros count), so the case reads the file as a later version under a scale-3 spec, "
            "where 'a later version's trailing zeros still fit'.")
 
-case("derive_overflow_emax", ["one"], "one", [derive("y", "x * 9.9e999999 * 10")],
+case("derive_overflow_emax", ["one"], "one", [derive("y", "x * 9.9e6144 * 10")],
      a_count("eq", I(1)), "error", error=("E5002", "/ops/0/expr"),
-     notes="9.9e999999 has adjusted exponent 999999, inside Emax, so the literal is accepted. "
-           "Left-associative: (x * 9.9e999999) * 10. 1 * 9.9e999999 = 9.9e999999 (adjusted 999999, no "
-           "overflow); * 10 = 9.9e1000000, adjusted exponent 1000000 > Emax 999999: the General "
-           "Decimal Arithmetic Overflow condition, verdict error with E5002. Row-level fields null. "
-           "The literal is quantized to its positional scale (0) before use; the product is the same number "
-           "either way, rounded to 34 digits, so the outcome does not change (AMBIGUITIES.md 39). E5002 points at "
-           "the member holding the expression, /ops/0/expr (11.18.2 Types).")
+     notes="Re-derived for the decimal128 context (was 9.9e999999 under Emax 999999). Context: precision "
+           "34, Emax 6144. 9.9e6144 = 99E6143 has adjusted exponent 6143 + 2 - 1 = 6144, not above Emax, so "
+           "the literal is accepted (11.18.1 names 9.9e6144 as accepted). It is made positional exactly, "
+           "outside the context: 99 followed by 6143 zeros, 6,145 digits, scale 0 (11.18.1: quantizing in "
+           "the precision-34 context would fail for this literal and must not be done). x = int 1. "
+           "Left-associative: (x * 9.9e6144) * 10; int * dec is dec. 1 * 9.9e6144: the exact product has "
+           "6,145 digits, all but the leading 99 zeros, so rounding to 34 significant digits drops only "
+           "zeros: 9.900000000000000000000000000000000E6144 (coefficient 99 followed by 32 zeros, exponent "
+           "6111), adjusted exponent 6144, not above Emax: no overflow. * 10: exact 9.9E6145, adjusted "
+           "exponent 6145 > Emax 6144: the General Decimal Arithmetic Overflow condition, verdict error with "
+           "E5002 (11.18.2 Domain). Row-level fields null. E5002 points at the member holding the expression, "
+           "/ops/0/expr (11.18.2 Types). Cross-checked with Python decimal in the stated context.")
 
 case("exp_literal_out_of_range", ["one"], "one", [filt("x < 1e1000000")],
      a_count("eq", I(1)), "error", error=("E6004", "/ops/0/where"),
-     notes="1e1000000 has adjusted exponent 1000000, above Emax 999999: E6004 at validation, pointing "
-           "at the where member (11.18.1 names this exact literal).")
+     notes="1e1000000 has adjusted exponent 1000000, above Emax 6144: E6004 at validation, pointing "
+           "at the where member. 11.18.1 states the rule; the refused literal it names is 1e6145 "
+           "(adjusted 6145), and 1e1000000 is far above that.")
 
 
 # -- grouping values, equal min/max, missing key components, float64 overflow (design review) ----------
@@ -1639,36 +1645,38 @@ table(
     {"a": [S("a"), D("1.234567")]},
 )
 
-# Etiny = Emin - (precision - 1) = -999999 - 33 = -1000032; both values sit at that exponent.
-UF_SUBNORMAL = "0." + "0" * 1000028 + "1235"   # 1235E-1000032 = 1.235E-1000029
-UF_ZERO = "0." + "0" * 1000032                 # 0E-1000032, scale kept
+# Etiny = Emin - (precision - 1) = -6143 - 33 = -6176; both values sit at that exponent.
+UF_SUBNORMAL = "0." + "0" * 6172 + "1235"   # 1235E-6176 = 1.235E-6173
+UF_ZERO = "0." + "0" * 6176                 # 0E-6176, scale kept
 
 case("derive_underflow_subnormal_then_zero", ["uf"], "uf",
-     [derive("y", "x * 1e-999999 * 1e-30"), derive("z", "y * 1e-5")],
+     [derive("y", "x * 1e-6143 * 1e-30"), derive("z", "y * 1e-5")],
      a_value([S("a")], "z", "eq", I(0)), "holds",
-     [(1, "Add column y = x * 1e-999999 * 1e-30; 1 rows."),
+     [(1, "Add column y = x * 1e-6143 * 1e-30; 1 rows."),
       (1, "Add column z = y * 1e-5; 1 rows.")],
      cols_of("uf", add=["y", "z"]),
      rows("uf", ["a"], add={"a": {"y": D(UF_SUBNORMAL), "z": D(UF_ZERO)}}), ["id"],
-     notes="Context: precision 34, Emin -999999, so Etiny = Emin - (34 - 1) = -1000032, the smallest exponent "
-           "a subnormal may have. Literals: 1e-999999 has adjusted exponent -999999, not below Emin, so it is "
-           "accepted (11.18.1); 1e-30 and 1e-5 are ordinary. Each is made positional exactly first (scales "
-           "999999, 30, 5). Step 1, left-associative (x * 1e-999999) * 1e-30. x = 1.234567 = 1234567E-6. "
-           "1234567E-6 * 1E-999999 = 1234567E-1000005, adjusted exponent -1000005 + 6 = -999999: normal, "
-           "7 digits, exact. * 1E-30 = 1234567E-1000035 exactly, adjusted -1000029 < Emin: subnormal. Its "
-           "exponent -1000035 is below Etiny, so General Decimal Arithmetic rounds the coefficient to exponent "
-           "-1000032: 1234567 / 10^3 = 1234.567, half-even -> 1235 (0.567 > 0.5). y = 1235E-1000032 = "
-           "1.235E-1000029 (Subnormal, Underflow, Inexact, Rounded: none is an error; 'Underflow below Emin "
-           "-999999 gives a subnormal result, then zero, and is not an error'). Only 4 significant digits "
-           "survive; an unbounded exponent would give 1.234567E-1000029 and flushing would give 0. Written "
-           "positionally at scale 1000032: '0.' then 1000028 zeros then 1235 (1,000,034 characters). Step 2: "
-           "y * 1E-5 = 1235E-1000037 exactly, adjusted -1000034; rounded to exponent Etiny -1000032: "
-           "1235 / 10^5 = 0.01235 -> 0. z = 0E-1000032 (Clamped as well), positive. 'scale kept': written "
-           "'0.' then 1000032 zeros (AMBIGUITIES.md 43). The multiplication sum-of-scales rule would give "
-           "scales 1000035 and 1000037; the subnormal rounding reduces both to 1000032, as rounding at 34 "
-           "digits does in derive_rounds_at_34_digits. No E5002: no adjusted exponent exceeds Emax. "
-           "a.z = 0 against int 0 as decimals, |0 - 0| = 0 <= 0: holds. Cross-checked with Python decimal "
-           "in the stated context.")
+     notes="Re-derived for the decimal128 context (was 1e-999999 under Emin -999999). Context: precision 34, "
+           "Emin -6143, so Etiny = Emin - (34 - 1) = -6176, the smallest exponent a subnormal may have. "
+           "Literals: 1e-6143 has adjusted exponent -6143, not below Emin, so it is accepted (11.18.1 names "
+           "1e-6143 as accepted); 1e-30 and 1e-5 are ordinary. Each is made positional exactly first (scales "
+           "6143, 30, 5). Step 1, left-associative (x * 1e-6143) * 1e-30. x = 1.234567 = 1234567E-6. "
+           "1234567E-6 * 1E-6143 = 1234567E-6149, adjusted exponent -6149 + 6 = -6143 = Emin: normal, "
+           "7 digits, exact. * 1E-30 = 1234567E-6179 exactly, adjusted -6179 + 6 = -6173 < Emin: subnormal. "
+           "Its exponent -6179 is below Etiny, so General Decimal Arithmetic rounds the coefficient to exponent "
+           "-6176: 1234567 / 10^3 = 1234.567, half-even -> 1235 (0.567 > 0.5). y = 1235E-6176 = 1.235E-6173 "
+           "(Subnormal, Underflow, Inexact, Rounded: none is an error; 'Underflow below Emin -6143 gives a "
+           "subnormal result, then zero, and is not an error'). Only 4 significant digits survive; an unbounded "
+           "exponent would give 1.234567E-6173 and flushing would give 0. 11.18.2 Precision: 'An underflowed "
+           "result keeps the exponent General Decimal Arithmetic gives it, so its scale is the negative of that "
+           "exponent'. Written positionally at scale 6176: '0.' then 6172 zeros then 1235 (6,178 characters). "
+           "Step 2: y * 1E-5 = 1235E-6181 exactly, adjusted -6178; rounded to exponent Etiny -6176: "
+           "1235 / 10^5 = 0.01235 -> 0. z = 0E-6176 (Clamped as well), positive. 'a result that underflows to "
+           "zero is written at that scale': '0.' then 6176 zeros (6,178 characters). The multiplication "
+           "sum-of-scales rule would give scales 6179 and 6181; the subnormal rounding reduces both to 6176, as "
+           "rounding at 34 digits does in derive_rounds_at_34_digits. No E5002: no adjusted exponent exceeds "
+           "Emax. a.z = 0 against int 0 as decimals, |0 - 0| = 0 <= 0: holds. Cross-checked with Python "
+           "decimal in the stated context.")
 
 table(
     "hx",
