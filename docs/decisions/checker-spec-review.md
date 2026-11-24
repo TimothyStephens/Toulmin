@@ -126,3 +126,9 @@ Timothy Stephens, 2026-11-17.
 Timothy Stephens, 2026-11-24. Supersedes the exponent limits of rulings 35 and 36; their other content stands.
 
 56. The decimal context is IEEE 754-2008 decimal128: precision 34, Emax 6144, Emin -6143, rounding half-even. Precision 34 was already decimal128's; Emax 999999 and Emin -999999 were Python's defaults and let one value be written with a million digits, which a hashed record must not hold. A result whose adjusted exponent exceeds 6144 is Overflow, E5002; underflow below -6143 is subnormal, then zero, not an error; a literal whose adjusted exponent is above 6144 or below -6143 is E6004 at validation (ruling 36's rule with the new numbers). Decided before P7 writes the first record, after which a change would alter stored events. Lands in 11.6, 11.18.1, and 11.18.2 (Precision, Domain), and closes the runbook-to-p1.md section 6 row on million-digit values.
+
+## Owner ruling 57: computed integers are bounded like decimals
+
+Timothy Stephens, 2026-11-24. Amends ruling 16's "int results are of arbitrary size and never overflow".
+
+57. A computed int whose adjusted exponent exceeds Emax 6144 (more than 6,145 digits) is Overflow, E5002, at the member holding the expression (ruling 42), exactly as a dec result. Below that, int arithmetic stays exact and never rounds. Ruling 56 bounded the size of a dec value in a hashed record; without this ruling, chained derives could still put an integer of any length into a claim.checked key map or row. An int literal is already bounded the same way (ruling 36 as amended by 56). Lands in 11.6 and 11.18.2 (Types, Precision, Domain).
