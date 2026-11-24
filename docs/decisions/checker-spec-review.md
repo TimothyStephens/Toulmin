@@ -120,3 +120,9 @@ Timothy Stephens, 2026-11-17.
 54. (Writer's 41.) An E3102 about a data file cell has field null; its message names the row and the column. A CSV cell is not a JSON member, and E1001 and E1003 already take null for the same reason. Lands in 11.12 and 11.7.
 
 55. (Writer's 42.) A row value in an assertion (row, left, or right) may be the typed value missing, and it matches a key component that is missing under grouping identity (ruling 50), not under the = rule, so a claim can name the missing group: "312 genes have no annotated pathway". 11.9's "of its column's type" becomes "of its column's type, or missing". Lands in 11.9 and 11.18.3.
+
+## Owner ruling 56: the decimal context is decimal128
+
+Timothy Stephens, 2026-11-24. Supersedes the exponent limits of rulings 35 and 36; their other content stands.
+
+56. The decimal context is IEEE 754-2008 decimal128: precision 34, Emax 6144, Emin -6143, rounding half-even. Precision 34 was already decimal128's; Emax 999999 and Emin -999999 were Python's defaults and let one value be written with a million digits, which a hashed record must not hold. A result whose adjusted exponent exceeds 6144 is Overflow, E5002; underflow below -6143 is subnormal, then zero, not an error; a literal whose adjusted exponent is above 6144 or below -6143 is E6004 at validation (ruling 36's rule with the new numbers). Decided before P7 writes the first record, after which a change would alter stored events. Lands in 11.6, 11.18.1, and 11.18.2 (Precision, Domain), and closes the runbook-to-p1.md section 6 row on million-digit values.
