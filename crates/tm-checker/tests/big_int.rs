@@ -1,5 +1,5 @@
 //! Owner rulings of 2026-11-24 (after ruling 56): an `int` of more than
-//! 4,300 digits, the CPython int-string limit, is read and written exactly.
+//! 4,300 digits, the Python int-string limit, is read and written exactly.
 //! Each case under `tests/cases/` has an `expected.json` that is the Python
 //! reference checker's output, which CI's checker loop also compares, so
 //! passing here means both implementations give the same values, verdict,
