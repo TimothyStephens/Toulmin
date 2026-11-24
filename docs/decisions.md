@@ -1499,3 +1499,9 @@ an older cargo-deny locally sees it.
 **What.** 11.16 now says what the `claim.checked` body check confirms of `against`: the handles are distinct, and the entries after the first are in 11.10 order; a violation is `E1002` at `/body/against/<i>` for the first entry that repeats an earlier entry or, from the third entry on, sorts before the entry before it. Which entry comes first cannot be confirmed from the body (the revision decides it), and 11.16 says so. `tm-formats` implements the check in the next commit, with one valid and one invalid envelope case added; `docs/spec/formats.md` is regenerated.
 
 **Why.** The review (m2), option (a) chosen by the owner: 24438db gave `against` a form the P1 body check did not follow, so a list with a repeated handle validated, and 11.16 makes a value not of its stated form `E1002`. No `claim.checked` line exists in any record yet (P7 writes the first), so tightening at `tv` 1 now breaks nothing stored; after P7 it could turn a stored line invalid. Every frozen `claim.checked` case has a one-entry `against`, so none changes validity or ID.
+
+## 2026-11-24 P6 review m3: a `claim.checked` is folded after its claim's `claim.added`
+
+**What.** Item 70 says a `claim.checked` is folded after its claim's `claim.added`, and a batch puts them in that order. Runbook section 6 gains a gate B row: section 9's `draft.promote` row lists `claim.checked` before `claim.added`.
+
+**Why.** The review (m3), accepted by the owner: the fold raises `assertion fails` only when the claim's row exists and is not final, so a `claim.checked` folded first raises nothing. Gate A's `claim.add` and `claim.supersede` rows already list `claim.added` first; nothing required it, and gate B's promote row has the other order.

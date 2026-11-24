@@ -146,6 +146,7 @@ Recorded so they are not lost, with where each surfaces. Do not fix them now.
 | Item 83's `claim add --ref REF` takes a ref from the author, while item 64 has the Core allocate the next `C<n>` | P7, writing `claim_add.rs` | Refuse a `--ref` other than the allocated one, or drop `--ref` and print the allocated ref |
 | The `claim.checked` body of a claim with no assertion (qualitative, or `steps` and `assertion` null): what `sql`, `steps`, `versions`, and the hashes hold when the Checker does not run | P7, writing `claim_add.rs` | State it in 11.16; `tm-claims`' `checked_event` takes the Checker's part from the caller and decides nothing |
 | Item 64 has the Core confirm the index's highest `C<n>` against the chain's last `claim.added`, and says nothing of a mismatch | P7, writing `claim_add.rs` | Rebuild or catch the index up and retry, or refuse; `tm_claims::refs::allocate` returns the mismatch with both numbers |
+| Section 9's `draft.promote` row lists `claim.checked` before `claim.added`, while item 70 folds a `claim.checked` after its claim's `claim.added` (the fold raises `assertion fails` only on a claim whose row exists) | Gate B, writing `draft.promote` | List `claim.added` before `claim.checked` in the row and in the batch |
 
 ---
 
