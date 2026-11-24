@@ -1,0 +1,16 @@
+[package]
+name = "tm-claims"
+version = "0.1.0"
+description = "Toulmin Claims library: claims, refs, revisions, the evidence-exists table, flags and labels, reviews, report-span scanning, drift, and the index fold"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+tm-formats.workspace = true
+tm-index.workspace = true
+unicode-normalization.workspace = true
+
+[lints]
+workspace = true
