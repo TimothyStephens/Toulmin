@@ -56,6 +56,16 @@ ABSENT_TYPES = ("missing", "nan", "inf")
 COLUMN_TYPES = ("int", "dec", "str", "bool", "date", "datetime")
 
 
+_STR_SAFE = 10**4000
+
+
+def int_text(n):
+    """The decimal digits of a Python int. str(Decimal(n)) is exact and not
+    bound by CPython's int-string limit (4,300 digits), which an in-range
+    literal (ruling 56) or a computed int can exceed."""
+    return str(n) if -_STR_SAFE < n < _STR_SAFE else str(Decimal(n))
+
+
 class Value:
     __slots__ = ("t", "v", "s")
 
@@ -79,7 +89,7 @@ class Value:
         if self.t == "inf":
             return {"t": "inf", "s": self.s}
         if self.t == "int":
-            return {"t": "int", "v": str(self.v)}
+            return {"t": "int", "v": int_text(self.v)}
         if self.t == "dec":
             return {"t": "dec", "v": format_dec(self.v)}
         return {"t": self.t, "v": self.v}

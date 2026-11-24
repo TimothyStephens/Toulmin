@@ -962,6 +962,15 @@ mod tests {
         assert_eq!(ty("1e999999").unwrap_err().code, Code::E6004);
         assert_eq!(ty("i + 1e1000000").unwrap_err().code, Code::E6004);
         assert_eq!(ty("1e-1000000").unwrap_err().code, Code::E6004);
+        // An INT literal of 6,145 digits is in range and has its value;
+        // one more digit is E6004.
+        let nines = "9".repeat(6145);
+        assert_eq!(ty(&format!("i + {nines}")).unwrap(), Some(Tag::Int));
+        assert_eq!(ty(&format!("{nines}9")).unwrap_err().code, Code::E6004);
+        let Some(TypedValue::Int(n)) = Lit::Int(nines.clone()).value() else {
+            panic!("an int")
+        };
+        assert_eq!(n.to_string(), nines);
         assert_eq!(ty("1e99999999999999999999").unwrap_err().code, Code::E6004);
         assert_eq!(adjusted_exponent("0.000"), Some(-3));
         assert_eq!(adjusted_exponent("007.50e2"), Some(2));

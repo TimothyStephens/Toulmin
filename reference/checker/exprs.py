@@ -249,7 +249,10 @@ def number_literal(text):
         return ("lit", "dec", text, to_positional(d))
     if "." in text:
         return ("lit", "dec", text, Decimal(text))
-    return ("lit", "int", text, int(text))
+    # int(Decimal) is exact and, unlike int(str), not bound by CPython's
+    # int-string limit (4,300 digits): an INT literal of up to 6,145 digits
+    # is in range (ruling 56) and must evaluate.
+    return ("lit", "int", text, int(d))
 
 
 def parse(text):
