@@ -238,13 +238,14 @@ def unescape(token):
 
 def number_literal(text):
     """INT, DEC, or EXPNUM. An EXPNUM is a dec converted exactly to positional
-    notation; its adjusted exponent must lie within the context (E6004)."""
+    notation. Every numeric literal's adjusted exponent must lie within the
+    context, Emin -6143 to Emax 6144 (E6004; rulings 36 and 56)."""
+    d = Decimal(text)
+    if d.adjusted() > EMAX or d.adjusted() < EMIN:
+        raise CheckError(
+            "E6004", f"literal {text} has an adjusted exponent outside the context"
+        )
     if "e" in text or "E" in text:
-        d = Decimal(text)
-        if d.adjusted() > EMAX or d.adjusted() < EMIN:
-            raise CheckError(
-                "E6004", f"literal {text} has an adjusted exponent outside the context"
-            )
         return ("lit", "dec", text, to_positional(d))
     if "." in text:
         return ("lit", "dec", text, Decimal(text))

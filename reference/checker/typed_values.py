@@ -4,8 +4,9 @@ A `Value` carries `t` (int, dec, str, bool, date, datetime, missing, nan,
 inf), `v` (Python int, Decimal, NFC str, bool, or the RFC 3339 text of a
 date or datetime) and `s` (the sign of an inf).
 
-Decimal arithmetic runs in CONTEXT: precision 34, Emax 999999, Emin
--999999, ROUND_HALF_EVEN; only Overflow is trapped (E5002). Exact
+Decimal arithmetic runs in CONTEXT, IEEE 754-2008 decimal128 (ruling 56):
+precision 34, Emax 6144, Emin -6143, ROUND_HALF_EVEN; only Overflow is
+trapped (E5002). Exact
 conversions (a literal to positional notation, a cell to its column scale,
 tolerance margins) run in EXACT, a context with the largest precision the
 module allows, so they never round.
@@ -22,8 +23,8 @@ from errors import CheckError
 
 CONTEXT = decimal.Context(
     prec=34,
-    Emax=999999,
-    Emin=-999999,
+    Emax=6144,
+    Emin=-6143,
     rounding=decimal.ROUND_HALF_EVEN,
     traps=[decimal.Overflow],
     flags=[],
@@ -39,8 +40,8 @@ EXACT = decimal.Context(
     flags=[],
 )
 
-EMAX = 999999
-EMIN = -999999
+EMAX = 6144
+EMIN = -6143
 
 INT_RE = re.compile(r"-?(0|[1-9][0-9]*)")
 DEC_RE = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?")
