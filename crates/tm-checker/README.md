@@ -20,8 +20,8 @@ it returns a `RunResult`.
 
 Why cells reach `DuckDB` as order keys rather than `DECIMAL(38, s)`: a
 derived `dec` column holds values of different scales (`10 / 4` is `2.5`
-and `4 / 4` is `1`), and an `int` is of arbitrary size, so no one decimal
-column type holds them. `DuckDB` orders, ranks, groups, and joins by the
+and `4 / 4` is `1`), and an `int` can be wider than 38 digits, so no one
+decimal column type holds them. `DuckDB` orders, ranks, groups, and joins by the
 keys and returns row numbers; the typed values never leave Rust. See
 `docs/decisions.md` (2026-11-17, P4).
 
@@ -32,6 +32,15 @@ keys and returns row numbers; the typed values never leave Rust. See
   against its `expected.json`; a case with an open entry in
   `docs/decisions/checker-diffs.md` is listed in `OPEN`.
 - `tests/property.rs` (item 60): five properties, 1,000 cases each.
+- `tests/big_int.rs` and `tests/cases/`: cross-checks outside
+  `conformance/checker/`, which the independent case writer owns. Each
+  directory under `tests/cases/` is a case in item 92's layout whose
+  `expected.json` is the Python reference checker's (`refcheck.py`)
+  output, not a hand-derived expectation; `big_int.rs` compares the Rust
+  run with it and CI's Python checker loop compares `refcheck.py`'s, so
+  both implementations are held to one file. The cases are `int` values
+  past CPython's 4,300-digit int-string limit and at ruling 57's bound
+  (10^6145 - 1 holds, 10^6145 is `E5002`).
 - `tests/snapshot_sql.rs` (item 61): the generated SQL per conformance
   case, `cargo insta test -p tm-checker`.
 - `examples/refcheck.rs` (item 59): `cargo run -p tm-checker --example
