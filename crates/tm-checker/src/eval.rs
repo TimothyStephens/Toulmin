@@ -10,7 +10,9 @@
 //! round to 34 significant digits, signal Overflow (`E5002`) when the
 //! adjusted exponent exceeds `Emax`, and go subnormal, then to zero, below
 //! `Emin`, which is not an error. `int` arithmetic is exact and never
-//! rounds. A value keeps the exponent the specification gives it, which
+//! rounds; an `int` result whose adjusted exponent exceeds `Emax` (more
+//! than 6,145 digits) is Overflow too (ruling 57), checked by [`int_fits`]
+//! since `BigInt` has no bound. A value keeps the exponent the specification gives it, which
 //! may be positive after rounding; it is written positionally (11.6) only
 //! when it leaves the Checker.
 
@@ -134,6 +136,16 @@ pub fn fix(coef: BigInt, exp: i64) -> Result<BigDecimal, Overflow> {
         return Err(Overflow);
     }
     Ok(BigDecimal::new(q, -exp_min))
+}
+
+/// An `int` result within the context's range: adjusted exponent at most
+/// `Emax`, so at most 6,145 digits (11.18.2 Precision, ruling 57).
+fn int_fits(n: BigInt) -> Result<BigInt, Overflow> {
+    if ndigits(&n) - 1 > EMAX {
+        Err(Overflow)
+    } else {
+        Ok(n)
+    }
 }
 
 fn parts(d: &BigDecimal) -> (BigInt, i64) {
@@ -435,11 +447,14 @@ fn type_error(at: &str, what: &str, v: &TypedValue) -> Error {
 #[allow(clippy::many_single_char_names, reason = "the operands' usual names")]
 pub fn arith(op: BinOp, a: &TypedValue, b: &TypedValue, at: &str) -> Result<TypedValue, Error> {
     if let (TypedValue::Int(x), TypedValue::Int(y)) = (a, b) {
-        match op {
-            BinOp::Add => return Ok(TypedValue::Int(x + y)),
-            BinOp::Sub => return Ok(TypedValue::Int(x - y)),
-            BinOp::Mul => return Ok(TypedValue::Int(x * y)),
-            _ => {}
+        let exact = match op {
+            BinOp::Add => Some(x + y),
+            BinOp::Sub => Some(x - y),
+            BinOp::Mul => Some(x * y),
+            _ => None,
+        };
+        if let Some(n) = exact {
+            return int_fits(n).map(TypedValue::Int).map_err(|_| overflow(at));
         }
     }
     let (Some(x), Some(y)) = (as_dec(a), as_dec(b)) else {
@@ -517,7 +532,8 @@ fn call(
 }
 
 /// The exact sum of present numbers in the context, in member order, for
-/// the `group` aggregate `sum`: `int` stays exact, `dec` rounds after each
+/// the `group` aggregate `sum`: `int` stays exact, each partial sum within
+/// the `int` bound (ruling 57), `dec` rounds after each
 /// addition as General Decimal Arithmetic does. `missing` when no member
 /// is present (11.18.2 `group`).
 ///
@@ -646,6 +662,42 @@ mod tests {
         let z = dec_mul(&BigDecimal::new(BigInt::from(1), 6176), &d("0.1")).unwrap();
         assert!(z.is_zero());
         assert_eq!(parts(&z).1, ETINY);
+    }
+
+    /// Ruling 57: an `int` result whose adjusted exponent exceeds `Emax`
+    /// 6144 (more than 6,145 digits) is `E5002` at the expression's
+    /// member; 10^6145 - 1 is the largest `int` result. `sum` checks each
+    /// partial sum, as it does for `dec`.
+    #[test]
+    fn int_result_past_emax_is_overflow() {
+        let int = |s: &str| TypedValue::Int(s.parse().unwrap());
+        let nines = int(&"9".repeat(6145));
+        let neg_nines = int(&format!("-{}", "9".repeat(6145)));
+        let e6144 = TypedValue::Int(pow10(6144));
+        let at = "/ops/0/expr";
+        let code = |r: Result<TypedValue, Error>| {
+            let e = r.unwrap_err();
+            (e.code, e.field.unwrap_or_default())
+        };
+        let overflow = (Code::E5002, at.to_owned());
+        assert_eq!(arith(BinOp::Add, &nines, &int("0"), at).unwrap(), nines);
+        assert_eq!(code(arith(BinOp::Add, &nines, &int("1"), at)), overflow);
+        assert_eq!(code(arith(BinOp::Sub, &neg_nines, &int("1"), at)), overflow);
+        assert_eq!(code(arith(BinOp::Mul, &e6144, &int("10"), at)), overflow);
+        assert_eq!(
+            arith(BinOp::Mul, &e6144, &int("9"), at).unwrap(),
+            TypedValue::Int(pow10(6144) * 9)
+        );
+        // A partial sum past the bound is Overflow even when the total is
+        // not; the same members in another order are not.
+        assert_eq!(
+            code(sum([&nines, &nines, &neg_nines].into_iter(), Tag::Int, at)),
+            overflow
+        );
+        assert_eq!(
+            sum([&nines, &neg_nines, &nines].into_iter(), Tag::Int, at).unwrap(),
+            nines
+        );
     }
 
     /// Ruling 56: the context is decimal128, `Emax` 6144, `Emin` -6143,
