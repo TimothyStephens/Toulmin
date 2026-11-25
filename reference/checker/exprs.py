@@ -21,6 +21,7 @@ from typed_values import (
     CONTEXT,
     EMAX,
     EMIN,
+    INT_LIMIT,
     MISSING,
     NUMBER_TYPES,
     Value,
@@ -37,6 +38,8 @@ NUMBER_RE = re.compile(r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?")
 RESERVED = {"and", "or", "not", "true", "false", "missing"}
 CALLS = {"abs", "log", "log2", "log10", "exp", "coalesce"}
 CMP_OPS = {"=", "!=", "<", "<=", ">", ">="}
+# libmpdec's MAX_EMAX, 999999999999999999, has 18 digits (D22).
+EXPONENT_DIGITS = 18
 
 # Precedence levels for re-serialization (higher binds tighter).
 PREC_OR, PREC_AND, PREC_NOT, PREC_CMP, PREC_ADD, PREC_MUL, PREC_UNARY, PREC_PRIMARY = range(1, 9)
@@ -239,7 +242,17 @@ def unescape(token):
 def number_literal(text):
     """INT, DEC, or EXPNUM. An EXPNUM is a dec converted exactly to positional
     notation. Every numeric literal's adjusted exponent must lie within the
-    context, Emin -6143 to Emax 6144 (E6004; rulings 36 and 56)."""
+    context, Emin -6143 to Emax 6144 (E6004; rulings 36 and 56).
+
+    An exponent of more than 18 significant digits is refused on the text
+    first: Decimal() raises InvalidOperation past libmpdec's MAX_EMAX (18
+    digits), and such a literal is out of range whatever its mantissa
+    (checker-diffs D22)."""
+    _, _, exponent = text.lower().partition("e")
+    if len(exponent.lstrip("+-").lstrip("0")) > EXPONENT_DIGITS:
+        raise CheckError(
+            "E6004", f"literal {text[:40]} has an adjusted exponent outside the context"
+        )
     d = Decimal(text)
     if d.adjusted() > EMAX or d.adjusted() < EMIN:
         raise CheckError(
@@ -428,14 +441,22 @@ def _compare(op, a, b):
     return {"<": c < 0, "<=": c <= 0, ">": c > 0, ">=": c >= 0}[op]
 
 
+def int_result(n):
+    """An int result: E5002 when its adjusted exponent exceeds Emax 6144,
+    more than 6,145 digits (ruling 57); Python's int has no bound."""
+    if abs(n) >= INT_LIMIT:
+        raise CheckError("E5002", "arithmetic overflow")
+    return Value("int", n)
+
+
 def arith(op, a, b):
     """+ - * / on two present numbers; both int gives int except for /."""
     if a.t == "int" and b.t == "int" and op != "/":
         if op == "+":
-            return Value("int", a.v + b.v)
+            return int_result(a.v + b.v)
         if op == "-":
-            return Value("int", a.v - b.v)
-        return Value("int", a.v * b.v)
+            return int_result(a.v - b.v)
+        return int_result(a.v * b.v)
     da, db = as_decimal(a), as_decimal(b)
     try:
         if op == "+":

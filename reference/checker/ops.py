@@ -612,7 +612,11 @@ def aggregate(fn, cells):
         return MISSING
     if fn == "sum":
         if all(c.t == "int" for c in present):
-            return Value("int", sum(c.v for c in present))
+            # Each partial sum is bounded, as for dec (ruling 57).
+            total = present[0]
+            for c in present[1:]:
+                total = exprs.int_result(total.v + c.v)
+            return total
         total = as_decimal(present[0])
         try:
             for c in present[1:]:

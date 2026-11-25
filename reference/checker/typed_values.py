@@ -42,6 +42,9 @@ EXACT = decimal.Context(
 
 EMAX = 6144
 EMIN = -6143
+# The smallest int magnitude past Emax: an int result is at most 6,145
+# digits (ruling 57).
+INT_LIMIT = 10 ** (EMAX + 1)
 
 INT_RE = re.compile(r"-?(0|[1-9][0-9]*)")
 DEC_RE = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?")
