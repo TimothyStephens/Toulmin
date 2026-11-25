@@ -41,6 +41,8 @@ keys and returns row numbers; the typed values never leave Rust. See
   both implementations are held to one file. The cases are `int` values
   past CPython's 4,300-digit int-string limit and at ruling 57's bound
   (10^6145 - 1 holds, 10^6145 is `E5002`).
+- `tests/encoding.rs` (item 53): equal values encode to identical keys and unequal keys order as 11.18.2 orders the values, in Rust and in `DuckDB`.
+- `tests/run_result.rs` (item 55): the result type, capped steps, emphasized rows and columns, named rows beyond the cap, and valid `claim.checked` bodies.
 - `tests/snapshot_sql.rs` (item 61): the generated SQL per conformance
   case, `cargo insta test -p tm-checker`.
 - `examples/refcheck.rs` (item 59): `cargo run -p tm-checker --example
