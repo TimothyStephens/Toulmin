@@ -239,25 +239,43 @@ def unescape(token):
     return body.replace('\\"', '"').replace("\\\\", "\\")
 
 
+def adjusted_exponent(text):
+    """The adjusted exponent of a numeric literal, computed from its text
+    with Python ints, as tm-formats' adjusted_exponent does: the exponent
+    less the fraction's length, plus the count of significant digits less
+    one, a zero coefficient counting one digit (so 0e5 is 5, 0.0e5 is 4, as
+    Decimal.adjusted() gives). Does not construct a Decimal, so it holds
+    any exponent the text can write."""
+    mantissa, _, exponent = text.lower().partition("e")
+    exp = int(exponent) if exponent else 0
+    integer, _, frac = mantissa.partition(".")
+    significant = max(len((integer + frac).lstrip("0")), 1)
+    return exp - len(frac) + significant - 1
+
+
 def number_literal(text):
     """INT, DEC, or EXPNUM. An EXPNUM is a dec converted exactly to positional
     notation. Every numeric literal's adjusted exponent must lie within the
     context, Emin -6143 to Emax 6144 (E6004; rulings 36 and 56).
 
-    An exponent of more than 18 significant digits is refused on the text
-    first: Decimal() raises InvalidOperation past libmpdec's MAX_EMAX (18
-    digits), and such a literal is out of range whatever its mantissa
-    (checker-diffs D22)."""
+    The range is checked on the text before Decimal() is called, which is
+    only for a literal that passed: Decimal() raises InvalidOperation when
+    the adjusted exponent is past libmpdec's MAX_EMAX (999999999999999999,
+    18 digits). An exponent of more than 18 significant digits is refused
+    first, without being converted; one of 18 digits or fewer is converted
+    with Python ints, which have no such limit, and the adjusted exponent is
+    computed from the text (checker-diffs D22 and its re-audit)."""
     _, _, exponent = text.lower().partition("e")
     if len(exponent.lstrip("+-").lstrip("0")) > EXPONENT_DIGITS:
         raise CheckError(
             "E6004", f"literal {text[:40]} has an adjusted exponent outside the context"
         )
-    d = Decimal(text)
-    if d.adjusted() > EMAX or d.adjusted() < EMIN:
+    adjusted = adjusted_exponent(text)
+    if adjusted > EMAX or adjusted < EMIN:
         raise CheckError(
-            "E6004", f"literal {text} has an adjusted exponent outside the context"
+            "E6004", f"literal {text[:40]} has an adjusted exponent outside the context"
         )
+    d = Decimal(text)
     if "e" in text or "E" in text:
         return ("lit", "dec", text, to_positional(d))
     if "." in text:
