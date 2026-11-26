@@ -267,3 +267,14 @@ From `reviews/2026-11-24-p7-context.md`, findings A and B: two differences that 
 - **Ruling (2026-11-24).** Python checks an exponent's digit count on the text before calling `Decimal`, so `x < 1e99999999999999999999` is `E6004`, not a crash. A ruling-specified exception to the `reference/checker/` no-edit rule.
 - Applied 2026-11-24: `exprs.number_literal` refuses a literal whose exponent has more than 18 significant digits (leading zeros and the sign not counted) with `E6004` before calling `Decimal`; an exponent of 18 digits or fewer reaches `Decimal`, which holds it, and the adjusted-exponent check as before. Rerun: `x < 1e99999999999999999999` and `x < 1e-99999999999999999999` are `E6004`, `x < 1e999999999999999999` (18 digits) is `E6004` through `Decimal`, and `x < 1e000000000000000000000000001` (exponent 1) is valid, as in Rust, whose `i64` parse also skips leading zeros. Logged in `docs/decisions.md` as a ruling-specified exception.
 - The 18-digit threshold is libmpdec's `MAX_EMAX` on 64-bit builds (999999999999999999); 32-bit builds, whose `MAX_EMAX` is 425000000, are out of scope.
+- **Re-audit (2026-11-26): the fix misses the boundary.** The text check counts the exponent's digits, but libmpdec's limit is on the adjusted exponent, so a literal whose exponent has 18 digits and whose adjusted exponent reaches 10^18 still crashes `Decimal(text)`. Five literals, each as `filter` `x < <literal>` over one table `t` (`k` `str` key, `x` `dec` scale 2), run as steps schema cases before any further change (`validate.py`; `Steps::from_json` then `Steps::check` in `tm-formats`):
+
+  | Literal | Adjusted exponent | Python | Rust |
+  | --- | --- | --- | --- |
+  | `10e999999999999999999` | 10^18 | exit 1, `decimal.InvalidOperation` | `E6004` `/ops/0/where` |
+  | `1e999999999999999999` | 10^18 - 1 | `E6004` `/ops/0/where` | `E6004` `/ops/0/where` |
+  | `0e999999999999999999` | 10^18 - 1 (zero coefficient counts one digit) | `E6004` `/ops/0/where` | `E6004` `/ops/0/where` |
+  | `0.1e-999999999999999999` | -10^18 | `E6004` `/ops/0/where` | `E6004` `/ops/0/where` |
+  | `1e-999999999999999999` | -(10^18 - 1) | `E6004` `/ops/0/where` | `E6004` `/ops/0/where` |
+
+  Only the first differs: `Decimal` holds an exponent down to its `MIN_ETINY`, far below -10^18, so the fourth passes it, and the first is the one combination the digit count lets through. Under the ruling, Python computes the adjusted exponent from the text with Python ints, as `tm-formats`' `adjusted_exponent` does, once the exponent has 18 digits or fewer, and calls `Decimal` only for a literal that passed; the bounds are unchanged.
