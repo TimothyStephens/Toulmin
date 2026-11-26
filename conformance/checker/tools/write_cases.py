@@ -1767,6 +1767,38 @@ case("int_cell_wider_than_38_digits", ["w39"], "w39", [],
            "is the case's error whatever they hold; verdict error, row-level fields null. A 38-digit cell parses "
            "(log_of_int_beyond_double holds 10^37).")
 
+table(
+    "sm",
+    "id,x\na,9\nb,10\n",
+    spec([col("id", "str"), col("x", "int")], ["id"]),
+    ["id", "x"], ["id"],
+    {"a": [S("a"), I(9)], "b": [S("b"), I(10)]},
+)
+
+INT_L = "1" + "0" * 3072   # 10^3072: 3,073 digits, adjusted exponent 3072
+
+case("derive_int_overflow_past_emax", ["sm"], "sm", [derive("y", f"x * {INT_L} * {INT_L}")],
+     a_count("eq", I(2)), "error", error=("E5002", "/ops/0/expr"),
+     notes="11.6 int row and 11.18.2 Precision: 'int results are exact and never round; an int result whose "
+           "adjusted exponent exceeds Emax 6144 (more than 6,145 digits) is Overflow, E5002, at the member "
+           "holding the expression'. For a positive integer of d digits the adjusted exponent is d - 1, so "
+           "d - 1 > 6144 is d > 6145: 6,145 digits are allowed and 6,146 are not. int column x with small "
+           "cells: a 9, b 10. The literal L is 1 followed by 3,072 zeros, 10^3072: an INT literal (11.18.1), "
+           "typed int, 3,073 digits, adjusted exponent 3072, in range, so it is not refused and is not near "
+           "the literal bound; it is written twice so that no single literal has 6,145 digits. Left-associative: "
+           "(x * L) * L; int * int gives int, exact up to the bound (11.18.2 Types). a: 9 * 10^3072 = 9 "
+           "followed by 3,072 zeros (3,073 digits); * 10^3072 = 9 * 10^6144 = 9 followed by 6,144 zeros, "
+           "6,145 digits, adjusted exponent 6144, not above Emax: exact, at the bound, no error. b: 10 * "
+           "10^3072 = 10^3073, 1 followed by 3,073 zeros (3,074 digits, a computed int wider than a 38-digit "
+           "cell, which 11.7 allows because it never leaves Rust or Python as Arrow); * 10^3072 = 10^6145 = 1 "
+           "followed by 6,145 zeros, 6,146 digits, adjusted exponent 6145 > 6144: Overflow, verdict error with "
+           "E5002, the same condition a dec result raises (11.18.2 Domain). Neither implementation's integers "
+           "have this bound, so both check it explicitly (Precision row); an implementation that left int "
+           "arithmetic unbounded would give y for both rows and count 2 = 2 holds. E5002 points at the member "
+           "holding the expression, /ops/0/expr (11.18.2 Types). Row-level fields null (item 92). Digit counts "
+           "cross-checked with Python (len of the decimal string) and the Overflow with Python decimal in the "
+           "stated context.")
+
 
 # ---- eval expectations (checker/assertions/eval/<name>/expected.json) ---------------------------
 
