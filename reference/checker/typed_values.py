@@ -5,8 +5,8 @@ inf), `v` (Python int, Decimal, NFC str, bool, or the RFC 3339 text of a
 date or datetime) and `s` (the sign of an inf).
 
 Decimal arithmetic runs in CONTEXT, IEEE 754-2008 decimal128 (ruling 56):
-precision 34, Emax 6144, Emin -6143, ROUND_HALF_EVEN; only Overflow is
-trapped (E5002). Exact
+precision 34, Emax 6144, Emin -6143, ROUND_HALF_EVEN, clamp 0; only Overflow
+is trapped (E5002). Exact
 conversions (a literal to positional notation, a cell to its column scale,
 tolerance margins) run in EXACT, a context with the largest precision the
 module allows, so they never round.

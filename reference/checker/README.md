@@ -65,7 +65,7 @@ All `dec` arithmetic (`+`, `-`, `*`, `/` in `derive`, `sum` in `group`)
 runs in one `decimal.Context`, IEEE 754-2008 decimal128 (owner ruling 56):
 
 ```
-precision 34, Emax 6144, Emin -6143, rounding ROUND_HALF_EVEN,
+precision 34, Emax 6144, Emin -6143, rounding ROUND_HALF_EVEN, clamp 0,
 traps: Overflow only (reported as E5002 with verdict error)
 ```
 

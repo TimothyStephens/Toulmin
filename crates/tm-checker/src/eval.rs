@@ -1,8 +1,8 @@
 //! Expression evaluation (design 11.18.2, item 53): `filter.where` and
 //! `derive.expr` over the rows of the current table, decimals under the one
 //! General Decimal Arithmetic context of 11.6, IEEE 754-2008 decimal128
-//! (precision 34, `Emax` 6144, `Emin` -6143, half-even; ruling 56), with
-//! `bigdecimal`.
+//! (precision 34, `Emax` 6144, `Emin` -6143, half-even, clamp 0; ruling 56),
+//! with `bigdecimal`.
 //!
 //! `bigdecimal` applies no context of its own, so every `dec` result is
 //! computed exactly and then passed through [`fix`], which is the
