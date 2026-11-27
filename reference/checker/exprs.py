@@ -245,9 +245,15 @@ def adjusted_exponent(text):
     less the fraction's length, plus the count of significant digits less
     one, a zero coefficient counting one digit (so 0e5 is 5, 0.0e5 is 4, as
     Decimal.adjusted() gives). Does not construct a Decimal, so it holds
-    any exponent the text can write."""
+    any exponent the text can write. The exponent's sign and leading zeros
+    are stripped before int() converts it: CPython's int-string limit
+    (4,300 digit characters) counts leading zeros, which the caller's
+    18-significant-digit check does not, so 1e followed by 4,300 zeros and
+    1 would otherwise raise ValueError (checker-diffs D22, re-audit of
+    2026-11-27); canonical_json._parse_int guards the same limit."""
     mantissa, _, exponent = text.lower().partition("e")
-    exp = int(exponent) if exponent else 0
+    sign = -1 if exponent.startswith("-") else 1
+    exp = sign * int(exponent.lstrip("+-").lstrip("0") or "0")
     integer, _, frac = mantissa.partition(".")
     significant = max(len((integer + frac).lstrip("0")), 1)
     return exp - len(frac) + significant - 1
@@ -263,8 +269,10 @@ def number_literal(text):
     the adjusted exponent is past libmpdec's MAX_EMAX (999999999999999999,
     18 digits). An exponent of more than 18 significant digits is refused
     first, without being converted; one of 18 digits or fewer is converted
-    with Python ints, which have no such limit, and the adjusted exponent is
-    computed from the text (checker-diffs D22 and its re-audit)."""
+    with Python ints, which have no such limit, its sign and leading zeros
+    stripped first so CPython's int-string limit cannot be reached, and the
+    adjusted exponent is computed from the text (checker-diffs D22 and its
+    re-audits)."""
     _, _, exponent = text.lower().partition("e")
     if len(exponent.lstrip("+-").lstrip("0")) > EXPONENT_DIGITS:
         raise CheckError(
