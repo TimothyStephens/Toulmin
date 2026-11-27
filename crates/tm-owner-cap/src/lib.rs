@@ -22,3 +22,15 @@ impl OwnerCap {
         OwnerCap(())
     }
 }
+
+#[cfg(feature = "test-support")]
+impl OwnerCap {
+    /// A capability for a crate's own tests, available through the
+    /// `test-support` feature, which a crate enables only in its
+    /// `[dev-dependencies]` (item 43). CI fails if any crate enables it
+    /// elsewhere.
+    #[must_use]
+    pub fn for_tests() -> OwnerCap {
+        OwnerCap(())
+    }
+}

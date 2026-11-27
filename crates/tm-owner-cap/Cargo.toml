@@ -10,6 +10,9 @@ publish.workspace = true
 # The one constructor. tm-cli enables this; no other crate does (4.2 rule
 # 4, checked by scripts/ci/check-owner-cap.sh).
 construct = []
+# Test support: `OwnerCap::for_tests()`, enabled only through a crate's
+# `[dev-dependencies]` (4.2 rule 4, item 43; P7 owner ruling 1).
+test-support = []
 
 [dependencies]
 

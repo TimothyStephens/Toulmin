@@ -18,6 +18,7 @@ Codes are stable; messages may change. `Gate` is the earliest gate at which the 
 | `E2006` | record | A | binding conflicts or config directory unwritable |
 | `E2007` | record | A | no record.json at the record path |
 | `E2008` | record | A | record format newer than this binary |
+| `E2009` | record | A | project root not a git repository |
 | `E2101` | record | A | torn tail |
 | `E2102` | record | A | fork |
 | `E2103` | record | A | corruption |
@@ -66,6 +67,7 @@ Codes are stable; messages may change. `Gate` is the earliest gate at which the 
 | `E6102` | claims | B | host path given |
 | `E6103` | claims | B | limit exceeded |
 | `E6201` | claims | A | unknown ref |
+| `E6202` | claims | A | claim retracted or superseded |
 | `E6301` | claims | A | span not found |
 | `E6401` | claims | C | no newer version |
 | `E6501` | claims | B | dependency missing |
@@ -80,8 +82,10 @@ Codes are stable; messages may change. `Gate` is the earliest gate at which the 
 | `E7102` | core and permissions | B | repository unreadable |
 | `E7103` | core and permissions | B | already confirmed |
 | `E7105` | core and permissions | B | session not open or not confirmed |
+| `E7201` | core and permissions | A | unknown audit |
 | `E8001` | front ends | A | output directory not empty |
 | `E8101` | front ends | A | outdated action |
 | `E8102` | front ends | A | action not available in this gate |
+| `E8103` | front ends | A | malformed action file |
 | `E8201` | front ends | D | bad code |
 | `E8202` | front ends | D | origin mismatch |

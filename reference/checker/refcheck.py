@@ -21,7 +21,7 @@ sys.path[:0] = [HERE, os.path.join(os.path.dirname(HERE), "formats")]
 import assertion  # noqa: E402
 import ops  # noqa: E402
 import tables  # noqa: E402
-from canonical_json import FormatError, parse  # noqa: E402
+from canonical_json import FormatError, _parse_int, parse  # noqa: E402
 from errors import CheckError  # noqa: E402
 from ids import id_of  # noqa: E402
 from typed_values import parse_typed  # noqa: E402
@@ -152,7 +152,11 @@ def main(argv):
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     with open(os.path.join(case_dir, "expected.json"), "rb") as f:
-        expected = json.loads(f.read().decode("utf-8"))
+        # A bare integer of more than 4,300 digits would raise ValueError at
+        # CPython's int-string limit under json's default parse_int;
+        # canonical_json's _parse_int checks the digit count on the text
+        # first (P7 owner ruling 2, 2026-11-27).
+        expected = json.loads(f.read().decode("utf-8"), parse_int=_parse_int)
     differences = diff(expected, result)
     if differences:
         print(f"{case_dir}: {len(differences)} difference(s)")

@@ -13,6 +13,21 @@ module allows, so they never round.
 """
 
 import datetime as _dt
+import sys
+
+# The C implementation is required: the pure-Python fallback (_pydecimal)
+# converts coefficients with int() and fails at CPython's int-string limit
+# (4,300 digits), while ruling 56 puts values of up to 6,145 digits in
+# range (P7 owner ruling 2, 2026-11-27).
+try:
+    import _decimal  # noqa: F401
+except ImportError:  # pragma: no cover
+    sys.exit(
+        "reference checker: the C _decimal module is absent; this Python "
+        "build's decimal is the pure-Python _pydecimal, which fails on the "
+        "6,145-digit values ruling 56 allows. Use a CPython with _decimal."
+    )
+
 import decimal
 import math
 import re

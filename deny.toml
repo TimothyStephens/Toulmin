@@ -231,6 +231,7 @@ allow = [
     "tinyvec",
     "tm-checker",
     "tm-claims",
+    "tm-core",
     "tm-duckdb",
     "tm-files",
     "tm-formats",

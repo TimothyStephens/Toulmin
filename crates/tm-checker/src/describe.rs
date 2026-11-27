@@ -77,33 +77,65 @@ fn func(f: AggFn) -> &'static str {
 }
 
 /// The description of `op`, given the key of its input table (`{key}`),
-/// its input row count `m`, and its output row count `n`.
+/// its input row count `m`, and its output row count `n`: the template's
+/// head, `; `, its count clause, and the period.
 #[must_use]
-#[allow(
-    clippy::many_single_char_names,
-    reason = "n, m, k, d, t are 11.18.4's placeholders"
-)]
 pub fn describe(op: &Op, key: &[String], m: u64, n: u64) -> String {
+    format!("{}; {}.", head(op, key), counts(op, m, n))
+}
+
+/// The description of `op` without its count clause, for
+/// `checker.describe_steps` (section 10), which reads no table: the
+/// template's head closed with the period, never a count that was not
+/// computed.
+#[must_use]
+pub fn describe_without_counts(op: &Op, key: &[String]) -> String {
+    format!("{}.", head(op, key))
+}
+
+/// The count clause of `op`'s template (`{n} of {m} rows remain`, `{n}
+/// rows`, `{n} rows remain`, `{n} groups from {m} rows`).
+fn counts(op: &Op, m: u64, n: u64) -> String {
     let (n, m) = (count(n), count(m));
     match op {
+        Op::Filter { .. } => format!("{n} of {m} rows remain"),
+        Op::Take { .. } => format!("{n} rows remain"),
+        Op::Group { .. } => format!("{n} groups from {m} rows"),
+        Op::Select { .. }
+        | Op::Sort { .. }
+        | Op::Rank { .. }
+        | Op::Derive { .. }
+        | Op::Join { .. } => {
+            format!("{n} rows")
+        }
+    }
+}
+
+/// The text of `op`'s template before the `;` that precedes the counts.
+#[allow(
+    clippy::many_single_char_names,
+    reason = "k, d, t are 11.18.4's placeholders"
+)]
+fn head(op: &Op, key: &[String]) -> String {
+    match op {
         Op::Filter { where_ } => format!(
-            "Keep rows where {} (missing values excluded); {n} of {m} rows remain.",
+            "Keep rows where {} (missing values excluded)",
             where_.render()
         ),
-        Op::Select { columns: c } => format!("Keep columns {}; {n} rows.", columns(c)),
+        Op::Select { columns: c } => format!("Keep columns {}", columns(c)),
         Op::Sort { by, missing: mp } => {
             let parts: Vec<String> = by
                 .iter()
                 .map(|(c, d)| format!("{} {}", column(c), dir(*d)))
                 .collect();
             format!(
-                "Sort by {} (missing values {}; ties broken by {}); {n} rows.",
+                "Sort by {} (missing values {}; ties broken by {})",
                 parts.join(", then "),
                 missing(*mp),
                 columns(key)
             )
         }
-        Op::Take { n: k } => format!("Take the first {} rows; {n} rows remain.", count(*k)),
+        Op::Take { n: k } => format!("Take the first {} rows", count(*k)),
         Op::Rank {
             by,
             dir: d,
@@ -116,7 +148,7 @@ pub fn describe(op: &Op, key: &[String], m: u64, n: u64) -> String {
                 Some(g) => format!("each {}", columns(g)),
             };
             format!(
-                "Rank by {} {} within {scope} (ties: {}; missing values {}); {n} rows.",
+                "Rank by {} {} within {scope} (ties: {}; missing values {})",
                 column(by),
                 dir(*d),
                 ties(*t),
@@ -124,7 +156,7 @@ pub fn describe(op: &Op, key: &[String], m: u64, n: u64) -> String {
             )
         }
         Op::Derive { as_, expr } => {
-            format!("Add column {} = {}; {n} rows.", column(as_), expr.render())
+            format!("Add column {} = {}", column(as_), expr.render())
         }
         Op::Group { by, aggregates } => {
             let aggs: Vec<String> = aggregates
@@ -138,11 +170,7 @@ pub fn describe(op: &Op, key: &[String], m: u64, n: u64) -> String {
                     )
                 })
                 .collect();
-            format!(
-                "Group by {} and compute {}; {n} groups from {m} rows.",
-                columns(by),
-                list(&aggs)
-            )
+            format!("Group by {} and compute {}", columns(by), list(&aggs))
         }
         Op::Join {
             right,
@@ -154,7 +182,7 @@ pub fn describe(op: &Op, key: &[String], m: u64, n: u64) -> String {
                 .map(|(l, r)| format!("{} = {}", column(l), column(r)))
                 .collect();
             format!(
-                "{} join with {right} on {}; {n} rows.",
+                "{} join with {right} on {}",
                 if *left_kind { "Left" } else { "Inner" },
                 list(&pairs)
             )
@@ -179,5 +207,29 @@ mod tests {
         assert_eq!(column("p-value"), "`p-value`");
         assert_eq!(column("or"), "`or`");
         assert_eq!(column("gene_id"), "gene_id");
+    }
+
+    #[test]
+    fn with_and_without_counts() {
+        let op = Op::Take { n: 1500 };
+        assert_eq!(
+            describe(&op, &[], 2000, 1500),
+            "Take the first 1,500 rows; 1,500 rows remain."
+        );
+        assert_eq!(
+            describe_without_counts(&op, &[]),
+            "Take the first 1,500 rows."
+        );
+        let op = Op::Select {
+            columns: vec!["gene_id".to_owned(), "p-value".to_owned()],
+        };
+        assert_eq!(
+            describe(&op, &[], 7, 7),
+            "Keep columns gene_id and `p-value`; 7 rows."
+        );
+        assert_eq!(
+            describe_without_counts(&op, &[]),
+            "Keep columns gene_id and `p-value`."
+        );
     }
 }

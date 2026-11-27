@@ -1658,6 +1658,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tm-core"
+version = "0.1.0"
+dependencies = [
+ "arrow",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tm-checker",
+ "tm-claims",
+ "tm-duckdb",
+ "tm-files",
+ "tm-formats",
+ "tm-fsfacts",
+ "tm-index",
+ "tm-owner-cap",
+ "tm-record",
+]
+
+[[package]]
 name = "tm-duckdb"
 version = "0.1.0"
 dependencies = [

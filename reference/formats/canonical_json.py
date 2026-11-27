@@ -17,9 +17,14 @@ lone surrogate only after the whole document parsed.
 """
 
 import json
+from decimal import Decimal
 
 LIMIT = 2**53 - 1
 LIMIT_DIGITS = len(str(LIMIT))
+# str(int) is bound by CPython's int-string limit (4,300 digits);
+# str(Decimal(int)) is exact and is not. The same rule as the checker's
+# typed_values.int_text (P7 owner ruling 2, 2026-11-27).
+_STR_SAFE = 10**4000
 
 
 class FormatError(Exception):
@@ -52,6 +57,11 @@ def _parse_int(text):
 
 def _short(text):
     return text if len(text) <= 40 else f"{text[:20]}... ({len(text)} characters)"
+
+
+def _int_text(n):
+    """The decimal digits of a Python int, whatever its size."""
+    return str(n) if -_STR_SAFE < n < _STR_SAFE else str(Decimal(n))
 
 
 def _parse_constant(text):
@@ -149,7 +159,7 @@ def _serialize(value, out):
         out.append("false")
     elif isinstance(value, int):
         if abs(value) > LIMIT:
-            raise FormatError("E1001", f"integer outside plus or minus 2^53-1: {value}")
+            raise FormatError("E1001", f"integer outside plus or minus 2^53-1: {_short(_int_text(value))}")
         out.append(str(value))
     elif isinstance(value, float):
         raise FormatError("E1001", f"float in canonical JSON: {value!r}")

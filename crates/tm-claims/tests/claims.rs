@@ -723,6 +723,9 @@ fn the_fold_writes_its_tables() {
         rows(&mut tx, "SELECT state FROM claims WHERE ref = 'C3'"),
         vec![vec![t("retracted")]]
     );
+    // A retract (and a supersede, above) clears `promoted, not reviewed`
+    // too: a withdrawn claim needs no review (item 70, P7).
+    assert_eq!(flags(&mut tx), Vec::<Vec<Param>>::new());
 
     // claim_events: one row per claim. event under its body's ref.
     assert_eq!(
