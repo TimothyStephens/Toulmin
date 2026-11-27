@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Item 8. Two checks that the OwnerCap constructor stays inside tm-cli
-# (NFR Security and privacy):
+# Item 8. Three checks that the OwnerCap constructor stays inside tm-cli
+# (NFR Security and privacy; 4.2 rule 4):
 #   1. no crate except tm-owner-cap and tm-cli mentions `new_for_cli`;
-#   2. every binary crate except tm-cli builds standalone, and its feature
+#   2. no crate's manifest enables tm-owner-cap's `test-support` feature
+#      (`OwnerCap::for_tests`) outside its `[dev-dependencies]` table, in a
+#      dependency entry or a `[features]` list (P7 owner ruling 1);
+#   3. every binary crate except tm-cli builds standalone, and its feature
 #      graph does not enable tm-owner-cap's `construct` feature.
-# In gate A the set of other binary crates is empty and the script passes.
+# In gate A the set of other binary crates is empty and check 3 passes.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -24,7 +27,36 @@ else
   echo "OK: new_for_cli only in tm-owner-cap and tm-cli"
 fi
 
-# Binary crates: a crates/<name>/src/main.rs or a [[bin]] table.
+# Check 2: `test-support` only under [dev-dependencies] (or a target's).
+if ! python3 -I - crates/*/Cargo.toml <<'PY'; then status=1; fi
+import re, sys
+bad = []
+for path in sys.argv[1:]:
+    if path.endswith("/tm-owner-cap/Cargo.toml"):
+        continue  # declares the feature; enables nothing
+    table = ""
+    for n, raw in enumerate(open(path, encoding="utf-8"), 1):
+        line = raw.split("#", 1)[0].rstrip()
+        m = re.match(r"^\s*\[+\s*([^\]]*?)\s*\]+\s*$", line)
+        if m:
+            table = m.group(1)
+            continue
+        if "test-support" not in line:
+            continue
+        in_dev = table == "dev-dependencies" or table.endswith(".dev-dependencies")
+        names_cap = "tm-owner-cap" in line or table.endswith("dependencies.tm-owner-cap")
+        if table == "features" or (names_cap and not in_dev) or (
+            not in_dev and "tm-owner-cap" in table
+        ):
+            bad.append(f"{path}:{n}: {line.strip()}")
+if bad:
+    print("FAIL: tm-owner-cap/test-support enabled outside [dev-dependencies]:", file=sys.stderr)
+    print("\n".join(bad), file=sys.stderr)
+    sys.exit(1)
+print("OK: test-support is enabled only under [dev-dependencies]")
+PY
+
+# Check 3. Binary crates: a crates/<name>/src/main.rs or a [[bin]] table.
 bins=()
 for manifest in crates/*/Cargo.toml; do
   dir=$(dirname "$manifest")
