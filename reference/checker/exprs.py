@@ -245,7 +245,9 @@ def adjusted_exponent(text):
     less the fraction's length, plus the count of significant digits less
     one, a zero coefficient counting one digit (so 0e5 is 5, 0.0e5 is 4, as
     Decimal.adjusted() gives). Does not construct a Decimal, so it holds
-    any exponent the text can write. The exponent's sign and leading zeros
+    any exponent the caller lets through; the caller must first have
+    refused an exponent of more than 18 significant digits, as
+    number_literal does. The exponent's sign and leading zeros
     are stripped before int() converts it: CPython's int-string limit
     (4,300 digit characters) counts leading zeros, which the caller's
     18-significant-digit check does not, so 1e followed by 4,300 zeros and
