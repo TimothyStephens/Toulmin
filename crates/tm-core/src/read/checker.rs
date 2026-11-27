@@ -1,7 +1,7 @@
 //! `checker.preview_steps` and `checker.describe_steps` (section 10; item
 //! 78): per-step outputs and counts over the cited tables without
-//! recording anything, and the plain-language descriptions with the
-//! validation result.
+//! recording anything, and the plain-language descriptions (count-free,
+//! since no table is read) with the validation result.
 
 use std::collections::BTreeMap;
 
@@ -34,9 +34,11 @@ fn named_versions(steps: &Value) -> Result<BTreeMap<String, VersionHandle>> {
     Ok(out)
 }
 
-/// `checker.preview_steps`: run the steps over the cited tables with a
-/// trivially true assertion (`count >= 0`) and return every step's table
-/// capped at `limit`; nothing is recorded.
+/// `checker.preview_steps`: run the steps over the cited tables and
+/// return every step's table capped at `limit`, with its true row count,
+/// and the Checker's error if one stopped the run; nothing is recorded.
+/// The Checker's request needs an assertion, so a `count >= 0` stands in;
+/// its result is neither returned nor stored, and no verdict is returned.
 ///
 /// # Errors
 /// `E6001` a version not citable or without a spec; the parser's codes;
@@ -93,8 +95,9 @@ pub fn preview_steps(core: &mut Core, steps: &Value, limit: Option<usize>) -> Re
 }
 
 /// `checker.describe_steps`: the validation result (the first 11.8 error
-/// against the cited specs, or none) and one 11.18.4 description per op.
-/// Without data the row counts in the descriptions are 0.
+/// against the cited specs, or none) and one 11.18.4 description per op
+/// in its count-free form (section 10): no table is read, so no count is
+/// shown.
 ///
 /// # Errors
 /// `Error::Index`.
@@ -123,7 +126,7 @@ pub fn describe_steps(core: &mut Core, steps: &Value) -> Result<Value> {
     let descriptions: Vec<String> = parsed
         .ops
         .iter()
-        .map(|op| tm_checker::describe::describe(op, &key, 0, 0))
+        .map(|op| tm_checker::describe::describe_without_counts(op, &key))
         .collect();
     Ok(match check {
         Ok(_) => json!({"valid": true, "error": Value::Null, "descriptions": descriptions}),

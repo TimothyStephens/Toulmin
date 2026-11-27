@@ -81,9 +81,9 @@ pub fn check_record_filesystem(
 /// `tm init --record PATH`.
 ///
 /// # Errors
-/// `E2001` record exists; `E2002` path inside repository; `E2003`
-/// filesystem unsuitable; `E2004` the repository already has a project
-/// file; `E2006` binding conflicts or config directory unwritable;
+/// `E2009` the project root is not a git repository; `E2001` record
+/// exists; `E2002` path inside repository; `E2003` filesystem unsuitable;
+/// `E2004` the repository already has a project file; `E2006` binding conflicts or config directory unwritable;
 /// `Error::Io`.
 pub fn init(
     cap: &OwnerCap,
@@ -95,7 +95,7 @@ pub fn init(
     let repo_root = canonical_path(repo_root)?;
     if !is_git_repository(&repo_root) {
         return Err(Error::code(
-            Code::E2002,
+            Code::E2009,
             format!(
                 "{} is not a git repository (no .git); Toulmin runs alongside git",
                 repo_root.display()

@@ -28,7 +28,8 @@ pub struct Updated {
 /// `tm claim update-text REF`.
 ///
 /// # Errors
-/// `E6201` unknown ref or a withdrawn claim; `E6301` no span for the ref in
+/// `E6201` unknown ref; `E6202` a retracted or superseded claim; `E6301`
+/// no span for the ref in
 /// the registered report; the check's codes; the lock's and the append's.
 pub fn update_text(core: &mut Core, cap: &OwnerCap, claim_ref: ClaimRef) -> Result<Updated> {
     let (row, content, report_path) = {
@@ -45,7 +46,7 @@ pub fn update_text(core: &mut Core, cap: &OwnerCap, claim_ref: ClaimRef) -> Resu
     };
     if row.state.is_final() {
         return Err(Error::code(
-            Code::E6201,
+            Code::E6202,
             format!(
                 "{claim_ref} is {}; its text is not updated",
                 row.state.as_str()

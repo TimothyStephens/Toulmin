@@ -13,8 +13,8 @@ use crate::{Code, Error, Result};
 /// `tm claim retract REF --reason R`.
 ///
 /// # Errors
-/// `E6201` unknown ref or a claim already retracted or superseded; `E1002`
-/// an empty reason; the lock's and the append's.
+/// `E6201` unknown ref; `E6202` a claim already retracted or superseded;
+/// `E1002` an empty reason; the lock's and the append's.
 pub fn retract(
     core: &mut Core,
     cap: &OwnerCap,
@@ -27,7 +27,7 @@ pub fn retract(
     tx.rollback()?;
     if row.state.is_final() {
         return Err(Error::code(
-            Code::E6201,
+            Code::E6202,
             format!("{claim_ref} is already {}", row.state.as_str()),
         ));
     }

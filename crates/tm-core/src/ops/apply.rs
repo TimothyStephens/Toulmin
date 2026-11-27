@@ -2,8 +2,10 @@
 //! static view produced, refuse an item whose target changed since the
 //! file's `chain_head` (`E8101`), list one line per item for the CLI's
 //! confirmation, and commit the actions' events with `source:
-//! static-view`. Gate A applies `claim.review` items only; a
-//! `draft.promote` or `run.approve` item, or any other, is `E8102`.
+//! static-view`. Gate A applies `claim.review` items only: a
+//! `draft.promote` or `run.approve` item is `E8102`; a file that is I-JSON
+//! but not of 11.15's shape, or an item that is not a well-formed instance
+//! of its `op`, is `E8103`.
 
 use std::path::Path;
 
@@ -67,40 +69,41 @@ impl Plan {
     }
 }
 
-fn e8102(why: impl std::fmt::Display) -> Error {
-    Error::code(
-        Code::E8102,
-        format!("not available in this gate: {why}; gate A applies claim.review items only"),
-    )
+/// The 11.15 actions gate A does not apply.
+const NOT_IN_GATE_A: [&str; 2] = ["draft.promote", "run.approve"];
+
+fn e8103(why: impl std::fmt::Display) -> Error {
+    Error::code(Code::E8103, format!("malformed action file: {why}"))
 }
 
 /// Read and check an action file (11.15), without writing.
 ///
 /// # Errors
 /// `E1003` not I-JSON; `E1001` a float; `E8101` the target changed since
-/// `chain_head`, or `chain_head` is not on the chain; `E8102` an item
-/// other than a well-formed `claim.review`; `E6201` unknown ref;
-/// `Error::Io`.
+/// `chain_head`, or `chain_head` is not on the chain; `E8102` a
+/// `draft.promote` or `run.approve` item; `E8103` a file not of 11.15's
+/// shape or an item that is not a well-formed `claim.review`; `E6201`
+/// unknown ref; `Error::Io`.
 pub fn plan(core: &mut Core, file: &Path) -> Result<Plan> {
     let bytes = crate::read_file(file)?;
     let v = canonical::parse_bytes(&bytes)?;
     if v.get("actions").and_then(Value::as_u64) != Some(tm_formats::version::ACTIONS) {
-        return Err(e8102("`actions` is not 1"));
+        return Err(e8103("`actions` is not 1"));
     }
     let exported_at = v
         .get("exported_at")
         .and_then(Value::as_str)
-        .ok_or_else(|| e8102("no `exported_at`"))?
+        .ok_or_else(|| e8103("no `exported_at`"))?
         .to_owned();
     let chain_head = v
         .get("chain_head")
         .and_then(Value::as_str)
-        .ok_or_else(|| e8102("no `chain_head`"))?
+        .ok_or_else(|| e8103("no `chain_head`"))?
         .to_owned();
     let items_json = v
         .get("items")
         .and_then(Value::as_array)
-        .ok_or_else(|| e8102("no `items` list"))?;
+        .ok_or_else(|| e8103("no `items` list"))?;
     let mut tx = core.index.begin()?;
     let on_chain = !tx
         .query_rows(
@@ -129,19 +132,27 @@ pub fn plan(core: &mut Core, file: &Path) -> Result<Plan> {
     let mut pending = Vec::new();
     for (i, item) in items_json.iter().enumerate() {
         let op = item.get("op").and_then(Value::as_str).unwrap_or_default();
+        if NOT_IN_GATE_A.contains(&op) {
+            return Err(Error::code(
+                Code::E8102,
+                format!("item {i} is {op}; gate A applies claim.review items only"),
+            ));
+        }
         if op != "claim.review" {
-            return Err(e8102(format!("item {i} is {op:?}")));
+            return Err(e8103(format!(
+                "item {i} has op {op:?}, not an 11.15 action"
+            )));
         }
         let s = |k: &str| item.get(k).and_then(Value::as_str);
         let claim_ref = s("ref")
             .and_then(ClaimRef::parse)
-            .ok_or_else(|| e8102(format!("item {i} has no valid `ref`")))?;
+            .ok_or_else(|| e8103(format!("item {i} has no valid `ref`")))?;
         let revision = s("revision")
             .and_then(EventId::parse)
-            .ok_or_else(|| e8102(format!("item {i} has no valid `revision`")))?;
+            .ok_or_else(|| e8103(format!("item {i} has no valid `revision`")))?;
         let outcome = s("outcome")
             .and_then(ReviewOutcome::parse)
-            .ok_or_else(|| e8102(format!("item {i} has no valid `outcome`")))?;
+            .ok_or_else(|| e8103(format!("item {i} has no valid `outcome`")))?;
         let note = s("note").map(str::to_owned);
         let row = claim_row(&mut tx, claim_ref)?
             .ok_or_else(|| Error::code(Code::E6201, format!("item {i}: no claim {claim_ref}")))?;

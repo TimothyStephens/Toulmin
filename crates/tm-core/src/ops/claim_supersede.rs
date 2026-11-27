@@ -15,7 +15,8 @@ use crate::{Code, Error, Result};
 /// replacement.
 ///
 /// # Errors
-/// `E6201` unknown or already withdrawn old ref; `claim.add`'s codes; the
+/// `E6201` unknown old ref; `E6202` an old ref already retracted or
+/// superseded; `claim.add`'s codes; the
 /// lock's and the append's.
 pub fn supersede(core: &mut Core, cap: &OwnerCap, old: ClaimRef, args: &Args) -> Result<Added> {
     {
@@ -25,7 +26,7 @@ pub fn supersede(core: &mut Core, cap: &OwnerCap, old: ClaimRef, args: &Args) ->
         tx.rollback()?;
         if row.state.is_final() {
             return Err(Error::code(
-                Code::E6201,
+                Code::E6202,
                 format!(
                     "{old} is already {}; it cannot be superseded",
                     row.state.as_str()

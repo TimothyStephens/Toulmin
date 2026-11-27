@@ -120,7 +120,7 @@ fn since_audit(core: &mut Core, since: &Since) -> Result<(String, String)> {
         })
         .ok_or_else(|| {
             Error::code(
-                Code::E6201,
+                Code::E7201,
                 match since {
                     Since::Last => "no audit.completed on the chain yet".to_owned(),
                     Since::Event(id) => format!("{id} is not an audit.completed on the chain"),
@@ -158,7 +158,7 @@ fn outcome_summary(body: &Map<String, Value>) -> Value {
 /// `tm audit [--since LAST] [--out DIR]`.
 ///
 /// # Errors
-/// `E6201` an unknown `--since`; the checks' codes; the lock's and the
+/// `E7201` a `--since` that names no `audit.completed`; the checks' codes; the lock's and the
 /// append's; `Error::Io` when the report cannot be written.
 pub fn audit(core: &mut Core, cap: &OwnerCap, args: &Args) -> Result<Report> {
     let since = match &args.since {
