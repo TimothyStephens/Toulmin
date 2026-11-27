@@ -1,0 +1,50 @@
+{
+  "description": "a where with a literal whose exponent has 18 digits and whose adjusted exponent is 10^18: E6004 as a shape check, not a crash in the reference implementation's Decimal (11.18.1, checker-diffs D22 re-audit)",
+  "input": {
+    "steps": 1,
+    "tables": {
+      "t": "F7@v2"
+    },
+    "from": "t",
+    "ops": [
+      {
+        "op": "filter",
+        "v": 1,
+        "where": "x < 10e999999999999999999"
+      }
+    ]
+  },
+  "specs": {
+    "t": {
+      "spec": 1,
+      "format": "tsv",
+      "delimiter": "\t",
+      "header": true,
+      "columns": [
+        {
+          "name": "k",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "x",
+          "type": "dec",
+          "missing": [
+            "NA"
+          ],
+          "scale": 2
+        }
+      ],
+      "key": [
+        "k"
+      ],
+      "nan": "missing",
+      "inf": "missing",
+      "encoding": "utf-8"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/ops/0/where"
+  }
+}

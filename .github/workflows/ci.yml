@@ -126,7 +126,7 @@ jobs:
         run: |
           # refcheck.py takes one case directory; validate.py takes schema
           # case files (reference/checker/README.md).
-          for d in conformance/checker/cases/*/ conformance/checker/assertions/eval/*/; do
+          for d in conformance/checker/cases/*/ conformance/checker/assertions/eval/*/ crates/tm-checker/tests/cases/*/; do
             python3 -I reference/checker/refcheck.py "$d" --check
           done
           python3 -I reference/checker/validate.py --check conformance/formats/steps/invalid/*.json conformance/formats/steps/valid/*.json

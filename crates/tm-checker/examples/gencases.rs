@@ -1104,9 +1104,14 @@ impl Gen {
     fn num_literal(&mut self, wish: ExprWish) -> E {
         if wish.out_of_range {
             return E::Exp(
-                (*self
-                    .rng
-                    .pick(&["1e1000000", "1e-1000000", "9e1000001", "1.5E+1000000"]))
+                (*self.rng.pick(&[
+                    "1e6145",
+                    "1e-6144",
+                    "9.9e6145",
+                    "1.5E+6145",
+                    "0.1e-6143",
+                    "1e1000000",
+                ]))
                 .to_owned(),
             );
         }
@@ -2394,35 +2399,56 @@ impl Gen {
                     ..plain
                 };
                 let (t, mut p) = self.start(&wish);
-                let text = if self.rng.below(6) == 5 {
-                    // Underflow, not an error: a `dec` times `1e-999999` is
-                    // subnormal, and below `Emin` far enough it rounds to
-                    // zero (11.18.2 Domain row).
+                let arm = self.rng.below(6);
+                let (text, tag) = if arm == 5 {
+                    // Underflow, not an error: a `dec` times `1e-6143` is
+                    // subnormal, and below `Emin` -6143 far enough it rounds
+                    // to zero (11.18.2 Domain row; ruling 56).
                     let dec_col = t.first_of(SpecType::Dec);
                     let col_ref = col_text(&mut self.rng, &dec_col);
                     let shape = *self.rng.pick(&[
-                        "{d} * 1e-999999",
-                        "{d} * 1e-999999 / 7",
-                        "({d} + 1) * 1e-999999",
-                        "{d} * 1e-999999 * 1e-999999",
-                        "{d} / 1e999999 / 1e999999",
+                        "{d} * 1e-6143",
+                        "{d} * 1e-6143 / 7",
+                        "({d} + 1) * 1e-6143",
+                        "{d} * 1e-6143 * 1e-6143",
+                        "{d} / 1e6144 / 1e6144",
                     ]);
-                    shape.replace("{d}", &col_ref)
+                    (shape.replace("{d}", &col_ref), Tag::Dec)
+                } else if arm == 4 {
+                    // An `int` product past `Emax` 6144 is Overflow too
+                    // (11.18.2 Precision; ruling 57): `{e}` is 10^6144, the
+                    // largest power of ten an `INT` literal may be, and
+                    // `{n}` is 10^6145 - 1, the largest `int` result. Each
+                    // shape overflows for any `x` with |x| >= 1 (the second
+                    // for `x` != -1); the result stays an exact `int`.
+                    let int_col = t.first_of(SpecType::Int);
+                    let col_ref = col_text(&mut self.rng, &int_col);
+                    let shape = *self.rng.pick(&[
+                        "{x} * {e} * 10",
+                        "({x} + 1) * {e} * -10",
+                        "{x} * {x} * {e} * 10",
+                        "abs({x}) * {e} + {n}",
+                    ]);
+                    let text = shape
+                        .replace("{x}", &col_ref)
+                        .replace("{e}", &format!("1{}", "0".repeat(6144)))
+                        .replace("{n}", &"9".repeat(6145));
+                    (text, Tag::Int)
                 } else {
                     let int_col = t.first_of(SpecType::Int);
                     let col_ref = col_text(&mut self.rng, &int_col);
                     let shape = *self.rng.pick(&[
-                        "{x} * 9.9e999999 * 10",
-                        "({x} + 1) * 1e999999 * 100",
-                        "{x} * 1E999999 * {x} * 1e999999",
-                        "abs({x}) * 9e999999 * -100",
-                        "coalesce({x}, 1) * 5e999999 * 2",
+                        "{x} * 9.9e6144 * 10",
+                        "({x} + 1) * 1e6144 * 100",
+                        "{x} * 1E6144 * {x} * 1e6144",
+                        "abs({x}) * 9e6144 * -100",
+                        "coalesce({x}, 1) * 5e6144 * 2",
                     ]);
-                    shape.replace("{x}", &col_ref)
+                    (shape.replace("{x}", &col_ref), Tag::Dec)
                 };
                 p.ops
                     .push(json!({"op": "derive", "v": 1, "as": "big", "expr": text}));
-                p.schema.columns.push(("big".into(), Tag::Dec));
+                p.schema.columns.push(("big".into(), tag));
                 let count_all = json!({"assert": 1, "kind": "count", "op": "eq", "expected": tv_int(t.rows() as i128)});
                 let mut case = self.finish(&t, &p, false);
                 case.assertion = count_all;

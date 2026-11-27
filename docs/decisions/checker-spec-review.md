@@ -120,3 +120,19 @@ Timothy Stephens, 2026-11-17.
 54. (Writer's 41.) An E3102 about a data file cell has field null; its message names the row and the column. A CSV cell is not a JSON member, and E1001 and E1003 already take null for the same reason. Lands in 11.12 and 11.7.
 
 55. (Writer's 42.) A row value in an assertion (row, left, or right) may be the typed value missing, and it matches a key component that is missing under grouping identity (ruling 50), not under the = rule, so a claim can name the missing group: "312 genes have no annotated pathway". 11.9's "of its column's type" becomes "of its column's type, or missing". Lands in 11.9 and 11.18.3.
+
+## Owner ruling 56: the decimal context is decimal128
+
+Timothy Stephens, 2026-11-24. Supersedes the exponent limits of rulings 35 and 36; their other content stands.
+
+56. The decimal context is IEEE 754-2008 decimal128: precision 34, Emax 6144, Emin -6143, rounding half-even. Precision 34 was already decimal128's; Emax 999999 and Emin -999999 were Python's defaults and let one value be written with a million digits, which a hashed record must not hold. A result whose adjusted exponent exceeds 6144 is Overflow, E5002; underflow below -6143 is subnormal, then zero, not an error; a literal whose adjusted exponent is above 6144 or below -6143 is E6004 at validation (ruling 36's rule with the new numbers). Decided before P7 writes the first record, after which a change would alter stored events. Lands in 11.6, 11.18.1, and 11.18.2 (Precision, Domain), and closes the runbook-to-p1.md section 6 row on million-digit values.
+
+## Owner ruling 57: computed integers are bounded like decimals
+
+Timothy Stephens, 2026-11-24. Amends ruling 16's "int results are of arbitrary size and never overflow".
+
+57. A computed int whose adjusted exponent exceeds Emax 6144 (more than 6,145 digits) is Overflow, E5002, at the member holding the expression (ruling 42), exactly as a dec result. Below that, int arithmetic stays exact and never rounds. Ruling 56 bounded the size of a dec value in a hashed record; without this ruling, chained derives could still put an integer of any length into a claim.checked key map or row. An int literal is already bounded the same way (ruling 36 as amended by 56). Lands in 11.6 and 11.18.2 (Types, Precision, Domain).
+
+### Ruling 57, addendum: partial sums
+
+Timothy Stephens, 2026-11-26. The bound in ruling 57 applies to every partial sum of sum, in row order, as it does for dec. A running int sum that passes Emax 6144 at any point is E5002, even if a later addend would bring it back in range. Confirms the builder's reading in ea155f6 and c8a973e.

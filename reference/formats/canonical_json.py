@@ -19,6 +19,7 @@ lone surrogate only after the whole document parsed.
 import json
 
 LIMIT = 2**53 - 1
+LIMIT_DIGITS = len(str(LIMIT))
 
 
 class FormatError(Exception):
@@ -38,10 +39,19 @@ def _parse_float(text):
 def _parse_int(text):
     if text == "-0":
         raise FormatError("E1001", "minus zero in canonical JSON")
+    # The range is checked on the text first: 2^53-1 has 16 digits, and
+    # int(text) on more than 4,300 digits raises ValueError (CPython's
+    # int-string limit) instead of giving E1001.
+    if len(text.lstrip("-")) > LIMIT_DIGITS:
+        raise FormatError("E1001", f"integer outside plus or minus 2^53-1: {_short(text)}")
     value = int(text)
     if abs(value) > LIMIT:
         raise FormatError("E1001", f"integer outside plus or minus 2^53-1: {text}")
     return value
+
+
+def _short(text):
+    return text if len(text) <= 40 else f"{text[:20]}... ({len(text)} characters)"
 
 
 def _parse_constant(text):

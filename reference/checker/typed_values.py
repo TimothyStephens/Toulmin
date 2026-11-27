@@ -4,8 +4,9 @@ A `Value` carries `t` (int, dec, str, bool, date, datetime, missing, nan,
 inf), `v` (Python int, Decimal, NFC str, bool, or the RFC 3339 text of a
 date or datetime) and `s` (the sign of an inf).
 
-Decimal arithmetic runs in CONTEXT: precision 34, Emax 999999, Emin
--999999, ROUND_HALF_EVEN; only Overflow is trapped (E5002). Exact
+Decimal arithmetic runs in CONTEXT, IEEE 754-2008 decimal128 (ruling 56):
+precision 34, Emax 6144, Emin -6143, ROUND_HALF_EVEN, clamp 0; only Overflow
+is trapped (E5002). Exact
 conversions (a literal to positional notation, a cell to its column scale,
 tolerance margins) run in EXACT, a context with the largest precision the
 module allows, so they never round.
@@ -22,8 +23,8 @@ from errors import CheckError
 
 CONTEXT = decimal.Context(
     prec=34,
-    Emax=999999,
-    Emin=-999999,
+    Emax=6144,
+    Emin=-6143,
     rounding=decimal.ROUND_HALF_EVEN,
     traps=[decimal.Overflow],
     flags=[],
@@ -39,8 +40,11 @@ EXACT = decimal.Context(
     flags=[],
 )
 
-EMAX = 999999
-EMIN = -999999
+EMAX = 6144
+EMIN = -6143
+# The smallest int magnitude past Emax: an int result is at most 6,145
+# digits (ruling 57).
+INT_LIMIT = 10 ** (EMAX + 1)
 
 INT_RE = re.compile(r"-?(0|[1-9][0-9]*)")
 DEC_RE = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?")
@@ -53,6 +57,16 @@ DATETIME_RE = re.compile(
 NUMBER_TYPES = ("int", "dec")
 ABSENT_TYPES = ("missing", "nan", "inf")
 COLUMN_TYPES = ("int", "dec", "str", "bool", "date", "datetime")
+
+
+_STR_SAFE = 10**4000
+
+
+def int_text(n):
+    """The decimal digits of a Python int. str(Decimal(n)) is exact and not
+    bound by CPython's int-string limit (4,300 digits), which an in-range
+    literal (ruling 56) or a computed int can exceed."""
+    return str(n) if -_STR_SAFE < n < _STR_SAFE else str(Decimal(n))
 
 
 class Value:
@@ -78,7 +92,7 @@ class Value:
         if self.t == "inf":
             return {"t": "inf", "s": self.s}
         if self.t == "int":
-            return {"t": "int", "v": str(self.v)}
+            return {"t": "int", "v": int_text(self.v)}
         if self.t == "dec":
             return {"t": "dec", "v": format_dec(self.v)}
         return {"t": self.t, "v": self.v}
@@ -222,7 +236,9 @@ def parse_typed(obj, field, allow_list=True):
             raise _bad(vf, f"int v {v!r} is not -?(0|[1-9][0-9]*)")
         if v.startswith("-") and set(v[1:]) == {"0"}:
             raise _bad(vf, "minus sign before zero")
-        return Value("int", int(v))
+        # int(Decimal) is exact and not bound by CPython's 4,300-digit
+        # int-string limit, which an `expected` or `row` int may exceed.
+        return Value("int", int(Decimal(v)))
     if t == "dec":
         if not DEC_RE.fullmatch(v):
             raise _bad(vf, f"dec v {v!r} is not positional")

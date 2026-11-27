@@ -9,7 +9,7 @@
       "op": "derive",
       "v": 1,
       "as": "y",
-      "expr": "x * 1e-999999 * 1e-30"
+      "expr": "x * 1e-6143 * 1e-30"
     },
     {
       "op": "derive",

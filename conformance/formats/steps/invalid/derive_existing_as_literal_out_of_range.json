@@ -1,0 +1,115 @@
+{
+  "description": "a derive whose as is already present and whose expr has a literal outside the context's range: the range check is a shape check, so E6004 at the expr comes before the as check against the specs (11.18.1, 11.8, checker-diffs D21)",
+  "input": {
+    "steps": 1,
+    "tables": {
+      "de": "F7@v2"
+    },
+    "from": "de",
+    "ops": [
+      {
+        "op": "derive",
+        "v": 1,
+        "as": "padj",
+        "expr": "padj * 1e6145"
+      }
+    ]
+  },
+  "specs": {
+    "de": {
+      "spec": 1,
+      "format": "tsv",
+      "delimiter": "\t",
+      "header": true,
+      "columns": [
+        {
+          "name": "gene_id",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "log2FoldChange",
+          "type": "dec",
+          "missing": [
+            "NA"
+          ],
+          "scale": 4
+        },
+        {
+          "name": "padj",
+          "type": "dec",
+          "missing": [
+            "NA"
+          ],
+          "scale": 5
+        },
+        {
+          "name": "baseMean",
+          "type": "float64",
+          "missing": [
+            "NA"
+          ]
+        }
+      ],
+      "key": [
+        "gene_id"
+      ],
+      "nan": "missing",
+      "inf": "missing",
+      "encoding": "utf-8"
+    },
+    "samples": {
+      "spec": 1,
+      "format": "tsv",
+      "delimiter": "\t",
+      "header": true,
+      "columns": [
+        {
+          "name": "sample_id",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "gene_id",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "condition",
+          "type": "str",
+          "missing": []
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "missing": [
+            "NA"
+          ]
+        },
+        {
+          "name": "count",
+          "type": "int",
+          "missing": [
+            "NA"
+          ]
+        },
+        {
+          "name": "ok",
+          "type": "bool",
+          "missing": []
+        }
+      ],
+      "key": [
+        "sample_id",
+        "gene_id"
+      ],
+      "nan": "missing",
+      "inf": "missing",
+      "encoding": "utf-8"
+    }
+  },
+  "expect": {
+    "code": "E6004",
+    "field": "/ops/0/expr"
+  }
+}

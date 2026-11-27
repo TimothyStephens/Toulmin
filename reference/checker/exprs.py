@@ -21,6 +21,7 @@ from typed_values import (
     CONTEXT,
     EMAX,
     EMIN,
+    INT_LIMIT,
     MISSING,
     NUMBER_TYPES,
     Value,
@@ -37,6 +38,8 @@ NUMBER_RE = re.compile(r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?")
 RESERVED = {"and", "or", "not", "true", "false", "missing"}
 CALLS = {"abs", "log", "log2", "log10", "exp", "coalesce"}
 CMP_OPS = {"=", "!=", "<", "<=", ">", ">="}
+# libmpdec's MAX_EMAX, 999999999999999999, has 18 digits (D22).
+EXPONENT_DIGITS = 18
 
 # Precedence levels for re-serialization (higher binds tighter).
 PREC_OR, PREC_AND, PREC_NOT, PREC_CMP, PREC_ADD, PREC_MUL, PREC_UNARY, PREC_PRIMARY = range(1, 9)
@@ -236,19 +239,61 @@ def unescape(token):
     return body.replace('\\"', '"').replace("\\\\", "\\")
 
 
+def adjusted_exponent(text):
+    """The adjusted exponent of a numeric literal, computed from its text
+    with Python ints, as tm-formats' adjusted_exponent does: the exponent
+    less the fraction's length, plus the count of significant digits less
+    one, a zero coefficient counting one digit (so 0e5 is 5, 0.0e5 is 4, as
+    Decimal.adjusted() gives). Does not construct a Decimal, so it holds
+    any exponent the caller lets through; the caller must first have
+    refused an exponent of more than 18 significant digits, as
+    number_literal does. The exponent's sign and leading zeros
+    are stripped before int() converts it: CPython's int-string limit
+    (4,300 digit characters) counts leading zeros, which the caller's
+    18-significant-digit check does not, so 1e followed by 4,300 zeros and
+    1 would otherwise raise ValueError (checker-diffs D22, re-audit of
+    2026-11-27); canonical_json._parse_int guards the same limit."""
+    mantissa, _, exponent = text.lower().partition("e")
+    sign = -1 if exponent.startswith("-") else 1
+    exp = sign * int(exponent.lstrip("+-").lstrip("0") or "0")
+    integer, _, frac = mantissa.partition(".")
+    significant = max(len((integer + frac).lstrip("0")), 1)
+    return exp - len(frac) + significant - 1
+
+
 def number_literal(text):
     """INT, DEC, or EXPNUM. An EXPNUM is a dec converted exactly to positional
-    notation; its adjusted exponent must lie within the context (E6004)."""
+    notation. Every numeric literal's adjusted exponent must lie within the
+    context, Emin -6143 to Emax 6144 (E6004; rulings 36 and 56).
+
+    The range is checked on the text before Decimal() is called, which is
+    only for a literal that passed: Decimal() raises InvalidOperation when
+    the adjusted exponent is past libmpdec's MAX_EMAX (999999999999999999,
+    18 digits). An exponent of more than 18 significant digits is refused
+    first, without being converted; one of 18 digits or fewer is converted
+    with Python ints, which have no such limit, its sign and leading zeros
+    stripped first so CPython's int-string limit cannot be reached, and the
+    adjusted exponent is computed from the text (checker-diffs D22 and its
+    re-audits)."""
+    _, _, exponent = text.lower().partition("e")
+    if len(exponent.lstrip("+-").lstrip("0")) > EXPONENT_DIGITS:
+        raise CheckError(
+            "E6004", f"literal {text[:40]} has an adjusted exponent outside the context"
+        )
+    adjusted = adjusted_exponent(text)
+    if adjusted > EMAX or adjusted < EMIN:
+        raise CheckError(
+            "E6004", f"literal {text[:40]} has an adjusted exponent outside the context"
+        )
+    d = Decimal(text)
     if "e" in text or "E" in text:
-        d = Decimal(text)
-        if d.adjusted() > EMAX or d.adjusted() < EMIN:
-            raise CheckError(
-                "E6004", f"literal {text} has an adjusted exponent outside the context"
-            )
         return ("lit", "dec", text, to_positional(d))
     if "." in text:
         return ("lit", "dec", text, Decimal(text))
-    return ("lit", "int", text, int(text))
+    # int(Decimal) is exact and, unlike int(str), not bound by CPython's
+    # int-string limit (4,300 digits): an INT literal of up to 6,145 digits
+    # is in range (ruling 56) and must evaluate.
+    return ("lit", "int", text, int(d))
 
 
 def parse(text):
@@ -424,14 +469,22 @@ def _compare(op, a, b):
     return {"<": c < 0, "<=": c <= 0, ">": c > 0, ">=": c >= 0}[op]
 
 
+def int_result(n):
+    """An int result: E5002 when its adjusted exponent exceeds Emax 6144,
+    more than 6,145 digits (ruling 57); Python's int has no bound."""
+    if abs(n) >= INT_LIMIT:
+        raise CheckError("E5002", "arithmetic overflow")
+    return Value("int", n)
+
+
 def arith(op, a, b):
     """+ - * / on two present numbers; both int gives int except for /."""
     if a.t == "int" and b.t == "int" and op != "/":
         if op == "+":
-            return Value("int", a.v + b.v)
+            return int_result(a.v + b.v)
         if op == "-":
-            return Value("int", a.v - b.v)
-        return Value("int", a.v * b.v)
+            return int_result(a.v - b.v)
+        return int_result(a.v * b.v)
     da, db = as_decimal(a), as_decimal(b)
     try:
         if op == "+":

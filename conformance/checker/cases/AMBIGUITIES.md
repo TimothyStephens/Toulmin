@@ -51,6 +51,7 @@ Items 1 to 31 above were ruled on in the revision. These are new.
 Items 32 to 38 were ruled on. Two new ones, not waiting for a ruling:
 
 39. 11.18.1: "the reference implementation quantizes a literal to its positional scale before using it". For `9.9e999999` that positional form has 1,000,000 digits. Python's `quantize` in the stated precision-34 context signals InvalidOperation when the result exceeds the precision. Readings: quantize exactly, outside the context, giving the same number; or quantize in context and fail with a condition that has no code. Taken: exactly. derive_overflow_emax keeps verdict error with E5002 at `/ops/0/expr`. Under the second reading it would fail before the multiplication, with no code given.
+Superseded by the decimal128 context (Emax 6144, Emin -6143).
 40. 11.18.4: "`{cols}` is the op's column list exactly as written in the op, and for `select` without the key columns it keeps implicitly". When a key column is listed explicitly, it can be read as kept "as written" or dropped as a key the op keeps anyway. Taken: kept, so select_three_with_key stays "Keep columns n, gene_id, and p; 5 rows.".
 
 ## Design-review rulings (2026-11-17)
@@ -65,3 +66,9 @@ Items 41 and 42 were ruled on: an E3102 about a data-file cell has `field` null 
 ## Underflow and the log family (2026-11-23)
 
 43. 11.6 and 11.18.2 Precision: underflow "follows the specification (subnormal, then zero)", but the scale of such a result is not stated. The multiplication rule says the scale is the sum of the operands' scales. General Decimal Arithmetic rounds a subnormal result to exponent Etiny = Emin - (precision - 1) = -1000032 and gives an underflowed zero that exponent too. "Negative zero is written without its sign, scale kept" then makes the zero `0.` followed by 1,000,032 zeros, and the subnormal 1,000,034 characters. Readings: the scale is the General Decimal Arithmetic exponent, as Python `decimal` gives, or a zero is written `0`. Taken: the first, as in item 35 (rounding wins over the sum rule). derive_underflow_subnormal_then_zero; its expected.json carries both long strings.
+Superseded by the decimal128 context (Emax 6144, Emin -6143).
+
+## decimal128 context (2026-11-24)
+
+44. 11.6 and 11.18.2 Precision: the context is "IEEE 754-2008 decimal128", whose format clamps (a result whose exponent is above Emax - (precision - 1) = 6111 has its coefficient padded with zeros down to exponent 6111; Python `clamp=1`), but the Python parameters the text lists are `prec=34`, `Emax=6144`, `Emin=-6143`, and `ROUND_HALF_EVEN`, which leave `clamp` at its default 0. Readings: clamp 0, as listed, or clamp 1, as decimal128 implies. Taken: clamp 0. No case depends on it: clamping changes only the exponent of an integral value, never the value, so the positional form (scale 0) and the Overflow threshold are the same under both; derive_overflow_emax gives E5002 and derive_underflow_subnormal_then_zero gives the same y and z under either reading.
+Superseded: the Precision row now states clamp 0, with an example where the difference is visible.
