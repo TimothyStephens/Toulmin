@@ -186,7 +186,7 @@ End (launcher to Toulmin, `tm session end S4 --json FILE`):
 
 ## 11.15 Action file (static view to `tm apply`)
 
-`{"actions":1,"exported_at","chain_head":"sha256:...","items":[{"op":"draft.promote","targets":["S4.12@<revision id>"],"allow_unapproved":false},{"op":"run.approve","code_version":"..."},{"op":"claim.review","ref":"S4.12","revision":"sha256:...","outcome":"confirmed","note":"..."}]}`. `tm apply` refuses an item whose target changed since `chain_head` (`E8101`), prints one line per item with its target, revision, and any override, requires `--yes-override` for any item that sets an override, and asks for confirmation. Review items carry the revision they were made against.
+`{"actions":1,"exported_at","chain_head":"sha256:...","items":[{"op":"draft.promote","targets":["S4.12@<revision id>"],"allow_unapproved":false},{"op":"run.approve","code_version":"..."},{"op":"claim.review","ref":"S4.12","revision":"sha256:...","outcome":"confirmed","note":"..."}]}`. `tm apply` refuses an item whose target changed since `chain_head` (`E8101`), prints one line per item with its target, revision, and any override, requires `--yes-override` for any item that sets an override, and asks for confirmation. Review items carry the revision they were made against. A file that is I-JSON but not of this shape, or an item that is not a well-formed instance of its `op`, is `E8103` malformed action file; an item whose `op` is one of the three above but not applied in the running gate is `E8102` (11.20).
 
 ## 11.16 Event bodies (gate A types)
 
