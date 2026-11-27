@@ -104,6 +104,7 @@ pub fn fold(tx: &mut IndexTx<'_>, line: &Line) -> Result<()> {
         EventType::ClaimRetracted => {
             transition(tx, &c, State::after_retract, None)?;
             clear(tx, &c, Name::AssertionFails)?;
+            clear(tx, &c, Name::PromotedNotReviewed)?;
         }
         EventType::ClaimSuperseded => {
             transition(
@@ -113,6 +114,7 @@ pub fn fold(tx: &mut IndexTx<'_>, line: &Line) -> Result<()> {
                 Some(text(&c.body, "replacement")),
             )?;
             clear(tx, &c, Name::AssertionFails)?;
+            clear(tx, &c, Name::PromotedNotReviewed)?;
         }
         _ => return Ok(()),
     }

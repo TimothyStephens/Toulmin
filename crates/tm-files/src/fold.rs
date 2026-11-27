@@ -1,6 +1,7 @@
 //! The Files fold (item 51; rule 6; 11.17): `file.` events into the
 //! `files`, `file_versions`, `parse_specs`, and `panels` tables through an
-//! [`IndexTx`]. A fold first looks the event ID up in `events` and returns
+//! [`IndexTx`]. `file.restored` clears `retired` and sets `restored`, the
+//! column behind 5.6's `restored` label (item 66). A fold first looks the event ID up in `events` and returns
 //! when present (the idempotence check of 11.17); the Core writes `events`
 //! after every fold ran.
 
@@ -63,7 +64,7 @@ pub fn fold(tx: &mut IndexTx<'_>, line: &Line) -> Result<()> {
         ),
         EventType::FileRestored => update(
             tx,
-            "UPDATE files SET retired = 0 WHERE file = ?",
+            "UPDATE files SET retired = 0, restored = 1 WHERE file = ?",
             &[Param::from(text(&body, "file"))],
         ),
         EventType::FileRenamed => update(

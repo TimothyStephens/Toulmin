@@ -1110,8 +1110,8 @@ const SCHEMA_11_17: &str = "
 CREATE TABLE events (id TEXT PRIMARY KEY, chain TEXT NOT NULL, seq INTEGER NOT NULL, type TEXT NOT NULL,
   segment INTEGER NOT NULL, offset INTEGER NOT NULL, at TEXT NOT NULL);
 CREATE TABLE files (file TEXT PRIMARY KEY, kind TEXT NOT NULL, path TEXT NOT NULL, title TEXT, description TEXT,
-  source TEXT, level TEXT NOT NULL, retired INTEGER NOT NULL DEFAULT 0, removable INTEGER NOT NULL DEFAULT 0,
-  agent_denied INTEGER NOT NULL DEFAULT 0, registered_event TEXT);
+  source TEXT, level TEXT NOT NULL, retired INTEGER NOT NULL DEFAULT 0, restored INTEGER NOT NULL DEFAULT 0,
+  removable INTEGER NOT NULL DEFAULT 0, agent_denied INTEGER NOT NULL DEFAULT 0, registered_event TEXT);
 CREATE INDEX files_path ON files(path);
 CREATE TABLE file_versions (version TEXT PRIMARY KEY, file TEXT NOT NULL, n INTEGER NOT NULL, fingerprint TEXT NOT NULL,
   origin_kind TEXT NOT NULL, origin_run TEXT, content_label TEXT, size INTEGER, kept_object TEXT,
@@ -1260,7 +1260,7 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
     }
     let files = tx
         .query_rows(
-            "SELECT file, path, title, level, removable, retired FROM files ORDER BY file",
+            "SELECT file, path, title, level, removable, retired, restored FROM files ORDER BY file",
             &[],
         )
         .unwrap();
@@ -1270,7 +1270,8 @@ fn the_fold_writes_the_four_tables_and_is_idempotent() {
     assert_eq!(files[0].text(2), Some("DE table"));
     assert_eq!(files[0].text(3), Some("registered"));
     assert_eq!(files[0].int(4), Some(1), "removable");
-    assert_eq!(files[0].int(5), Some(0), "restored");
+    assert_eq!(files[0].int(5), Some(0), "not retired after restore");
+    assert_eq!(files[0].int(6), Some(1), "restored (item 51)");
     let versions = tx
         .query_rows("SELECT version, n, fingerprint, origin_kind, content_label, kept_object, fingerprint_only, size, decompressed_fingerprint FROM file_versions ORDER BY version", &[])
         .unwrap();

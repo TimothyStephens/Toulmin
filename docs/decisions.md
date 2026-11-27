@@ -1623,3 +1623,28 @@ No other `int()` call in the two directories takes text (`ops._is_int` is an `is
 No other behaviour in `reference/` changes.
 
 **Checked.** `python3 -I reference/formats/test_formats.py` passes (5 tests); `validate.py --check` over `conformance/formats/steps/invalid/`, `steps/valid/`, and `assertions/schema/` reports 77 of 77; `refcheck.py --check` passes on all 167 directories under `conformance/checker/cases/`, `conformance/checker/assertions/eval/`, and `crates/tm-checker/tests/cases/`. `canonical({"a": 10**5000})` is `E1001` with the number shortened to its first 20 characters and its length.
+
+## 2026-11-27 P7: the Core's gap decisions made in code, and what the sandbox could not run
+
+**What.** `tm-core` (items 72 to 78, 80, 81) is built against the design as edited on 2026-11-27 (4055a76, dbbdcb6). Where a row said nothing, the code chose, each choice listed here (rule 2 of the P7 brief) and reported for a ruling where it picks a code the design does not list:
+- `tm init` on a directory with no `.git` is refused with `E2002` and a message naming the reason; the Assumptions table says `tm init` refuses when the project is not a repository and gives no code, and `E2002` is the init row's nearest. Reported.
+- `claim.retract`, `claim.supersede`, and `claim.update_text` on a claim already retracted or superseded are refused with `E6201` and a message naming the state (item 70 makes the two states final; section 9 lists only `E6201` for these rows). Reported.
+- `tm audit --since ID` naming an event that is not an `audit.completed` on the chain is `E6201`. Reported.
+- `tm apply` on an action file that is I-JSON but not of 11.15's shape, or whose item is anything but a well-formed `claim.review`, is `E8102` (11.20's code for a promote or approve item); `E8101` covers a `chain_head` not on the chain as well as a target revised since the export.
+- `login_node.pattern` (gate C) is accepted as any non-empty string: the workspace has no regex crate (D24) and nothing reads the setting before gate C, whose reader validates it. The other 11.19 validations are implemented, `manifest.ignore` through `tm-fsfacts`' `Excludes` and `files.agent_denied` through Files' input-path rule.
+- `AGENTBOX_AGENT`'s value is returned with the detected `src` facts for the command's output (the `possibly agent-issued` label) and is not stored: 11.2's `src` has no slot for it (item 72's wording).
+- A `stat_cache` row with a snapshot and no fingerprint records an unconfirmed observation (item 30's `Unconfirmed`), the source of the `possibly changed (unconfirmed)` flag; a row with a `NULL` snapshot records an absent path (11.17).
+- `tm status --refresh` ignores the cache's snapshots, so every registered input is decided as new; `--hash` scans in item 30's `Run` context, so a stat-changed file above `hashing.inline_threshold` is hashed instead of left unconfirmed. A `metadata_only` hand edit (same table by key) is detected only when the identity has a parse spec and the previous version is in the parse cache.
+- `checker.describe_steps` renders the 11.18.4 descriptions with row counts 0, since it has no data; `checker.preview_steps` runs the Checker with the trivially true assertion `count >= 0` and reports the step tables and any error, not the assertion.
+- `files.rows` returns rows in key order (11.18.2 Initial order), each with its 0-based position, and takes a key list or a position range; the range form serves "with neighbors".
+- `file.keep` above `keep.warn_mib` returns a needs-confirmation result unless the caller confirms (the prompt is the CLI's, 5.5); `keep.budget_mib` is compared with the kept versions' sizes plus this one's.
+- `claim.review` records the fingerprint of the report file on disk; a claim whose report is not registered (not reachable in gate A) records the fingerprint of empty bytes.
+- `index::open` removes and recreates a database that fails `PRAGMA integrity_check` (3.4's "triggers a rebuild"), and `sync` rebuilds when the recorded head is not on the chain, is ahead of it, or carries another `schema_version`.
+- Ref allocation confirms the index against the chain by scanning the chain's `claim.added` events (item 64), once per `claim add`.
+- `claim.add` makes section 9's refusals before the lock in this order: citability (`E6001`), a `cells` key absent at add time (`E6003`), a `page` citation on a file without a page tree (`E3302`), then `tm-checker`'s `rules::validate` for the first 11.8 or 11.9 error; the Checker's own verdict `error` is reserved for what those checks cannot see.
+- `files.lineage` returns the registered input as the only node and no edges (the gate A tree stub of the exit criteria).
+- The Checker's `versions.duckdb` for a claim it does not run comes from opening `tm-duckdb` once for its facts (11.16 as edited).
+
+**Also.** `tm-files`' fold sets `files.restored` (item 51) and its fold test's schema gains the column; `tm-claims`' fold clears `promoted, not reviewed` on `claim.retracted` and `claim.superseded` (item 70) and `tests/claims.rs` asserts it. `scripts/ci/bench-index.sh` builds `tm-record`'s `gen-chain` example and `tm-core`'s `index-rebuild` example (item 8).
+
+**Unverified in the sandbox.** Every test binary of `tm-core` links DuckDB (through `tm-checker` and `tm-files`), which the sandbox cannot link; `cargo check -p tm-core --all-targets --locked` is the check that ran. `cargo test -p tm-core`, `cargo test -p tm-files`, `bench-index.sh`'s 60 s budget (the fold runs about five prepared-per-call statements per event through `tm-index`), and the scenario behaviour of every operation over `fixtures/` are the owner's to run on the host.
