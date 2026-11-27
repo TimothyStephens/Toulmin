@@ -278,17 +278,17 @@ From `reviews/2026-11-24-p7-context.md`, findings A and B: two differences that 
   | `1e-999999999999999999` | -(10^18 - 1) | `E6004` `/ops/0/where` | `E6004` `/ops/0/where` |
 
   Only the first differs: `Decimal` holds an exponent down to its `MIN_ETINY`, far below -10^18, so the fourth passes it, and the first is the one combination the digit count lets through. Under the ruling, Python computes the adjusted exponent from the text with Python ints, as `tm-formats`' `adjusted_exponent` does, once the exponent has 18 digits or fewer, and calls `Decimal` only for a literal that passed; the bounds are unchanged.
-- Applied 2026-11-26: `exprs.adjusted_exponent` and the check in `number_literal` before `Decimal(text)`, logged in `docs/decisions.md` under the D22 exception. The five probes rerun through `validate.py` are all `E6004` `/ops/0/where`, equal to Rust.
+- Applied 2026-11-26: `exprs.adjusted_exponent` and the check in `number_literal` before `Decimal(text)`, logged in `docs/decisions.md` under the D22 exception. The five probes rerun through `validate.py` are all `E6004` `/ops/0/where`, equal to Rust. Corrected 2026-11-27: `adjusted_exponent` converts the exponent with its sign and leading zeros stripped, since `int()` on the raw text reached CPython's int-string limit on an exponent of 4,300 or more characters (the re-audit below).
 - **Re-audit (2026-11-27): the 2026-11-26 fix crashes on a long exponent.** The reviewer found, as run, that `exprs.adjusted_exponent` calls `int(exponent)` on the exponent's raw text, and CPython's int-string limit raises `ValueError` past 4,300 digit characters, leading zeros counted; the 18-digit text check in front strips leading zeros, so it lets such an exponent through. Seven literals, each as `filter` `x < <literal>` over the table of `steps/invalid/where_literal_exponent_18_digits` (`t`: `k` `str` key, `x` `dec` scale 2), run before any further change (`validate.py`; `Steps::from_json` then `Steps::check` in `tm-formats`). `Z` is 4,300 zeros:
 
-  | Literal | Adjusted exponent | Python before | Rust |
-  | --- | --- | --- | --- |
-  | `1eZ1` | 1 | exit 1, `ValueError` (int-string limit, 4,301 digits) | valid |
-  | `1e+Z1` | 1 | exit 1, `ValueError` | valid |
-  | `1e-Z1` | -1 | exit 1, `ValueError` | valid |
-  | `1eZ0` | 0 | exit 1, `ValueError` | valid |
-  | `1eZ6145` | 6145 | exit 1, `ValueError` (4,304 digits) | `E6004` `/ops/0/where` |
-  | `1Ze-4300` (a 4,301-digit mantissa) | 0 | valid | valid |
-  | `0.Z01e4302` (4,301 fraction zeros, then `1`) | 0 | valid | valid |
+  | Literal | Adjusted exponent | Python before | Rust | Python after |
+  | --- | --- | --- | --- | --- |
+  | `1eZ1` | 1 | exit 1, `ValueError` (int-string limit, 4,301 digits) | valid | valid |
+  | `1e+Z1` | 1 | exit 1, `ValueError` | valid | valid |
+  | `1e-Z1` | -1 | exit 1, `ValueError` | valid | valid |
+  | `1eZ0` | 0 | exit 1, `ValueError` | valid | valid |
+  | `1eZ6145` | 6145 | exit 1, `ValueError` (4,304 digits) | `E6004` `/ops/0/where` | `E6004` `/ops/0/where` |
+  | `1Ze-4300` (a 4,301-digit mantissa) | 0 | valid | valid | valid |
+  | `0.Z01e4302` (4,301 fraction zeros, then `1`) | 0 | valid | valid | valid |
 
   The reference as of cfce625, before 527bfc1, gives Rust's result on all seven (rerun from `git archive`): the 2026-11-26 fix introduced the crash. The last two pass because the mantissa's digits are never converted with `int()`; `Decimal` reads them. Under the ruling, Python converts the stripped exponent digits instead, as `canonical_json._parse_int` guards the same limit: the sign is read from the text, and `int()` is given the exponent with its sign and leading zeros removed, which the 18-digit check in front has already bounded.
